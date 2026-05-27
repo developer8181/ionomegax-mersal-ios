@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extreme Print Management System</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Private print control platform</p>
+        <h1>Extreme Print Management System</h1>
+        <p>Track print jobs, enforce quotas, hold risky jobs, and report usage by user or printer.</p>
+      </div>
+      <button id="resetQuotas" class="secondary">Reset monthly quotas</button>
+    </header>
+
+    <main>
+      <section id="cards" class="cards"></section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Submit print job</h2>
+          <p>Simulates a controlled print request with quota and printer-policy checks.</p>
+        </div>
+        <form id="jobForm" class="grid-form">
+          <label>
+            User
+            <select name="user_id" id="jobUser" required></select>
+          </label>
+          <label>
+            Printer
+            <select name="printer_id" id="jobPrinter" required></select>
+          </label>
+          <label>
+            Document
+            <input name="document_name" value="Monthly report.pdf" required />
+          </label>
+          <label>
+            Pages
+            <input name="pages" type="number" min="1" value="8" required />
+          </label>
+          <label>
+            Copies
+            <input name="copies" type="number" min="1" value="1" required />
+          </label>
+          <label>
+            Account / department
+            <input name="account" value="Personal" />
+          </label>
+          <label class="checkbox">
+            <input name="color" type="checkbox" />
+            Color
+          </label>
+          <label class="checkbox">
+            <input name="duplex" type="checkbox" checked />
+            Duplex
+          </label>
+          <button type="submit">Submit job</button>
+        </form>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Users and balances</h2>
+            <p>Add emergency credit when a valid job is held by quota.</p>
+          </div>
+          <div id="users"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Printers</h2>
+            <p>Device capabilities and page pricing.</p>
+          </div>
+          <div id="printers"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recent print jobs</h2>
+          <p>Held jobs can be released or denied by an administrator.</p>
+        </div>
+        <div id="jobs"></div>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <h2>Top users</h2>
+          <div id="userReport"></div>
+        </article>
+        <article class="panel">
+          <h2>Printer usage</h2>
+          <div id="printerReport"></div>
+        </article>
+      </section>
+    </main>
+
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

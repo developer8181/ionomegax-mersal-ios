@@ -1,0 +1,6 @@
+{
+  "server": "http://127.0.0.1:8080",
+  "agent_id": "client-agent-001",
+  "direct_monitor": true,
+  "default_user": "sara"
+}
