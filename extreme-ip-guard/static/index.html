@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extreme IP Guard — مركز العمليات الأمنية</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Zero Trust · UEBA · DLP · Immutable Audit</p>
+        <h1>Extreme IP Guard</h1>
+        <p>
+          منصة أمن داخلية من الجيل القادم: حماية البيانات، مراقبة الشبكة، أمان نقاط النهاية،
+          وتحليل سلوكي — مستوحاة من IP-guard لكن مبنية على Zero Trust وسلسلة تدقيق غير قابلة للتلاعب.
+        </p>
+        <div class="badge-row">
+          <span class="badge">MITRE ATT&CK mapping</span>
+          <span class="badge">Post-quantum ready hooks</span>
+          <span class="badge">eBPF event taxonomy</span>
+          <span class="badge">SOAR webhooks (planned)</span>
+        </div>
+      </div>
+      <button id="refreshBtn" class="secondary">تحديث اللوحة</button>
+    </header>
+
+    <main>
+      <section id="cards" class="cards"></section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>محاكاة حدث أمني</h2>
+            <p>إرسال حدث إلى محرك السياسات وUEBA وإنشاء حادثة عند الحاجة.</p>
+          </div>
+          <form id="eventForm" class="grid-form">
+            <label>
+              الجهاز (hostname)
+              <input name="hostname" value="ws-finance-01" required />
+            </label>
+            <label>
+              الفئة
+              <select name="category">
+                <option value="dlp">DLP — تسريب بيانات</option>
+                <option value="network">Network — شبكة</option>
+                <option value="usb">USB — وسائط</option>
+                <option value="web">Web — تصفح</option>
+                <option value="application">Application — تطبيقات</option>
+                <option value="identity">Identity — هوية</option>
+              </select>
+            </label>
+            <label>
+              الملخص
+              <input name="summary" value="محاولة إرسال ملف سري عبر البريد" required />
+            </label>
+            <label style="grid-column: 1 / -1">
+              التفاصيل
+              <textarea name="detail" rows="2">confidential financial report TOP SECRET</textarea>
+            </label>
+            <button type="submit">تحليل وتطبيق السياسة</button>
+          </form>
+          <pre id="eventResult" class="mono" style="margin-top: 1rem; white-space: pre-wrap"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Zero Trust — فحص الجلسة</h2>
+            <p>تحقق مستمر من وضع الجهاز، MFA، والقطاع الشبكي.</p>
+          </div>
+          <button id="ztCheck" type="button">تشغيل فحص Zero Trust</button>
+          <pre id="ztResult" class="mono" style="margin-top: 1rem; white-space: pre-wrap"></pre>
+        </article>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>نقاط النهاية والمخاطر</h2>
+          </div>
+          <div id="endpoints"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>الوكلاء النشطون</h2>
+          </div>
+          <div id="agents"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>الأحداث الأمنية الأخيرة</h2>
+        </div>
+        <div id="events"></div>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>الحوادث المفتوحة</h2>
+          </div>
+          <div id="incidents"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>سلسلة التدقيق</h2>
+            <p>سجلات مرتبطة بتجزئة SHA-256 لاكتشاف التلاعب.</p>
+          </div>
+          <div id="audit"></div>
+        </article>
+      </section>
+    </main>
+
+    <footer>Extreme IP Guard v0.1 — prototype · self-hosted · no external dependencies</footer>
+    <script src="/app.js"></script>
+  </body>
+</html>

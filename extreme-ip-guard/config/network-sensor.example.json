@@ -1,0 +1,6 @@
+{
+  "server_url": "http://127.0.0.1:8090",
+  "sensor_id": "eig-sensor-dmz-01",
+  "monitored_segments": ["corporate", "guest", "dmz"],
+  "block_lateral_from": ["guest", "unknown"]
+}

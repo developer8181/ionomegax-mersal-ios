@@ -1,0 +1,11 @@
+{
+  "server_url": "http://127.0.0.1:8090",
+  "agent_id": "eig-ws-finance-01",
+  "trust_score": 75,
+  "posture": {
+    "encrypted_disk": true,
+    "av_updated": true,
+    "patch_level_ok": true,
+    "agent_healthy": true
+  }
+}

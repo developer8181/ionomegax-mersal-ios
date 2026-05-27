@@ -1,0 +1,20 @@
+{
+  "zero_trust": {
+    "require_mfa": true,
+    "minimum_trust_score": 60,
+    "restricted_segments": ["guest", "dmz", "unknown"]
+  },
+  "dlp": {
+    "block_pci_patterns": true,
+    "scan_channels": ["email", "usb", "im", "cloud_upload"]
+  },
+  "network": {
+    "block_unauthorized_lateral": true,
+    "alert_on_port_scan": true
+  },
+  "future": {
+    "post_quantum_tls": "hybrid-x25519-kyber768",
+    "ebpf_telemetry": true,
+    "soar_webhook": "https://soc.example/hooks/eig"
+  }
+}
