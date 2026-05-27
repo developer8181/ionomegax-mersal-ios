@@ -44,10 +44,17 @@ lb config noauto \
   --iso-publisher "Ionomegax" \
   --win32-loader false
 
-mkdir -p config/package-lists config/hooks/normal
+mkdir -p config/package-lists config/hooks/normal config/archives
 cp "$ROOT/build/package-lists/mersal.list.chroot" config/package-lists/mersal.list.chroot
+cp "$ROOT/build/archives/debian.list.chroot" config/archives/debian.list.chroot
+cp "$ROOT/build/hooks/0001-fix-apt-security.chroot" config/hooks/normal/0001-fix-apt-security.chroot
 cp "$ROOT/build/hooks/0100-mersal.chroot" config/hooks/normal/0100-mersal.chroot
-chmod +x config/hooks/normal/0100-mersal.chroot
+chmod +x config/hooks/normal/*.chroot
+
+if [ "${MERSAL_ISO_NO_SECURITY:-0}" = "1" ]; then
+  echo "MERSAL_ISO_NO_SECURITY=1 — building without security repository"
+  lb config set security false
+fi
 
 export LB_INCLUDES="$WORK/config/includes.chroot"
 "$ROOT/build/sync-includes.sh"

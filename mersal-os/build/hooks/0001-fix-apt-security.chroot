@@ -1,0 +1,7 @@
+#!/bin/bash
+# Fix legacy live-build security suite path (bookworm/updates -> bookworm-security)
+set -e
+for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+  [ -f "$file" ] || continue
+  sed -i 's|bookworm/updates|bookworm-security|g' "$file"
+done
