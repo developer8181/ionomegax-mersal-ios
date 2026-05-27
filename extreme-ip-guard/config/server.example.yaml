@@ -1,0 +1,57 @@
+# Extreme IP Guard - control-plane configuration template.
+#
+# Copy to `config/server.yaml` for local use. The reference build reads only
+# environment variables (XIG_HOST, XIG_PORT, XIG_DB); this file documents the
+# additional knobs a production deployment is expected to surface.
+
+server:
+  host: 127.0.0.1
+  port: 8090
+  base_url: https://xig.example.com
+
+database:
+  driver: sqlite        # sqlite | postgres | cockroach
+  dsn: data/extreme-ip-guard.sqlite3
+  pool_size: 10
+
+audit:
+  hash_algorithm: sha256
+  publish_merkle_root_every: 1h
+  external_witness:
+    enabled: false
+    endpoint: https://witness.example.com/anchor
+
+crypto:
+  signing_algorithm: ed25519       # reference build emulates with HMAC-SHA256
+  kem_algorithm: x25519-kyber768   # used when hybrid PQC library is available
+  password_hash:
+    algorithm: pbkdf2-sha256
+    iterations: 240000
+
+retention:
+  events_days: 365
+  alerts_days: 1095
+  forensic_artefacts_days: 30
+
+ueba:
+  baseline_minimum_observations: 12
+  zscore_threshold: 3.0
+
+soar:
+  approval_required_above_severity: critical
+  playbook_directory: playbooks/
+
+threat_intel:
+  feeds:
+    - kind: stix2
+      url: https://intel.example.com/collections/iocs
+      poll_interval: 15m
+
+rbac:
+  roles:
+    - viewer
+    - analyst
+    - admin
+    - auditor
+    - break-glass
+  break_glass_requires_two_admins: true

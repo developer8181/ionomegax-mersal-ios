@@ -1,0 +1,50 @@
+# Extreme IP Guard - endpoint agent configuration template.
+
+agent:
+  server: https://xig.example.com
+  enrol_token_env: XIG_ENROL_TOKEN     # never store the token on disk
+  state_path: /var/lib/xig/agent.json
+  heartbeat_interval: 30s
+  poll_interval: 5s
+
+sensors:
+  device:
+    enabled: true
+    block_unknown_usb: true
+  process:
+    enabled: true
+    suspicious_parents:
+      - winword.exe
+      - excel.exe
+      - outlook.exe
+      - chrome.exe
+      - firefox.exe
+  network:
+    enabled: true
+    inspect_dns: true
+    inspect_sni: true
+  dlp:
+    enabled: true
+    rules_path: /etc/xig/dlp-rules.yaml
+    sample_size_kb: 64
+  screen:
+    enabled: false               # privacy: off by default
+    trigger_only: true
+  clipboard:
+    enabled: true
+    redact_secrets: true
+
+privacy:
+  mask_pii_in_logs: true
+  forensic_screen_capture: trigger_only
+
+response:
+  allowed_actions:
+    - block_usb
+    - kill_process
+    - quarantine_file
+    - wipe_clipboard
+    - alert
+    - isolate_host
+  isolation:
+    keep_management_channel: true

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extreme IP Guard — SOC Console</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Next-generation endpoint protection &middot; Zero Trust &middot; XDR &middot; SOAR-lite</p>
+        <h1>Extreme IP Guard</h1>
+        <p>
+          A unified control plane for endpoint telemetry, behavioural analytics, MITRE
+          ATT&amp;CK mapping, and tamper-evident audit. Built to outclass legacy IP Guard
+          deployments with cloud-native architecture and crypto-agile primitives.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="publishPolicy" class="primary">Re-publish policy</button>
+        <button id="verifyChains" class="secondary">Verify audit chains</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="cards" class="cards"></section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Threat timeline</h2>
+          <p>Live alerts, mapped to MITRE ATT&amp;CK and ranked by severity.</p>
+        </div>
+        <div id="alerts"></div>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>User risk leaderboard</h2>
+            <p>Highest blended risk scores (EWMA).</p>
+          </div>
+          <div id="topUsers"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Asset risk leaderboard</h2>
+            <p>Endpoints showing the most anomalous behaviour.</p>
+          </div>
+          <div id="topAssets"></div>
+        </article>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>MITRE ATT&amp;CK coverage</h2>
+            <p>Techniques observed in the wild on this estate.</p>
+          </div>
+          <div id="mitre"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Audit ledger</h2>
+            <p>Every privileged action, hash-chained and replayable.</p>
+          </div>
+          <div id="audit"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Endpoint agents</h2>
+          <p>Issue enrolment tokens or inspect agent state.</p>
+        </div>
+        <form id="tokenForm" class="grid-form">
+          <label>
+            Hostname
+            <input name="hostname" required placeholder="WS-ANALYST-04" />
+          </label>
+          <label>
+            Criticality
+            <select name="criticality">
+              <option value="low">Low</option>
+              <option value="normal" selected>Normal</option>
+              <option value="high">High</option>
+              <option value="crown">Crown jewel</option>
+            </select>
+          </label>
+          <button type="submit">Issue enrolment token</button>
+        </form>
+        <div id="agents" class="mt"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Threat intel feed</h2>
+          <p>Add indicators of compromise (IOCs) to harden detection.</p>
+        </div>
+        <form id="iocForm" class="grid-form">
+          <label>
+            Kind
+            <select name="kind">
+              <option value="sha256">SHA-256</option>
+              <option value="domain">Domain</option>
+              <option value="ipv4">IPv4</option>
+              <option value="ja3">JA3</option>
+            </select>
+          </label>
+          <label>
+            Value
+            <input name="value" required placeholder="evil.example or 5e..." />
+          </label>
+          <button type="submit">Add IOC</button>
+        </form>
+        <div id="iocs" class="mt"></div>
+      </section>
+    </main>
+
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
