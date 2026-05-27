@@ -13,7 +13,9 @@ echo "=== Mersal OS ISO Build ==="
 echo "Powered by Extreme Technology Company"
 
 mkdir -p "$DIST"
-rm -rf "$WORK"
+if [ "${MERSAL_ISO_RESUME:-0}" != "1" ]; then
+  rm -rf "$WORK"
+fi
 mkdir -p "$WORK"
 
 if ! command -v lb >/dev/null 2>&1; then
@@ -34,6 +36,8 @@ lb config noauto \
   --mirror-chroot "http://deb.debian.org/debian" \
   --mirror-binary "http://deb.debian.org/debian" \
   --security false \
+  --firmware-chroot false \
+  --firmware-binary false \
   --bootappend-live "boot=live components quiet splash hostname=mersal-os username=mersal" \
   --memtest none \
   --iso-application "Mersal OS" \
@@ -61,7 +65,23 @@ export LB_INCLUDES="$WORK/config/includes.chroot"
 "$ROOT/build/sync-includes.sh"
 
 echo "Starting live-build (this may take 20-60 minutes)..."
-sudo lb build 2>&1 | tee "$ROOT/build/build.log"
+ATTEMPTS=0
+MAX_ATTEMPTS=3
+BUILD_OK=0
+while [ "$ATTEMPTS" -lt "$MAX_ATTEMPTS" ]; do
+  ATTEMPTS=$((ATTEMPTS + 1))
+  echo "Build attempt ${ATTEMPTS}/${MAX_ATTEMPTS}..."
+  if sudo lb build 2>&1 | tee "$ROOT/build/build.log"; then
+    BUILD_OK=1
+    break
+  fi
+  echo "Attempt ${ATTEMPTS} failed — retrying in 20s (set MERSAL_ISO_RESUME=1 to keep cache)"
+  sleep 20
+done
+if [ "$BUILD_OK" -ne 1 ]; then
+  echo "ERROR: live-build failed after ${MAX_ATTEMPTS} attempts"
+  exit 1
+fi
 
 ISO="$(find . -maxdepth 1 -name 'live-image-*.hybrid.iso' | head -1)"
 if [ -z "$ISO" ]; then
