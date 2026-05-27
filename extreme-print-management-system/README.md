@@ -17,6 +17,7 @@ The project is intentionally standalone and does not modify the existing Monal a
 - Client Agent CLI prototype for workstation-side balance checks and print-job submission.
 - Print Provider CLI prototype for print-server/gateway spool events with an offline queue.
 - Printer Controller CLI prototype for embedded/gateway-side platform metadata and held-job actions.
+- Enterprise demo mode with polished command-center UI, readiness indicators, agent mesh, and source intelligence.
 - No external runtime dependencies; it uses Python's standard library.
 
 ## Product components
@@ -48,6 +49,14 @@ Then open:
 ```text
 http://127.0.0.1:8080
 ```
+
+For inspection from another machine or a cloud forwarded port, bind to all interfaces:
+
+```bash
+python3 -c "from epms.server import run; run(host='0.0.0.0', port=8080)"
+```
+
+In the dashboard, click **Load enterprise demo** to reset the local demo database with a full enterprise scenario.
 
 The default database is created at:
 
@@ -113,12 +122,14 @@ Real embedded support must be implemented per vendor SDK/platform. The prototype
 | `GET` | `/api/jobs` | List recent print jobs |
 | `GET` | `/api/agents` | List registered server/client/provider/controller agents |
 | `GET` | `/api/printer-platforms` | List supported embedded/gateway platform profiles |
+| `GET` | `/api/readiness` | Demo readiness report for server and agent components |
 | `POST` | `/api/jobs` | Submit a simulated print job |
 | `POST` | `/api/jobs/{id}/release` | Release a held job |
 | `POST` | `/api/jobs/{id}/deny` | Deny a held job |
 | `POST` | `/api/users/{id}/credit` | Add balance to a user |
 | `POST` | `/api/quotas/reset` | Reset active users to monthly quotas |
 | `POST` | `/api/agents/heartbeat` | Register or refresh an agent/controller |
+| `POST` | `/api/demo/reset` | Reset and load the enterprise demo scenario |
 
 Example job submission:
 

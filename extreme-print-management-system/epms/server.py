@@ -40,6 +40,20 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json(self.database.list_agents())
         if path == "/api/printer-platforms":
             return self._send_json(supported_platforms())
+        if path == "/api/readiness":
+            dashboard = self.database.dashboard()
+            return self._send_json(
+                {
+                    "product": "Extreme Print Management System",
+                    "edition": "Enterprise Demo",
+                    "status": "ready_for_demo",
+                    "components": dashboard["readiness"],
+                    "limits": [
+                        "Real embedded printer apps require vendor SDK certification.",
+                        "Production deployment should enable TLS, RBAC, and PostgreSQL.",
+                    ],
+                }
+            )
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib method name
@@ -91,6 +105,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     metadata=payload.get("metadata", {}),
                 )
                 return self._send_json(agent)
+
+            if path == "/api/demo/reset":
+                return self._send_json(self.database.seed_enterprise_demo())
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError) as exc:

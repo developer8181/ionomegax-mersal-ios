@@ -128,6 +128,87 @@ class Database:
                     ],
                 )
 
+    def seed_enterprise_demo(self) -> dict[str, Any]:
+        """Reset the database to a polished enterprise demo scenario."""
+        with self.connect() as db:
+            db.execute("DELETE FROM transactions")
+            db.execute("DELETE FROM print_jobs")
+            db.execute("DELETE FROM agents")
+            db.execute("DELETE FROM printers")
+            db.execute("DELETE FROM users")
+            db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'print_jobs', 'agents', 'printers', 'users')")
+
+            db.executemany(
+                """
+                INSERT INTO users
+                    (username, display_name, department, balance_cents, monthly_quota_cents, overdraft_cents)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    ("admin", "Nora Al-Fayed", "Executive Office", money_to_cents("150.00"), money_to_cents("150.00"), money_to_cents("50.00")),
+                    ("finance", "Omar Finance", "Finance", money_to_cents("95.00"), money_to_cents("120.00"), money_to_cents("20.00")),
+                    ("hr", "Lina HR", "Human Resources", money_to_cents("62.50"), money_to_cents("75.00"), money_to_cents("10.00")),
+                    ("student-a", "Sara Student", "Students", money_to_cents("8.20"), money_to_cents("15.00"), money_to_cents("0.00")),
+                    ("marketing", "Yousef Marketing", "Marketing", money_to_cents("44.00"), money_to_cents("60.00"), money_to_cents("15.00")),
+                    ("itdesk", "Ahmed IT Desk", "IT Operations", money_to_cents("220.00"), money_to_cents("220.00"), money_to_cents("75.00")),
+                ],
+            )
+            db.executemany(
+                """
+                INSERT INTO printers
+                    (name, location, color_supported, duplex_supported, bw_page_cents, color_page_cents, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    ("HQ SecurePrint Cluster", "HQ - Level 21", 1, 1, 4, 28, "online"),
+                    ("Finance Canon MEAP", "Finance Vault", 1, 1, 5, 32, "online"),
+                    ("Library BW Fleet", "Public Library", 0, 1, 2, 0, "online"),
+                    ("Marketing Xerox Color", "Creative Studio", 1, 1, 6, 38, "online"),
+                    ("Branch HP OXP Gateway", "Remote Branch", 1, 1, 4, 30, "online"),
+                    ("Archive Kyocera HyPAS", "Records Room", 0, 1, 3, 0, "maintenance"),
+                ],
+            )
+            db.executemany(
+                """
+                INSERT INTO agents (agent_id, agent_type, hostname, os_name, version, metadata_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    ("server-primary-hq", "server", "epms-hq-01", "Linux 6.x", "0.1.0", '{"role": "application-server", "region": "HQ"}'),
+                    ("client-agent-vdi-pool", "client", "vdi-pool-7", "Windows 11 Enterprise", "0.1.0", '{"direct_print_monitor": true, "fleet": "managed-workstations"}'),
+                    ("print-provider-hq-cups", "print-provider", "cups-hq-01", "Ubuntu LTS", "0.1.0", '{"spooler": "cups", "queues": ["HQ SecurePrint Cluster", "Library BW Fleet"]}'),
+                    ("printer-controller-canon-finance", "printer-controller", "canon-meap-fin-01", "Canon MEAP", "0.1.0", '{"vendor": "canon", "platform": "MEAP", "embedded": true}'),
+                    ("printer-controller-hp-branch", "printer-controller", "hp-oxp-branch-02", "HP FutureSmart", "0.1.0", '{"vendor": "hp", "platform": "OXP / Workpath", "embedded": true}'),
+                    ("site-server-branch-east", "site-server", "branch-east-cache", "Linux 6.x", "0.1.0", '{"offline_cache": true, "sync_mode": "planned"}'),
+                ],
+            )
+
+        users = {row["username"]: row["id"] for row in self.list_users()}
+        printers = {row["name"]: row["id"] for row in self.list_printers()}
+        demo_jobs = [
+            ("finance", "Finance Canon MEAP", "Quarterly board pack.pdf", 42, 2, True, True, "Finance", "print-provider", "print-provider-hq-cups"),
+            ("admin", "HQ SecurePrint Cluster", "Executive contract bundle.pdf", 18, 1, False, True, "Executive Office", "printer-controller", "printer-controller-canon-finance"),
+            ("marketing", "Marketing Xerox Color", "Campaign pitch deck.pdf", 28, 3, True, True, "Marketing", "client-agent", "client-agent-vdi-pool"),
+            ("student-a", "Library BW Fleet", "Research notes.pdf", 16, 1, False, True, "Students", "client-agent", "client-agent-vdi-pool"),
+            ("student-a", "HQ SecurePrint Cluster", "Full color thesis draft.pdf", 140, 1, True, True, "Students", "print-provider", "print-provider-hq-cups"),
+            ("hr", "Archive Kyocera HyPAS", "Policy archive.pdf", 80, 1, False, True, "Human Resources", "print-provider", "print-provider-hq-cups"),
+            ("itdesk", "Branch HP OXP Gateway", "Branch audit packet.pdf", 65, 1, True, True, "IT Operations", "site-server", "site-server-branch-east"),
+        ]
+        for username, printer_name, document, pages, copies, color, duplex, account, source, agent_id in demo_jobs:
+            self.submit_job(
+                user_id=users[username],
+                printer_id=printers[printer_name],
+                document_name=document,
+                pages=pages,
+                copies=copies,
+                color=color,
+                duplex=duplex,
+                account=account,
+                source=source,
+                agent_id=agent_id,
+            )
+        return self.dashboard()
+
     def list_users(self) -> list[dict[str, Any]]:
         return self._fetch_all("SELECT * FROM users ORDER BY display_name")
 
@@ -364,6 +445,16 @@ class Database:
             totals["users"] = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
             totals["printers"] = db.execute("SELECT COUNT(*) FROM printers").fetchone()[0]
             totals["agents"] = db.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
+            totals["denied_jobs"] = db.execute("SELECT COUNT(*) FROM print_jobs WHERE status = 'denied'").fetchone()[0]
+            totals["printed_jobs"] = db.execute("SELECT COUNT(*) FROM print_jobs WHERE status = 'printed'").fetchone()[0]
+            totals["estimated_savings_cents"] = int(totals["pages"] or 0) * 2
+            totals["readiness"] = {
+                "server": True,
+                "client_agent": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'client'").fetchone()[0] > 0,
+                "print_provider": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'print-provider'").fetchone()[0] > 0,
+                "printer_controller": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'printer-controller'").fetchone()[0] > 0,
+                "site_server_planned": True,
+            }
             totals["by_user"] = self._fetch_all(
                 """
                 SELECT u.display_name, COUNT(j.id) AS jobs, COALESCE(SUM(j.cost_cents), 0) AS cost_cents
@@ -382,6 +473,14 @@ class Database:
                 GROUP BY p.id
                 ORDER BY pages DESC
                 LIMIT 10
+                """
+            )
+            totals["by_source"] = self._fetch_all(
+                """
+                SELECT source, COUNT(*) AS jobs, COALESCE(SUM(cost_cents), 0) AS cost_cents
+                FROM print_jobs
+                GROUP BY source
+                ORDER BY jobs DESC
                 """
             )
             return totals

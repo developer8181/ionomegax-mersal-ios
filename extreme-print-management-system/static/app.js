@@ -2,11 +2,16 @@ const state = {
   users: [],
   printers: [],
   jobs: [],
+  agents: [],
   dashboard: {},
 };
 
 const money = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 const yesNo = (value) => (value ? "Yes" : "No");
+const titleCase = (value) =>
+  String(value || "")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -21,13 +26,14 @@ async function api(path, options = {}) {
 }
 
 async function refresh() {
-  const [dashboard, users, printers, jobs] = await Promise.all([
+  const [dashboard, users, printers, jobs, agents] = await Promise.all([
     api("/api/dashboard"),
     api("/api/users"),
     api("/api/printers"),
     api("/api/jobs"),
+    api("/api/agents"),
   ]);
-  Object.assign(state, { dashboard, users, printers, jobs });
+  Object.assign(state, { dashboard, users, printers, jobs, agents });
   render();
 }
 
@@ -37,19 +43,23 @@ function render() {
   renderUsers();
   renderPrinters();
   renderJobs();
+  renderAgents();
+  renderReadiness();
   renderReports();
+  document.querySelector("#heroJobs").textContent = state.dashboard.jobs ?? 0;
 }
 
 function renderCards() {
   const dashboard = state.dashboard;
   document.querySelector("#cards").innerHTML = [
-    ["Users", dashboard.users],
-    ["Printers", dashboard.printers],
-    ["Agents", dashboard.agents],
-    ["Print jobs", dashboard.jobs],
-    ["Held jobs", dashboard.held_jobs],
-    ["Pages", dashboard.pages],
+    ["Identities", dashboard.users],
+    ["Printer Fleet", dashboard.printers],
+    ["Active Agents", dashboard.agents],
+    ["Printed Jobs", dashboard.printed_jobs],
+    ["Held Jobs", dashboard.held_jobs],
+    ["Total Pages", dashboard.pages],
     ["Charged", money(dashboard.charged_cents)],
+    ["Eco Savings", money(dashboard.estimated_savings_cents)],
   ]
     .map(([label, value]) => `<article class="card"><span>${label}</span><strong>${value ?? 0}</strong></article>`)
     .join("");
@@ -66,12 +76,13 @@ function renderSelects() {
 
 function renderUsers() {
   document.querySelector("#users").innerHTML = table(
-    ["Name", "Department", "Balance", "Monthly quota", "Credit"],
+    ["Name", "Department", "Balance", "Monthly quota", "Overdraft", "Action"],
     state.users.map((user) => [
-      escapeHtml(user.display_name),
+      `<strong>${escapeHtml(user.display_name)}</strong><br><span class="muted">@${escapeHtml(user.username)}</span>`,
       escapeHtml(user.department),
       money(user.balance_cents),
       money(user.monthly_quota_cents),
+      money(user.overdraft_cents),
       `<button class="small" data-credit="${user.id}">Add $5</button>`,
     ]),
   );
@@ -79,35 +90,71 @@ function renderUsers() {
 
 function renderPrinters() {
   document.querySelector("#printers").innerHTML = table(
-    ["Name", "Location", "Color", "Duplex", "BW", "Color"],
+    ["Device", "Location", "Color", "Duplex", "BW", "Color", "Status"],
     state.printers.map((printer) => [
-      escapeHtml(printer.name),
+      `<strong>${escapeHtml(printer.name)}</strong>`,
       escapeHtml(printer.location),
       yesNo(printer.color_supported),
       yesNo(printer.duplex_supported),
       money(printer.bw_page_cents),
       money(printer.color_page_cents),
+      `<span class="status ${printer.status}">${escapeHtml(printer.status)}</span>`,
     ]),
   );
 }
 
 function renderJobs() {
-  document.querySelector("#jobs").innerHTML = table(
-    ["ID", "Document", "User", "Printer", "Pages", "Cost", "Status", "Reason", "Actions"],
+  document.querySelector("#jobsTable").innerHTML = table(
+    ["ID", "Document", "Identity", "Printer", "Pages", "Cost", "Source", "Status", "Action"],
     state.jobs.map((job) => [
-      job.id,
-      escapeHtml(job.document_name),
+      `#${job.id}`,
+      `<strong>${escapeHtml(job.document_name)}</strong><br><span class="muted">${escapeHtml(job.account)}</span>`,
       escapeHtml(job.user_name),
       escapeHtml(job.printer_name),
       `${job.pages} x ${job.copies}`,
       money(job.cost_cents),
-      `<span class="status ${job.status}">${job.status}</span>`,
-      escapeHtml(job.reason),
+      `<span class="badge">${escapeHtml(job.source || "web")}</span>`,
+      `<span class="status ${job.status}">${job.status}</span><br><span class="muted">${escapeHtml(job.reason)}</span>`,
       job.status === "held"
         ? `<button class="small" data-release="${job.id}">Release</button> <button class="small danger" data-deny="${job.id}">Deny</button>`
         : "",
     ]),
   );
+}
+
+function renderAgents() {
+  document.querySelector("#agentsTable").innerHTML = table(
+    ["Agent", "Type", "Host", "Version", "Metadata"],
+    state.agents.map((agent) => [
+      `<strong>${escapeHtml(agent.agent_id)}</strong>`,
+      `<span class="badge">${escapeHtml(agent.agent_type)}</span>`,
+      `${escapeHtml(agent.hostname)}<br><span class="muted">${escapeHtml(agent.os_name)}</span>`,
+      escapeHtml(agent.version),
+      escapeHtml(compactMetadata(agent.metadata)),
+    ]),
+  );
+}
+
+function renderReadiness() {
+  const readiness = state.dashboard.readiness || {};
+  const labels = {
+    server: "Extreme Server",
+    client_agent: "Client Agent",
+    print_provider: "Print Provider",
+    printer_controller: "Printer Controller",
+    site_server_planned: "Site Server Architecture",
+  };
+  document.querySelector("#readiness").innerHTML = Object.entries(labels)
+    .map(([key, label]) => {
+      const ready = Boolean(readiness[key]);
+      return `
+        <div class="ready-row">
+          <strong>${label}</strong>
+          <span class="badge ${ready ? "ready" : "not-ready"}">${ready ? "Ready" : "Pending"}</span>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 function renderReports() {
@@ -119,15 +166,32 @@ function renderReports() {
     ["Printer", "Printed jobs", "Pages"],
     (state.dashboard.by_printer || []).map((row) => [escapeHtml(row.name), row.jobs, row.pages]),
   );
+  document.querySelector("#sourceReport").innerHTML = table(
+    ["Source", "Jobs", "Cost"],
+    (state.dashboard.by_source || []).map((row) => [titleCase(row.source), row.jobs, money(row.cost_cents)]),
+  );
 }
 
 function table(headers, rows) {
+  if (!rows.length) {
+    return `<p class="muted">No records yet. Load the enterprise demo to populate the control plane.</p>`;
+  }
   return `
     <table>
       <thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead>
       <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
     </table>
   `;
+}
+
+function compactMetadata(metadata) {
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+  return Object.entries(metadata)
+    .slice(0, 3)
+    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
+    .join(" | ");
 }
 
 function escapeHtml(value) {
@@ -143,7 +207,7 @@ function toast(message) {
   const element = document.querySelector("#toast");
   element.textContent = message;
   element.classList.add("show");
-  setTimeout(() => element.classList.remove("show"), 2500);
+  setTimeout(() => element.classList.remove("show"), 2800);
 }
 
 document.querySelector("#jobForm").addEventListener("submit", async (event) => {
@@ -156,6 +220,8 @@ document.querySelector("#jobForm").addEventListener("submit", async (event) => {
     pages: Number(form.get("pages")),
     copies: Number(form.get("copies")),
     account: form.get("account"),
+    source: form.get("source"),
+    agent_id: form.get("agent_id"),
     color: form.get("color") === "on",
     duplex: form.get("duplex") === "on",
   };
@@ -175,17 +241,17 @@ document.body.addEventListener("click", async (event) => {
   try {
     if (creditId) {
       await api(`/api/users/${creditId}/credit`, { method: "POST", body: JSON.stringify({ amount: "5.00" }) });
-      toast("Credit added");
+      toast("Emergency credit added");
       await refresh();
     }
     if (releaseId) {
       await api(`/api/jobs/${releaseId}/release`, { method: "POST", body: "{}" });
-      toast("Job released");
+      toast("Held job released");
       await refresh();
     }
     if (denyId) {
-      await api(`/api/jobs/${denyId}/deny`, { method: "POST", body: JSON.stringify({ reason: "Denied from dashboard" }) });
-      toast("Job denied");
+      await api(`/api/jobs/${denyId}/deny`, { method: "POST", body: JSON.stringify({ reason: "Denied from command center" }) });
+      toast("Held job denied");
       await refresh();
     }
   } catch (error) {
@@ -197,6 +263,16 @@ document.querySelector("#resetQuotas").addEventListener("click", async () => {
   try {
     await api("/api/quotas/reset", { method: "POST", body: "{}" });
     toast("Monthly quotas reset");
+    await refresh();
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
+document.querySelector("#loadDemo").addEventListener("click", async () => {
+  try {
+    await api("/api/demo/reset", { method: "POST", body: "{}" });
+    toast("Enterprise demo data loaded");
     await refresh();
   } catch (error) {
     toast(error.message);
