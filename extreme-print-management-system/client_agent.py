@@ -8,17 +8,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from epms.agents import build_heartbeat
+from epms.security import AGENT_TOKEN_HEADER
 
 
-def request_json(server_url: str, path: str, payload: dict | None = None) -> object:
+def request_json(server_url: str, path: str, payload: dict | None = None, agent_token: str = "") -> object:
     url = server_url.rstrip("/") + path
     data = None if payload is None else json.dumps(payload).encode("utf-8")
-    request = Request(url, data=data, headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    if agent_token:
+        headers[AGENT_TOKEN_HEADER] = agent_token
+    request = Request(url, data=data, headers=headers)
     if payload is not None:
         request.method = "POST"
     try:
@@ -43,7 +48,7 @@ def send_heartbeat(args: argparse.Namespace) -> object:
         agent_type="client",
         metadata={"mode": "client-agent", "direct_print_monitor": args.direct_monitor},
     )
-    return request_json(args.server, "/api/agents/heartbeat", heartbeat.to_dict())
+    return request_json(args.server, "/api/agents/heartbeat", heartbeat.to_dict(), args.agent_token)
 
 
 def show_balance(args: argparse.Namespace) -> object:
@@ -71,13 +76,14 @@ def submit_job(args: argparse.Namespace) -> object:
         "source": "client-agent",
         "agent_id": args.agent_id,
     }
-    return request_json(args.server, "/api/jobs", payload)
+    return request_json(args.server, "/api/jobs", payload, args.agent_token)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Extreme Client Agent prototype")
     parser.add_argument("--server", default="http://127.0.0.1:8080", help="Extreme Server URL")
     parser.add_argument("--agent-id", default="client-agent-local", help="Stable client agent id")
+    parser.add_argument("--agent-token", default=os.environ.get("EPMS_AGENT_TOKEN", ""), help="Agent API token")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     heartbeat = subparsers.add_parser("heartbeat", help="Register or refresh this client agent")

@@ -17,6 +17,9 @@ The project is intentionally standalone and does not modify the existing Monal a
 - Client Agent CLI prototype for workstation-side balance checks and print-job submission.
 - Print Provider CLI prototype for print-server/gateway spool events with an offline queue.
 - Printer Controller CLI prototype for embedded/gateway-side platform metadata and held-job actions.
+- Optional agent API token enforcement for real client/provider/controller communication.
+- Audit log persistence for operational events, job actions, credits, quota resets, and agent heartbeats.
+- Real Linux CUPS discovery and polling adapter using `lpstat`.
 - Enterprise demo mode with polished command-center UI, readiness indicators, agent mesh, and source intelligence.
 - Light, comfortable dashboard theme with Arabic/English language switching and RTL support.
 - No external runtime dependencies; it uses Python's standard library.
@@ -71,6 +74,15 @@ To use a different database file:
 EPMS_DB=/path/to/epms.sqlite3 python3 app.py
 ```
 
+For a production-style agent token:
+
+```bash
+export EPMS_AGENT_TOKEN='replace-with-a-long-random-token'
+python3 app.py
+```
+
+When `EPMS_AGENT_TOKEN` is set, agent-originated job submissions and agent heartbeats must send the same token with the `X-EPMS-Agent-Token` header. The provided agent CLIs read this value from the environment automatically.
+
 ## Run the Client Agent prototype
 
 In another terminal while the server is running:
@@ -102,6 +114,27 @@ data/print-provider-offline.jsonl
 
 and can be replayed later with `flush-queue`.
 
+### Real CUPS integration
+
+On a Linux print server with CUPS installed, the provider can discover queues and poll real CUPS jobs via `lpstat`:
+
+```bash
+python3 print_provider.py cups-discover
+python3 print_provider.py cups-poll \
+  --user-map config/cups-user-map.example.json \
+  --printer-map config/cups-printer-map.example.json \
+  --default-pages 1 \
+  --account CUPS
+```
+
+Notes:
+
+- `cups-discover` reads `lpstat -p`.
+- `cups-poll` reads `lpstat -W all -o`.
+- CUPS output does not reliably expose page counts for every driver, so `--default-pages` is used until a driver-specific parser is added.
+- `data/cups-seen-jobs.json` prevents duplicate submissions.
+- Real deployments should replace the example user/printer maps with IDs from the production server.
+
 ## Run the Printer Controller prototype
 
 ```bash
@@ -122,6 +155,7 @@ Real embedded support must be implemented per vendor SDK/platform. The prototype
 | `GET` | `/api/printers` | List printers and capabilities |
 | `GET` | `/api/jobs` | List recent print jobs |
 | `GET` | `/api/agents` | List registered server/client/provider/controller agents |
+| `GET` | `/api/audit-logs` | List recent audit events |
 | `GET` | `/api/printer-platforms` | List supported embedded/gateway platform profiles |
 | `GET` | `/api/readiness` | Demo readiness report for server and agent components |
 | `POST` | `/api/jobs` | Submit a simulated print job |

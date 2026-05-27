@@ -1,0 +1,8 @@
+{
+  "admin": 1,
+  "finance": 2,
+  "hr": 3,
+  "student-a": 4,
+  "marketing": 5,
+  "itdesk": 6
+}

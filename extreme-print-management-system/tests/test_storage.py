@@ -114,6 +114,7 @@ class StorageWorkflowTests(unittest.TestCase):
         self.assertEqual(second["version"], "0.1.1")
         self.assertEqual(second["metadata"]["platform"], "Workpath")
         self.assertEqual(len(self.db.list_agents()), 1)
+        self.assertEqual(self.db.list_audit_logs()[0]["event_type"], "agent_heartbeat")
 
     def test_enterprise_demo_seed_populates_full_control_plane(self):
         dashboard = self.db.seed_enterprise_demo()
@@ -127,6 +128,7 @@ class StorageWorkflowTests(unittest.TestCase):
         self.assertTrue(dashboard["readiness"]["print_provider"])
         self.assertTrue(dashboard["readiness"]["printer_controller"])
         self.assertTrue(any(row["source"] == "print-provider" for row in dashboard["by_source"]))
+        self.assertGreater(dashboard["audit_logs"], 0)
 
 
 if __name__ == "__main__":

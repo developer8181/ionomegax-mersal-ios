@@ -92,6 +92,16 @@ class Database:
                     first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    actor TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL DEFAULT '',
+                    details_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
                 """
             )
             self._ensure_column(db, "print_jobs", "source", "TEXT NOT NULL DEFAULT 'web'")
@@ -134,9 +144,10 @@ class Database:
             db.execute("DELETE FROM transactions")
             db.execute("DELETE FROM print_jobs")
             db.execute("DELETE FROM agents")
+            db.execute("DELETE FROM audit_logs")
             db.execute("DELETE FROM printers")
             db.execute("DELETE FROM users")
-            db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'print_jobs', 'agents', 'printers', 'users')")
+            db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'print_jobs', 'agents', 'audit_logs', 'printers', 'users')")
 
             db.executemany(
                 """
@@ -248,6 +259,14 @@ class Database:
                 """,
                 (user_id, amount_cents, balance_after, note),
             )
+            self._insert_audit(
+                db,
+                actor="administrator",
+                event_type="credit_added",
+                entity_type="user",
+                entity_id=str(user_id),
+                details={"amount_cents": amount_cents, "balance_after_cents": balance_after, "note": note},
+            )
             return self._row_to_dict(self._get_row(db, "SELECT * FROM users WHERE id = ?", (user_id,)))
 
     def record_agent_heartbeat(
@@ -288,6 +307,14 @@ class Database:
             )
             agent = self._row_to_dict(self._get_row(db, "SELECT * FROM agents WHERE agent_id = ?", (agent_id,)))
             agent["metadata"] = json.loads(agent.pop("metadata_json") or "{}")
+            self._insert_audit(
+                db,
+                actor=agent_id,
+                event_type="agent_heartbeat",
+                entity_type="agent",
+                entity_id=agent_id,
+                details={"agent_type": agent_type, "hostname": hostname},
+            )
             return agent
 
     def submit_job(
@@ -374,6 +401,14 @@ class Database:
             job_id = cursor.lastrowid
             if status == "printed":
                 self._charge_job(db, user_id=user_id, job_id=job_id, cost_cents=cost)
+            self._insert_audit(
+                db,
+                actor=agent_id or "web",
+                event_type="print_job_submitted",
+                entity_type="print_job",
+                entity_id=str(job_id),
+                details={"status": status, "source": source, "cost_cents": cost},
+            )
             return self._row_to_dict(self._get_job_row(db, job_id))
 
     def release_job(self, job_id: int) -> dict[str, Any]:
@@ -398,6 +433,14 @@ class Database:
                 """,
                 (job_id,),
             )
+            self._insert_audit(
+                db,
+                actor="administrator",
+                event_type="print_job_released",
+                entity_type="print_job",
+                entity_id=str(job_id),
+                details={"cost_cents": job["cost_cents"]},
+            )
             return self._row_to_dict(self._get_job_row(db, job_id))
 
     def deny_job(self, job_id: int, reason: str = "Denied by administrator") -> dict[str, Any]:
@@ -408,6 +451,14 @@ class Database:
             db.execute(
                 "UPDATE print_jobs SET status = 'denied', reason = ? WHERE id = ?",
                 (reason, job_id),
+            )
+            self._insert_audit(
+                db,
+                actor="administrator",
+                event_type="print_job_denied",
+                entity_type="print_job",
+                entity_id=str(job_id),
+                details={"reason": reason},
             )
             return self._row_to_dict(self._get_job_row(db, job_id))
 
@@ -426,7 +477,28 @@ class Database:
                     """,
                     (user["id"], user["monthly_quota_cents"], user["monthly_quota_cents"]),
                 )
+            self._insert_audit(
+                db,
+                actor="administrator",
+                event_type="quota_reset",
+                entity_type="user",
+                entity_id="all_active",
+                details={"active_users": len(users)},
+            )
             return self.list_users()
+
+    def list_audit_logs(self, limit: int = 100) -> list[dict[str, Any]]:
+        logs = self._fetch_all(
+            """
+            SELECT * FROM audit_logs
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        for log in logs:
+            log["details"] = json.loads(log.pop("details_json") or "{}")
+        return logs
 
     def dashboard(self) -> dict[str, Any]:
         with self.connect() as db:
@@ -445,6 +517,7 @@ class Database:
             totals["users"] = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
             totals["printers"] = db.execute("SELECT COUNT(*) FROM printers").fetchone()[0]
             totals["agents"] = db.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
+            totals["audit_logs"] = db.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
             totals["denied_jobs"] = db.execute("SELECT COUNT(*) FROM print_jobs WHERE status = 'denied'").fetchone()[0]
             totals["printed_jobs"] = db.execute("SELECT COUNT(*) FROM print_jobs WHERE status = 'printed'").fetchone()[0]
             totals["estimated_savings_cents"] = int(totals["pages"] or 0) * 2
@@ -495,6 +568,24 @@ class Database:
             VALUES (?, ?, ?, ?, 'debit', 'Print job charge')
             """,
             (user_id, job_id, -cost_cents, balance_after),
+        )
+
+    @staticmethod
+    def _insert_audit(
+        db: sqlite3.Connection,
+        *,
+        actor: str,
+        event_type: str,
+        entity_type: str,
+        entity_id: str,
+        details: dict[str, Any],
+    ) -> None:
+        db.execute(
+            """
+            INSERT INTO audit_logs (actor, event_type, entity_type, entity_id, details_json)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (actor, event_type, entity_type, entity_id, json.dumps(details, sort_keys=True)),
         )
 
     def _get_job_row(self, db: sqlite3.Connection, job_id: int) -> sqlite3.Row:

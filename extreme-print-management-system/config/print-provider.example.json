@@ -1,7 +1,11 @@
 {
   "server": "http://127.0.0.1:8080",
   "agent_id": "print-provider-main-server",
+  "agent_token_env": "EPMS_AGENT_TOKEN",
   "spooler": "cups",
   "queue_names": ["Main Office HP", "Library BW"],
-  "offline_queue": "data/print-provider-offline.jsonl"
+  "offline_queue": "data/print-provider-offline.jsonl",
+  "cups_state": "data/cups-seen-jobs.json",
+  "cups_user_map": "config/cups-user-map.example.json",
+  "cups_printer_map": "config/cups-printer-map.example.json"
 }
