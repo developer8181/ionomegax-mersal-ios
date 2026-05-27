@@ -27,7 +27,7 @@ The MVP is intentionally dependency-free and uses:
 
 ```bash
 cd print_management_system
-python -m print_mgmt.app --db ./print_management.sqlite3 --host 127.0.0.1 --port 8080
+python3 -m print_mgmt.app --db ./print_management.sqlite3 --host 127.0.0.1 --port 8080
 ```
 
 Open:
@@ -78,7 +78,7 @@ curl -X POST http://127.0.0.1:8080/api/jobs/1/cancel
 
 ```bash
 cd print_management_system
-PYTHONPATH=. python -m unittest discover -s tests
+PYTHONPATH=. python3 -m unittest discover -s tests
 ```
 
 ## Next production steps
