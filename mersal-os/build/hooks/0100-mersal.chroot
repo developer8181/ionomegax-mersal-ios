@@ -12,7 +12,6 @@ systemctl enable mersal-command-center.service || true
 systemctl enable mersal-guard-agent.service || true
 systemctl enable mersal-gateway.service || true
 systemctl enable mersal-update-orbit.service || true
-systemctl enable suricata.service || true
 systemctl enable cockpit.socket || true
 
 # Trial user for live and installed

@@ -13,7 +13,6 @@ wget
 openssl
 ca-certificates
 nftables
-suricata
 cockpit
 network-manager
 network-manager-gnome
