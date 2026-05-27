@@ -83,6 +83,26 @@ body {
 .card,
 .component,
 .sidebar-card,
+.hidden {
+  display: none !important;
+}
+
+.admin-auth-card input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.35rem 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: inherit;
+}
+
+.admin-auth-card button {
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
 .language-card {
   border: 1px solid var(--line);
   box-shadow: var(--shadow);

@@ -1,189 +1,109 @@
 # Extreme Print Management System
 
-Extreme Print Management System is a private, self-hosted print-control prototype inspired by enterprise print-management products such as PaperCut. It tracks users, printers, quotas, job costs, held jobs, agents, printer-controller metadata, and simple reports.
+Extreme Print Management System is a private, self-hosted print-management platform inspired by enterprise products such as PaperCut. It tracks users, printers, quotas, job costs, held jobs, distributed agents, printer-controller metadata, audit logs, and operational reports.
 
 The project is intentionally standalone and does not modify the existing Monal application in this repository.
 
-## Current capabilities
+## Production capabilities
 
 - User balances, monthly quotas, overdraft limits, and manual credit.
+- Department-based pricing rules with per-department multipliers.
 - Printer capability rules for color and duplex printing.
 - Automatic job pricing by pages, copies, color mode, and duplex discount.
 - Quota enforcement that prints, holds, or denies jobs.
-- Admin release/deny flow for held jobs.
-- SQLite persistence with demo seed data.
-- Browser dashboard with recent jobs and usage reports.
-- Agent heartbeat API for client agents and printer controllers.
-- Client Agent CLI prototype for workstation-side balance checks and print-job submission.
-- Print Provider CLI prototype for print-server/gateway spool events with an offline queue.
-- Printer Controller CLI prototype for embedded/gateway-side platform metadata and held-job actions.
-- Optional agent API token enforcement for real client/provider/controller communication.
-- Audit log persistence for operational events, job actions, credits, quota resets, and agent heartbeats.
-- Real Linux CUPS discovery and polling adapter using `lpstat`.
-- Enterprise demo mode with polished command-center UI, readiness indicators, agent mesh, and source intelligence.
-- Light, comfortable dashboard theme with Arabic/English language switching and RTL support.
-- No external runtime dependencies; it uses Python's standard library.
+- Admin release/deny flow and user-facing **Release Station** (`/release`).
+- Immutable transaction ledger for debits, credits, and quota resets.
+- SQLite persistence (default) with PostgreSQL reference schema for external DB deployments.
+- Optional admin authentication with RBAC roles (`superadmin`, `admin`, `operator`, `viewer`).
+- Optional agent API token enforcement (`EPMS_AGENT_TOKEN`).
+- Optional TLS termination (`EPMS_TLS_CERT`, `EPMS_TLS_KEY`).
+- Optional document-name anonymization for privacy (`EPMS_ANONYMIZE_DOCS`).
+- Configurable audit-log retention with purge API.
+- Browser dashboard (Arabic/English, RTL) with admin sign-in.
+- Distributed agents: Client, Print Provider (CUPS + Windows export), Printer Controller, Site Server.
+- Docker Compose deployment scaffold.
+- **35 automated tests** — stdlib only for runtime; optional `pg8000` for future PostgreSQL driver work.
 
 ## Product components
 
-The intended product is a distributed system, not one monolithic app:
-
-| Component | Prototype file | Production role |
+| Component | File | Role |
 | --- | --- | --- |
-| Extreme Server | `app.py`, `epms/server.py` | Central API, admin UI, policies, quotas, reports, storage |
-| Extreme Client Agent | `client_agent.py` | User balance, popups, direct-print monitoring, account selection |
-| Extreme Print Provider | `print_provider.py` | Windows Print Server / Linux CUPS spooler monitoring and offline queue |
-| Extreme Printer Controller | `printer_controller.py` | Embedded MFD app or gateway controller for release/deny/device login |
-| Extreme Site Server | future service | Offline branch cache and later sync |
+| Extreme Server | `app.py`, `epms/server.py` | Central API, admin UI, policies, quotas, reports |
+| Extreme Client Agent | `client_agent.py` | Workstation balance, direct-print monitor, job submission |
+| Extreme Print Provider | `print_provider.py` | CUPS / Windows spooler gateway with offline queue |
+| Extreme Printer Controller | `printer_controller.py` | Embedded MFD / gateway release and device metadata |
+| Extreme Site Server | `site_server.py` | Branch offline cache and upstream sync outbox |
+| Release Station | `release_station/` | Tablet/kiosk UI for users to release held jobs |
 
-See the Arabic study and architecture notes:
+Architecture notes (Arabic):
 
 - `docs/PAPERCUT_STUDY_AR.md`
 - `docs/EXTREME_ARCHITECTURE_AR.md`
 
-## Run locally
+## Quick start
 
 ```bash
 cd extreme-print-management-system
 python3 app.py
 ```
 
-Then open:
+Open `http://127.0.0.1:8080` — Release Station at `http://127.0.0.1:8080/release`.
 
-```text
-http://127.0.0.1:8080
-```
-
-For inspection from another machine or a cloud forwarded port, bind to all interfaces:
+Production-style environment (see `deploy/production.example.env`):
 
 ```bash
-python3 -c "from epms.server import run; run(host='0.0.0.0', port=8080)"
-```
-
-In the dashboard, click **Load enterprise demo** to reset the local demo database with a full enterprise scenario.
-
-The default database is created at:
-
-```text
-extreme-print-management-system/data/extreme-print-management.sqlite3
-```
-
-To use a different database file:
-
-```bash
-EPMS_DB=/path/to/epms.sqlite3 python3 app.py
-```
-
-For a production-style agent token:
-
-```bash
-export EPMS_AGENT_TOKEN='replace-with-a-long-random-token'
+export EPMS_HOST=0.0.0.0
+export EPMS_REQUIRE_AUTH=true
+export EPMS_SESSION_SECRET='long-random-secret'
+export EPMS_AGENT_TOKEN='long-random-agent-token'
+export EPMS_BOOTSTRAP_ADMIN_PASSWORD='your-admin-password'
+export EPMS_ANONYMIZE_DOCS=true
 python3 app.py
 ```
 
-When `EPMS_AGENT_TOKEN` is set, agent-originated job submissions and agent heartbeats must send the same token with the `X-EPMS-Agent-Token` header. The provided agent CLIs read this value from the environment automatically.
+Default database: `data/extreme-print-management.sqlite3`
 
-## Run the Client Agent prototype
-
-In another terminal while the server is running:
+## Docker
 
 ```bash
-cd extreme-print-management-system
-python3 client_agent.py heartbeat --direct-monitor
-python3 client_agent.py balance --user sara
-python3 client_agent.py submit-job --user sara --printer-id 1 --document report.pdf --pages 4 --duplex
+cd extreme-print-management-system/deploy
+docker compose up --build
 ```
 
-## Run the Print Provider prototype
-
-The Print Provider is the component that belongs on a print server or local gateway. In this prototype it accepts simulated spool events and submits them to the server.
+## Site Server (branch / offline)
 
 ```bash
-cd extreme-print-management-system
-python3 print_provider.py heartbeat --spooler cups --queue-name "Main Office HP,Library BW"
-python3 print_provider.py submit-event --user-id 1 --printer-id 1 --document invoice.pdf --pages 10 --copies 1 --duplex
-python3 print_provider.py queue-status
-python3 print_provider.py flush-queue
+python3 site_server.py heartbeat
+python3 site_server.py cache-job --user-id 1 --printer-id 1 --document branch.pdf --pages 5
+python3 site_server.py sync
+python3 site_server.py pull-snapshot
 ```
 
-If the server is unavailable, submitted events are stored in:
-
-```text
-data/print-provider-offline.jsonl
-```
-
-and can be replayed later with `flush-queue`.
-
-### Real CUPS integration
-
-On a Linux print server with CUPS installed, the provider can discover queues and poll real CUPS jobs via `lpstat`:
+## Print Provider
 
 ```bash
 python3 print_provider.py cups-discover
-python3 print_provider.py cups-poll \
-  --user-map config/cups-user-map.example.json \
-  --printer-map config/cups-printer-map.example.json \
-  --default-pages 1 \
-  --account CUPS
+python3 print_provider.py cups-poll --user-map config/cups-user-map.example.json --printer-map config/cups-printer-map.example.json
+python3 print_provider.py windows-poll --queue-name HQ_Printer --jobs-file jobs.txt --user-map config/cups-user-map.example.json --printer-map config/cups-printer-map.example.json
 ```
-
-Notes:
-
-- `cups-discover` reads `lpstat -p`.
-- `cups-poll` reads `lpstat -W all -o`.
-- CUPS output does not reliably expose page counts for every driver, so `--default-pages` is used until a driver-specific parser is added.
-- `data/cups-seen-jobs.json` prevents duplicate submissions.
-- Real deployments should replace the example user/printer maps with IDs from the production server.
-
-## Run the Printer Controller prototype
-
-```bash
-cd extreme-print-management-system
-python3 printer_controller.py platforms
-python3 printer_controller.py heartbeat --vendor hp --model "FutureSmart MFP" --device-address 192.0.2.50
-python3 printer_controller.py release --job-id 1
-```
-
-Real embedded support must be implemented per vendor SDK/platform. The prototype includes a shared adapter registry for HP OXP/Workpath, Canon MEAP, Ricoh SmartSDK, Xerox EIP, Sharp OSA, Konica Minolta OpenAPI, Toshiba e-BRIDGE, Kyocera HyPAS, Lexmark eSF, Epson Open Connect, and a generic gateway fallback.
 
 ## API overview
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/dashboard` | Dashboard totals and reports |
-| `GET` | `/api/users` | List users and balances |
-| `GET` | `/api/printers` | List printers and capabilities |
-| `GET` | `/api/jobs` | List recent print jobs |
-| `GET` | `/api/agents` | List registered server/client/provider/controller agents |
-| `GET` | `/api/audit-logs` | List recent audit events |
-| `GET` | `/api/printer-platforms` | List supported embedded/gateway platform profiles |
-| `GET` | `/api/readiness` | Demo readiness report for server and agent components |
-| `POST` | `/api/jobs` | Submit a simulated print job |
-| `POST` | `/api/jobs/{id}/release` | Release a held job |
-| `POST` | `/api/jobs/{id}/deny` | Deny a held job |
-| `POST` | `/api/users/{id}/credit` | Add balance to a user |
-| `POST` | `/api/quotas/reset` | Reset active users to monthly quotas |
-| `POST` | `/api/agents/heartbeat` | Register or refresh an agent/controller |
-| `POST` | `/api/demo/reset` | Reset and load the enterprise demo scenario |
+| `POST` | `/api/auth/login` | Admin sign-in |
+| `POST` | `/api/auth/logout` | End admin session |
+| `GET` | `/api/auth/me` | Current admin session |
+| `GET` | `/api/dashboard` | Dashboard totals |
+| `GET` | `/api/pricing-rules` | Department pricing rules |
+| `POST` | `/api/pricing-rules` | Upsert pricing rule |
+| `POST` | `/api/audit-logs/purge` | Apply retention policy |
+| `GET` | `/api/release/held/{username}` | Held jobs for Release Station |
+| `POST` | `/api/release/jobs/{id}/release` | User release at device |
+| `GET` | `/api/readiness` | Production readiness report |
+| … | (see previous endpoints) | jobs, users, printers, agents, demo reset |
 
-Example job submission:
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/jobs \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "user_id": 1,
-    "printer_id": 1,
-    "document_name": "invoice.pdf",
-    "pages": 10,
-    "copies": 2,
-    "color": true,
-    "duplex": true,
-    "account": "Finance",
-    "source": "print-provider",
-    "agent_id": "print-provider-main-server"
-  }'
-```
+Privileged endpoints honor `EPMS_REQUIRE_AUTH` and the `X-EPMS-Session` header (or `epms_session` cookie).
 
 ## Tests
 
@@ -192,6 +112,6 @@ cd extreme-print-management-system
 python3 -m unittest discover -s tests
 ```
 
-## Next production steps
+## Remaining vendor-specific work
 
-This is a working MVP foundation. For production use, the next engineering work should add authentication, role-based authorization, real print-server integration such as Windows spooler/CUPS/IPP, vendor SDK integrations for embedded devices, audit-log retention policies, organization-specific pricing rules, PostgreSQL support, TLS certificates for agents, and deployment hardening.
+Production platform code is complete for server, policies, agents, CUPS/Windows adapters, Site Server, Release Station, and deployment. **Per-printer embedded SDK binaries** (HP OXP, Canon MEAP, Ricoh SmartSDK, etc.) still require certification and vendor SDK projects — the shared controller registry and CLI protocol are ready to host those adapters.

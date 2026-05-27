@@ -1,0 +1,2 @@
+# Optional production dependencies (application runs on stdlib alone by default)
+pg8000>=1.30.0

@@ -5,6 +5,8 @@ const state = {
   agents: [],
   dashboard: {},
   lang: localStorage.getItem("epms-language") || "en",
+  sessionToken: localStorage.getItem("epms-session") || "",
+  adminUser: null,
 };
 
 const messages = {
@@ -25,6 +27,13 @@ const messages = {
       "Centralized print security, quotas, embedded device control, direct-print monitoring, offline provider queues, and executive-grade reporting.",
     loadDemo: "Load enterprise demo",
     resetQuotas: "Reset monthly quotas",
+    adminLogin: "Admin sign-in",
+    signIn: "Sign in",
+    signOut: "Sign out",
+    adminGuest: "Guest mode (auth optional)",
+    adminSignedIn: "Signed in as {name} ({role})",
+    toastSignedIn: "Admin session started",
+    toastSignedOut: "Admin session ended",
     liveControlPlane: "Live control plane",
     trackedDecisions: "tracked print decisions",
     secureRelease: "Secure Release",
@@ -156,6 +165,13 @@ const messages = {
       "أمان مركزي للطباعة، حصص وأرصدة، تحكم بالأجهزة المدمجة، مراقبة الطباعة المباشرة، طوابير دون اتصال، وتقارير تنفيذية.",
     loadDemo: "تحميل عرض مؤسسي",
     resetQuotas: "تصفير الحصص الشهرية",
+    adminLogin: "دخول المسؤول",
+    signIn: "تسجيل الدخول",
+    signOut: "تسجيل الخروج",
+    adminGuest: "وضع ضيف (المصادقة اختيارية)",
+    adminSignedIn: "مسجّل كـ {name} ({role})",
+    toastSignedIn: "بدأت جلسة المسؤول",
+    toastSignedOut: "انتهت جلسة المسؤول",
     liveControlPlane: "لوحة تحكم مباشرة",
     trackedDecisions: "قرار طباعة متتبع",
     secureRelease: "إطلاق آمن",
@@ -292,9 +308,17 @@ const statusLabels = {
   maintenance: "statusMaintenance",
 };
 
+function authHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  if (state.sessionToken) {
+    headers["X-EPMS-Session"] = state.sessionToken;
+  }
+  return headers;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), ...(options.headers || {}) },
     ...options,
   });
   const data = await response.json();
@@ -599,5 +623,66 @@ document.querySelector("#loadDemo").addEventListener("click", async () => {
   }
 });
 
+function renderAdminAuth() {
+  const status = document.querySelector("#adminAuthStatus");
+  const loginBtn = document.querySelector("#adminLoginBtn");
+  const logoutBtn = document.querySelector("#adminLogoutBtn");
+  if (!status) return;
+  if (state.adminUser) {
+    status.textContent = t("adminSignedIn")
+      .replace("{name}", state.adminUser.display_name)
+      .replace("{role}", state.adminUser.role);
+    loginBtn.classList.add("hidden");
+    logoutBtn.classList.remove("hidden");
+  } else {
+    status.textContent = t("adminGuest");
+    loginBtn.classList.remove("hidden");
+    logoutBtn.classList.add("hidden");
+  }
+}
+
+async function refreshAuth() {
+  try {
+    const me = await api("/api/auth/me");
+    state.adminUser = me.authenticated ? me.user : null;
+  } catch {
+    state.adminUser = null;
+  }
+  renderAdminAuth();
+}
+
+document.querySelector("#adminLoginBtn")?.addEventListener("click", async () => {
+  const username = document.querySelector("#adminUsername").value.trim();
+  const password = document.querySelector("#adminPassword").value;
+  try {
+    const result = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    state.sessionToken = result.token;
+    localStorage.setItem("epms-session", state.sessionToken);
+    state.adminUser = result.user;
+    renderAdminAuth();
+    toast(t("toastSignedIn"));
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
+document.querySelector("#adminLogoutBtn")?.addEventListener("click", async () => {
+  try {
+    await api("/api/auth/logout", { method: "POST", body: "{}" });
+  } catch {
+    /* ignore */
+  }
+  state.sessionToken = "";
+  state.adminUser = null;
+  localStorage.removeItem("epms-session");
+  renderAdminAuth();
+  toast(t("toastSignedOut"));
+});
+
 setLanguage(state.lang);
-refresh().catch((error) => toast(error.message));
+refreshAuth()
+  .then(() => refresh())
+  .catch((error) => toast(error.message));

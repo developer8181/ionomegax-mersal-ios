@@ -1,0 +1,7 @@
+{
+  "site_id": "branch-east",
+  "upstream": "https://epms.example.com",
+  "agent_id": "site-server-branch-east",
+  "agent_token_env": "EPMS_AGENT_TOKEN",
+  "cache_db": "data/site-branch-east.sqlite3"
+}

@@ -7,12 +7,22 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .auth import AdminUser, generate_session_token, hash_password, is_session_active, session_expiry_iso, verify_password
 from .core import PrintCostPolicy, calculate_job_cost, evaluate_quota, money_to_cents
+from .policy import apply_pricing_rules, scrub_job_document
 
 
 class Database:
-    def __init__(self, path: str | Path):
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        anonymize_documents: bool = False,
+        audit_retention_days: int = 365,
+    ):
         self.path = Path(path)
+        self.anonymize_documents = anonymize_documents
+        self.audit_retention_days = audit_retention_days
 
     def connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,10 +112,53 @@ class Database:
                     details_json TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS admin_users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'admin',
+                    display_name TEXT NOT NULL,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS admin_sessions (
+                    token TEXT PRIMARY KEY,
+                    admin_user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+                    expires_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS pricing_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    department TEXT NOT NULL UNIQUE,
+                    bw_multiplier_percent INTEGER NOT NULL DEFAULT 100,
+                    color_multiplier_percent INTEGER NOT NULL DEFAULT 100,
+                    duplex_discount_override INTEGER,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    key TEXT PRIMARY KEY,
+                    value_json TEXT NOT NULL DEFAULT '{}'
+                );
+
+                CREATE TABLE IF NOT EXISTS site_sync_outbox (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    site_id TEXT NOT NULL,
+                    method TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    payload_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    synced_at TEXT
+                );
                 """
             )
             self._ensure_column(db, "print_jobs", "source", "TEXT NOT NULL DEFAULT 'web'")
             self._ensure_column(db, "print_jobs", "agent_id", "TEXT NOT NULL DEFAULT ''")
+            self._seed_default_pricing_rules(db)
 
     def seed_demo(self) -> None:
         with self.connect() as db:
@@ -233,7 +286,7 @@ class Database:
         return agents
 
     def list_jobs(self, limit: int = 100) -> list[dict[str, Any]]:
-        return self._fetch_all(
+        jobs = self._fetch_all(
             """
             SELECT j.*, u.display_name AS user_name, p.name AS printer_name
             FROM print_jobs j
@@ -244,6 +297,7 @@ class Database:
             """,
             (limit,),
         )
+        return [scrub_job_document(job, enabled=self.anonymize_documents) for job in jobs]
 
     def add_credit(self, user_id: int, amount_cents: int, note: str = "Manual credit") -> dict[str, Any]:
         if amount_cents <= 0:
@@ -339,15 +393,21 @@ class Database:
         with self.connect() as db:
             user = self._get_row(db, "SELECT * FROM users WHERE id = ?", (user_id,))
             printer = self._get_row(db, "SELECT * FROM printers WHERE id = ?", (printer_id,))
+            base_policy = PrintCostPolicy(
+                bw_page_cents=printer["bw_page_cents"],
+                color_page_cents=printer["color_page_cents"],
+            )
+            policy = apply_pricing_rules(
+                base=base_policy,
+                department=str(user["department"]),
+                rules=self._list_pricing_rules(db),
+            )
             cost = calculate_job_cost(
                 pages=pages,
                 copies=copies,
                 color=color,
                 duplex=duplex,
-                policy=PrintCostPolicy(
-                    bw_page_cents=printer["bw_page_cents"],
-                    color_page_cents=printer["color_page_cents"],
-                ),
+                policy=policy,
             )
 
             status = "printed"
@@ -500,6 +560,224 @@ class Database:
             log["details"] = json.loads(log.pop("details_json") or "{}")
         return logs
 
+    def purge_expired_audit_logs(self) -> dict[str, int]:
+        with self.connect() as db:
+            cursor = db.execute(
+                """
+                DELETE FROM audit_logs
+                WHERE datetime(created_at) < datetime('now', ?)
+                """,
+                (f"-{self.audit_retention_days} days",),
+            )
+            removed = cursor.rowcount
+            if removed:
+                self._insert_audit(
+                    db,
+                    actor="system",
+                    event_type="audit_retention_purge",
+                    entity_type="audit_logs",
+                    entity_id="batch",
+                    details={"removed": removed, "retention_days": self.audit_retention_days},
+                )
+            return {"removed": removed, "retention_days": self.audit_retention_days}
+
+    def bootstrap_admin(self, *, password: str | None = None) -> dict[str, Any] | None:
+        with self.connect() as db:
+            count = db.execute("SELECT COUNT(*) FROM admin_users").fetchone()[0]
+            if count > 0:
+                return None
+            initial_password = password or "ChangeMeNow!"
+            db.execute(
+                """
+                INSERT INTO admin_users (username, password_hash, role, display_name)
+                VALUES (?, ?, 'superadmin', 'System Administrator')
+                """,
+                ("admin", hash_password(initial_password)),
+            )
+            return {
+                "username": "admin",
+                "role": "superadmin",
+                "bootstrap_password_set": password is not None,
+                "message": "Default admin account created. Change the password immediately.",
+            }
+
+    def authenticate_admin(self, *, username: str, password: str) -> tuple[str, AdminUser]:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM admin_users WHERE username = ? AND is_active = 1",
+                (username.strip(),),
+            ).fetchone()
+            if row is None or not verify_password(password, row["password_hash"]):
+                raise ValueError("invalid username or password")
+            token = generate_session_token()
+            db.execute(
+                """
+                INSERT INTO admin_sessions (token, admin_user_id, expires_at)
+                VALUES (?, ?, ?)
+                """,
+                (token, row["id"], session_expiry_iso()),
+            )
+            user = AdminUser(id=row["id"], username=row["username"], role=row["role"], display_name=row["display_name"])
+            self._insert_audit(
+                db,
+                actor=row["username"],
+                event_type="admin_login",
+                entity_type="admin_user",
+                entity_id=str(row["id"]),
+                details={},
+            )
+            return token, user
+
+    def resolve_session(self, token: str | None) -> AdminUser | None:
+        if not token:
+            return None
+        with self.connect() as db:
+            row = db.execute(
+                """
+                SELECT s.expires_at, u.id, u.username, u.role, u.display_name
+                FROM admin_sessions s
+                JOIN admin_users u ON u.id = s.admin_user_id
+                WHERE s.token = ? AND u.is_active = 1
+                """,
+                (token.strip(),),
+            ).fetchone()
+            if row is None or not is_session_active(row["expires_at"]):
+                return None
+            return AdminUser(
+                id=row["id"],
+                username=row["username"],
+                role=row["role"],
+                display_name=row["display_name"],
+            )
+
+    def logout_session(self, token: str) -> None:
+        with self.connect() as db:
+            db.execute("DELETE FROM admin_sessions WHERE token = ?", (token.strip(),))
+
+    def list_pricing_rules(self) -> list[dict[str, Any]]:
+        return self._fetch_all("SELECT * FROM pricing_rules ORDER BY department")
+
+    def upsert_pricing_rule(
+        self,
+        *,
+        department: str,
+        bw_multiplier_percent: int,
+        color_multiplier_percent: int,
+        duplex_discount_override: int | None = None,
+        is_active: bool = True,
+    ) -> dict[str, Any]:
+        department = department.strip()
+        if not department:
+            raise ValueError("department is required")
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO pricing_rules
+                    (department, bw_multiplier_percent, color_multiplier_percent, duplex_discount_override, is_active)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(department) DO UPDATE SET
+                    bw_multiplier_percent = excluded.bw_multiplier_percent,
+                    color_multiplier_percent = excluded.color_multiplier_percent,
+                    duplex_discount_override = excluded.duplex_discount_override,
+                    is_active = excluded.is_active
+                """,
+                (
+                    department,
+                    bw_multiplier_percent,
+                    color_multiplier_percent,
+                    duplex_discount_override,
+                    int(is_active),
+                ),
+            )
+            rule = self._row_to_dict(
+                db.execute("SELECT * FROM pricing_rules WHERE department = ?", (department,)).fetchone()
+            )
+            self._insert_audit(
+                db,
+                actor="administrator",
+                event_type="pricing_rule_upserted",
+                entity_type="pricing_rule",
+                entity_id=str(rule["id"]),
+                details={"department": department},
+            )
+            return rule
+
+    def list_held_jobs_for_user(self, *, username: str) -> list[dict[str, Any]]:
+        jobs = self._fetch_all(
+            """
+            SELECT j.*, u.display_name AS user_name, p.name AS printer_name
+            FROM print_jobs j
+            JOIN users u ON u.id = j.user_id
+            JOIN printers p ON p.id = j.printer_id
+            WHERE j.status = 'held' AND u.username = ?
+            ORDER BY j.id DESC
+            """,
+            (username.strip(),),
+        )
+        return [scrub_job_document(job, enabled=self.anonymize_documents) for job in jobs]
+
+    def release_job_as_user(self, job_id: int, *, username: str) -> dict[str, Any]:
+        with self.connect() as db:
+            job = self._get_job_row(db, job_id)
+            user = self._get_row(db, "SELECT * FROM users WHERE id = ?", (job["user_id"],))
+            if user["username"] != username.strip():
+                raise ValueError("job does not belong to this user")
+        return self.release_job(job_id)
+
+    def enqueue_site_sync(
+        self,
+        *,
+        site_id: str,
+        method: str,
+        path: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO site_sync_outbox (site_id, method, path, payload_json)
+                VALUES (?, ?, ?, ?)
+                """,
+                (site_id, method.upper(), path, json.dumps(payload, sort_keys=True)),
+            )
+            return {"id": cursor.lastrowid, "site_id": site_id, "method": method.upper(), "path": path}
+
+    def list_site_outbox(self, *, site_id: str, pending_only: bool = True) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM site_sync_outbox WHERE site_id = ?"
+        params: list[Any] = [site_id]
+        if pending_only:
+            sql += " AND synced_at IS NULL"
+        sql += " ORDER BY id"
+        rows = self._fetch_all(sql, tuple(params))
+        for row in rows:
+            row["payload"] = json.loads(row.pop("payload_json") or "{}")
+        return rows
+
+    def mark_site_outbox_synced(self, outbox_id: int) -> None:
+        with self.connect() as db:
+            db.execute(
+                "UPDATE site_sync_outbox SET synced_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (outbox_id,),
+            )
+
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        with self.connect() as db:
+            row = db.execute("SELECT value_json FROM system_settings WHERE key = ?", (key,)).fetchone()
+            if row is None:
+                return default
+            return json.loads(row["value_json"])
+
+    def set_setting(self, key: str, value: Any) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO system_settings (key, value_json) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
+                """,
+                (key, json.dumps(value, sort_keys=True)),
+            )
+            return {"key": key, "value": value}
+
     def dashboard(self) -> dict[str, Any]:
         with self.connect() as db:
             totals = self._row_to_dict(
@@ -526,7 +804,7 @@ class Database:
                 "client_agent": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'client'").fetchone()[0] > 0,
                 "print_provider": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'print-provider'").fetchone()[0] > 0,
                 "printer_controller": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'printer-controller'").fetchone()[0] > 0,
-                "site_server_planned": True,
+                "site_server": db.execute("SELECT COUNT(*) FROM agents WHERE agent_type = 'site-server'").fetchone()[0] > 0,
             }
             totals["by_user"] = self._fetch_all(
                 """
@@ -621,3 +899,24 @@ class Database:
         columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})").fetchall()}
         if column not in columns:
             db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    @staticmethod
+    def _seed_default_pricing_rules(db: sqlite3.Connection) -> None:
+        count = db.execute("SELECT COUNT(*) FROM pricing_rules").fetchone()[0]
+        if count > 0:
+            return
+        db.executemany(
+            """
+            INSERT INTO pricing_rules
+                (department, bw_multiplier_percent, color_multiplier_percent, duplex_discount_override, is_active)
+            VALUES (?, ?, ?, ?, 1)
+            """,
+            [
+                ("Students", 80, 90, 15),
+                ("Finance", 100, 110, None),
+                ("Marketing", 100, 120, 10),
+            ],
+        )
+
+    def _list_pricing_rules(self, db: sqlite3.Connection) -> list[dict[str, Any]]:
+        return [self._row_to_dict(row) for row in db.execute("SELECT * FROM pricing_rules WHERE is_active = 1").fetchall()]

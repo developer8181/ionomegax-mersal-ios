@@ -25,6 +25,15 @@
           </div>
         </div>
 
+        <div class="language-card admin-auth-card" id="adminAuthCard">
+          <span data-i18n="adminLogin">Admin sign-in</span>
+          <input id="adminUsername" type="text" placeholder="admin" autocomplete="username" />
+          <input id="adminPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" id="adminLoginBtn" data-i18n="signIn">Sign in</button>
+          <button type="button" id="adminLogoutBtn" class="secondary hidden" data-i18n="signOut">Sign out</button>
+          <small id="adminAuthStatus" data-i18n="adminGuest">Guest mode (auth optional)</small>
+        </div>
+
         <nav>
           <a href="#command" class="active" data-i18n="navCommand">Command Center</a>
           <a href="#jobs" data-i18n="navJobs">Secure Jobs</a>

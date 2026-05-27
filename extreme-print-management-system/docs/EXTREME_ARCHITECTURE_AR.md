@@ -12,7 +12,7 @@
 2. **Extreme Client Agent**: برنامج العميل على أجهزة المستخدمين.
 3. **Extreme Print Provider**: برنامج على خادم الطباعة أو جهاز وسيط.
 4. **Extreme Printer Controller**: برنامج/تطبيق مدمج داخل الطابعات المدعومة أو gateway خارجي للطابعات غير المدعومة.
-5. **Extreme Site Server**: خيار لاحق للفروع والعمل بدون اتصال مؤقت.
+5. **Extreme Site Server**: `site_server.py` — ذاكرة فرعية محلية ومزامنة مع الخادم المركزي.
 
 ## مخطط عالي المستوى
 
@@ -194,17 +194,20 @@ Printer / MFD
 
 بهذه الطريقة يمكن للنظام أن يدعم أساطيل مختلطة من الطابعات دون ادعاء تقني غير واقعي.
 
-## 7. ترتيب التنفيذ المقترح
+## 7. حالة التنفيذ
 
-1. تثبيت Server API وقاعدة البيانات.
-2. إضافة Agent registration وheartbeat.
-3. بناء Client Agent فعلي على Windows/macOS/Linux.
-4. بناء CUPS Print Provider.
-5. بناء Windows Print Provider.
-6. بناء Release Station ويب/تابلت.
-7. اختيار أول Vendor Embedded Adapter حسب الطابعات المتوفرة فعليًا.
-8. إضافة Site Server للفروع.
-9. إضافة PostgreSQL وRBAC وTLS وشهادات agents.
+| المرحلة | الحالة |
+| --- | --- |
+| Server API وقاعدة البيانات | مكتمل |
+| Agent registration وheartbeat | مكتمل |
+| Client Agent (CLI) | مكتمل كنموذج بروتوكول |
+| CUPS Print Provider | مكتمل |
+| Windows spooler adapter | مكتمل (تصدير نصي) |
+| Release Station ويب | مكتمل (`/release`) |
+| Site Server للفروع | مكتمل (`site_server.py`) |
+| RBAC وTLS وaudit retention | مكتمل |
+| PostgreSQL | مخطط مرجعي + Docker؛ التشغيل الافتراضي SQLite |
+| Vendor Embedded SDKs | يتطلب مشاريع SDK لكل مصنع |
 
 ## 8. قرارات تصميم مهمة
 

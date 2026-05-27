@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 from epms.agents import build_heartbeat
 from epms.cups_provider import SeenJobStore, cups_job_to_spool_event, discover_cups_printers, list_cups_jobs
 from epms.print_provider import OfflineQueue, parse_spool_event
+from epms.windows_provider import parse_print_jobs, windows_job_to_spool_event
 from epms.security import AGENT_TOKEN_HEADER
 
 DEFAULT_QUEUE = Path(__file__).resolve().parent / "data" / "print-provider-offline.jsonl"
@@ -160,6 +161,31 @@ def cups_poll(args: argparse.Namespace) -> object:
     return {"processed": len(results), "results": results, "seen_state": str(args.cups_state)}
 
 
+def _load_map(path: Path) -> dict[str, int]:
+    with path.open("r", encoding="utf-8") as handle:
+        raw = json.load(handle)
+    return {str(key): int(value) for key, value in raw.items()}
+
+
+def windows_poll(args: argparse.Namespace) -> dict:
+    user_map = _load_map(args.user_map)
+    printer_map = _load_map(args.printer_map)
+    with args.jobs_file.open("r", encoding="utf-8") as handle:
+        output = handle.read()
+    jobs = parse_print_jobs(output, queue_name=args.queue_name)
+    results = []
+    for job in jobs:
+        event = windows_job_to_spool_event(
+            job,
+            user_map=user_map,
+            printer_map=printer_map,
+            account=args.account,
+            agent_id=args.agent_id,
+        )
+        results.append(submit_payload_or_queue(args, event.to_job_payload()))
+    return {"processed": len(results), "results": results}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Extreme Print Provider prototype")
     parser.add_argument("--server", default="http://127.0.0.1:8080", help="Extreme Server URL")
@@ -205,6 +231,14 @@ def build_parser() -> argparse.ArgumentParser:
     cups.add_argument("--default-pages", type=int, default=1, help="Fallback page count when CUPS does not expose pages")
     cups.add_argument("--account", default="CUPS")
     cups.set_defaults(func=cups_poll)
+
+    windows = subparsers.add_parser("windows-poll", help="Parse Windows spooler job export and submit")
+    windows.add_argument("--queue-name", required=True)
+    windows.add_argument("--jobs-file", type=Path, required=True, help="Text file with simplified Get-PrintJob output")
+    windows.add_argument("--user-map", type=Path, required=True)
+    windows.add_argument("--printer-map", type=Path, required=True)
+    windows.add_argument("--account", default="Windows")
+    windows.set_defaults(func=windows_poll)
 
     return parser
 
