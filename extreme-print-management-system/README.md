@@ -64,6 +64,14 @@ python3 app.py
 
 Open `http://127.0.0.1:8080` — Release Station at `http://127.0.0.1:8080/release`.
 
+### VPS / سيرفر خاص
+
+تثبيت إنتاجي على Ubuntu/Debian: [docs/VPS_INSTALL_AR.md](docs/VPS_INSTALL_AR.md)
+
+```bash
+sudo bash scripts/install_on_vps.sh --method docker --domain print.example.com --email you@example.com
+```
+
 Production-style environment (see `deploy/production.example.env`):
 
 ```bash
