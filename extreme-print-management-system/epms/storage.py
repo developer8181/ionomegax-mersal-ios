@@ -62,6 +62,8 @@ class Database:
                     cost_cents INTEGER NOT NULL,
                     status TEXT NOT NULL,
                     reason TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT 'web',
+                    agent_id TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     completed_at TEXT,
                     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -92,6 +94,8 @@ class Database:
                 );
                 """
             )
+            self._ensure_column(db, "print_jobs", "source", "TEXT NOT NULL DEFAULT 'web'")
+            self._ensure_column(db, "print_jobs", "agent_id", "TEXT NOT NULL DEFAULT ''")
 
     def seed_demo(self) -> None:
         with self.connect() as db:
@@ -216,9 +220,13 @@ class Database:
         color: bool,
         duplex: bool,
         account: str = "Personal",
+        source: str = "web",
+        agent_id: str = "",
     ) -> dict[str, Any]:
         document_name = document_name.strip() or "Untitled document"
         account = account.strip() or "Personal"
+        source = source.strip() or "web"
+        agent_id = agent_id.strip()
 
         with self.connect() as db:
             user = self._get_row(db, "SELECT * FROM users WHERE id = ?", (user_id,))
@@ -263,8 +271,8 @@ class Database:
                 f"""
                 INSERT INTO print_jobs
                     (user_id, printer_id, document_name, pages, copies, color, duplex, account,
-                     cost_cents, status, reason, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, {completed_at})
+                     cost_cents, status, reason, source, agent_id, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, {completed_at})
                 """,
                 (
                     user_id,
@@ -278,6 +286,8 @@ class Database:
                     cost,
                     status,
                     reason,
+                    source,
+                    agent_id,
                 ),
             )
             job_id = cursor.lastrowid
@@ -415,3 +425,9 @@ class Database:
     @staticmethod
     def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         return {key: row[key] for key in row.keys()}
+
+    @staticmethod
+    def _ensure_column(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in columns:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")

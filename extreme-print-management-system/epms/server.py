@@ -56,6 +56,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     color=bool(payload.get("color", False)),
                     duplex=bool(payload.get("duplex", False)),
                     account=str(payload.get("account", "Personal")),
+                    source=str(payload.get("source", "web")),
+                    agent_id=str(payload.get("agent_id", "")),
                 )
                 return self._send_json(job, status=HTTPStatus.CREATED)
 

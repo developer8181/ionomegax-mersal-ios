@@ -68,6 +68,8 @@ def submit_job(args: argparse.Namespace) -> object:
         "color": args.color,
         "duplex": args.duplex,
         "account": args.account,
+        "source": "client-agent",
+        "agent_id": args.agent_id,
     }
     return request_json(args.server, "/api/jobs", payload)
 

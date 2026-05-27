@@ -15,6 +15,7 @@ The project is intentionally standalone and does not modify the existing Monal a
 - Browser dashboard with recent jobs and usage reports.
 - Agent heartbeat API for client agents and printer controllers.
 - Client Agent CLI prototype for workstation-side balance checks and print-job submission.
+- Print Provider CLI prototype for print-server/gateway spool events with an offline queue.
 - Printer Controller CLI prototype for embedded/gateway-side platform metadata and held-job actions.
 - No external runtime dependencies; it uses Python's standard library.
 
@@ -26,7 +27,7 @@ The intended product is a distributed system, not one monolithic app:
 | --- | --- | --- |
 | Extreme Server | `app.py`, `epms/server.py` | Central API, admin UI, policies, quotas, reports, storage |
 | Extreme Client Agent | `client_agent.py` | User balance, popups, direct-print monitoring, account selection |
-| Extreme Print Provider | future service | Windows Print Server / Linux CUPS spooler monitoring |
+| Extreme Print Provider | `print_provider.py` | Windows Print Server / Linux CUPS spooler monitoring and offline queue |
 | Extreme Printer Controller | `printer_controller.py` | Embedded MFD app or gateway controller for release/deny/device login |
 | Extreme Site Server | future service | Offline branch cache and later sync |
 
@@ -71,6 +72,26 @@ python3 client_agent.py balance --user sara
 python3 client_agent.py submit-job --user sara --printer-id 1 --document report.pdf --pages 4 --duplex
 ```
 
+## Run the Print Provider prototype
+
+The Print Provider is the component that belongs on a print server or local gateway. In this prototype it accepts simulated spool events and submits them to the server.
+
+```bash
+cd extreme-print-management-system
+python3 print_provider.py heartbeat --spooler cups --queue-name "Main Office HP,Library BW"
+python3 print_provider.py submit-event --user-id 1 --printer-id 1 --document invoice.pdf --pages 10 --copies 1 --duplex
+python3 print_provider.py queue-status
+python3 print_provider.py flush-queue
+```
+
+If the server is unavailable, submitted events are stored in:
+
+```text
+data/print-provider-offline.jsonl
+```
+
+and can be replayed later with `flush-queue`.
+
 ## Run the Printer Controller prototype
 
 ```bash
@@ -112,7 +133,9 @@ curl -X POST http://127.0.0.1:8080/api/jobs \
     "copies": 2,
     "color": true,
     "duplex": true,
-    "account": "Finance"
+    "account": "Finance",
+    "source": "print-provider",
+    "agent_id": "print-provider-main-server"
   }'
 ```
 
