@@ -1,0 +1,16 @@
+[Unit]
+Description=Extreme Print Management System
+After=network.target
+
+[Service]
+Type=simple
+User=epms
+Group=epms
+WorkingDirectory=/opt/epms/extreme-print-management-system
+EnvironmentFile=/etc/epms/production.env
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

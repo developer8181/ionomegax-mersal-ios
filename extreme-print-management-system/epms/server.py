@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-import os
 import ssl
+from dataclasses import asdict
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +16,8 @@ from .auth import SESSION_COOKIE, SESSION_HEADER, user_to_dict
 from .config import Settings
 from .core import money_to_cents
 from .policy import scrub_job_document
+from .embedded import get_adapter
+from .health import health_report
 from .security import AGENT_TOKEN_HEADER, is_authorized_agent_token
 from .storage import Database
 
@@ -68,6 +70,17 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._require_permission("manage_settings", lambda: self._send_json(self._settings_payload()))
         if path == "/api/readiness":
             return self._readiness()
+        if path == "/api/health":
+            return self._send_json(
+                health_report(
+                    self.database,
+                    settings_summary={
+                        "require_auth": self.settings.require_auth,
+                        "anonymize_documents": self.settings.anonymize_documents,
+                        "agent_token_enforced": bool(self.settings.agent_token),
+                    },
+                )
+            )
         if path.startswith("/api/release/held/"):
             username = path.rsplit("/", 1)[-1]
             return self._send_json(self.database.list_held_jobs_for_user(username=username))
@@ -155,6 +168,22 @@ class RequestHandler(SimpleHTTPRequestHandler):
                 payload = self._read_json()
                 username = str(payload.get("username", ""))
                 return self._send_json(self._scrub_job(self.database.release_job_as_user(job_id, username=username)))
+            if path == "/api/devices/login":
+                payload = self._read_json()
+                scheme = "https" if self.settings.tls_cert else "http"
+                host = self.headers.get("Host", f"{self.settings.host}:{self.settings.port}")
+                adapter = get_adapter(
+                    vendor=str(payload.get("vendor", "generic")),
+                    server_url=f"{scheme}://{host}",
+                    agent_token=self.settings.agent_token or "",
+                    device_address=str(payload.get("device_address", "")),
+                )
+                session = adapter.authenticate(
+                    username=str(payload["username"]),
+                    pin=str(payload.get("pin", "")),
+                    card_id=str(payload.get("card_id", "")),
+                )
+                return self._send_json({"session": asdict(session), "capabilities": adapter.device_capabilities()})
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError) as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)

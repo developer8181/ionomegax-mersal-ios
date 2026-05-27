@@ -22,7 +22,9 @@ The project is intentionally standalone and does not modify the existing Monal a
 - Browser dashboard (Arabic/English, RTL) with admin sign-in.
 - Distributed agents: Client, Print Provider (CUPS + Windows export), Printer Controller, Site Server.
 - Docker Compose deployment scaffold.
-- **35 automated tests** — stdlib only for runtime; optional `pg8000` for future PostgreSQL driver work.
+- **40 automated tests** — stdlib only for runtime; optional `pg8000` for future PostgreSQL driver work.
+- Embedded vendor adapter framework (HP OXP, Canon MEAP, gateway fallback) — see `docs/EMBEDDED_ADAPTERS_AR.md`.
+- Minimal IPP Get-Jobs client for generic network printers.
 
 ## Product components
 
