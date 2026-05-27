@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 from .agents import supported_platforms
 from .core import money_to_cents
+from .security import AGENT_TOKEN_HEADER, is_authorized_agent_token
 from .storage import Database
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -19,8 +20,9 @@ DEFAULT_DB = PROJECT_ROOT / "data" / "extreme-print-management.sqlite3"
 
 
 class RequestHandler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, database: Database, **kwargs):
+    def __init__(self, *args, database: Database, agent_token: str | None = None, **kwargs):
         self.database = database
+        self.agent_token = agent_token
         super().__init__(*args, directory=str(STATIC_ROOT), **kwargs)
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib method name
@@ -38,6 +40,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json(self.database.list_jobs())
         if path == "/api/agents":
             return self._send_json(self.database.list_agents())
+        if path == "/api/audit-logs":
+            return self._send_json(self.database.list_audit_logs())
         if path == "/api/printer-platforms":
             return self._send_json(supported_platforms())
         if path == "/api/readiness":
@@ -45,8 +49,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json(
                 {
                     "product": "Extreme Print Management System",
-                    "edition": "Enterprise Demo",
+                    "edition": "Production Foundation",
                     "status": "ready_for_demo",
+                    "agent_token_enforced": bool(self.agent_token),
                     "components": dashboard["readiness"],
                     "limits": [
                         "Real embedded printer apps require vendor SDK certification.",
@@ -61,6 +66,10 @@ class RequestHandler(SimpleHTTPRequestHandler):
         try:
             if path == "/api/jobs":
                 payload = self._read_json()
+                source = str(payload.get("source", "web"))
+                agent_id = str(payload.get("agent_id", ""))
+                if (source != "web" or agent_id) and not self._require_agent_auth():
+                    return
                 job = self.database.submit_job(
                     user_id=int(payload["user_id"]),
                     printer_id=int(payload["printer_id"]),
@@ -70,8 +79,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     color=bool(payload.get("color", False)),
                     duplex=bool(payload.get("duplex", False)),
                     account=str(payload.get("account", "Personal")),
-                    source=str(payload.get("source", "web")),
-                    agent_id=str(payload.get("agent_id", "")),
+                    source=source,
+                    agent_id=agent_id,
                 )
                 return self._send_json(job, status=HTTPStatus.CREATED)
 
@@ -95,6 +104,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json(self.database.reset_monthly_quotas())
 
             if path == "/api/agents/heartbeat":
+                if not self._require_agent_auth():
+                    return
                 payload = self._read_json()
                 agent = self.database.record_agent_heartbeat(
                     agent_id=str(payload["agent_id"]),
@@ -128,6 +139,13 @@ class RequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _require_agent_auth(self) -> bool:
+        provided = self.headers.get(AGENT_TOKEN_HEADER)
+        if is_authorized_agent_token(provided, self.agent_token):
+            return True
+        self._send_json({"error": "agent token is required or invalid"}, status=HTTPStatus.UNAUTHORIZED)
+        return False
+
     @staticmethod
     def _path_id(path: str) -> int:
         parts = [part for part in path.split("/") if part]
@@ -138,9 +156,10 @@ def run(host: str = "127.0.0.1", port: int = 8080) -> None:
     database = Database(os.environ.get("EPMS_DB", DEFAULT_DB))
     database.init_schema()
     database.seed_demo()
+    agent_token = os.environ.get("EPMS_AGENT_TOKEN")
 
     def handler(*args, **kwargs):
-        RequestHandler(*args, database=database, **kwargs)
+        RequestHandler(*args, database=database, agent_token=agent_token, **kwargs)
 
     server = ThreadingHTTPServer((host, port), handler)
     print(f"Extreme Print Management System running at http://{host}:{port}")

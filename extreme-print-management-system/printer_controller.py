@@ -9,18 +9,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import socket
 import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from epms.agents import build_heartbeat, platform_profile, supported_platforms
+from epms.security import AGENT_TOKEN_HEADER
 
 
-def request_json(server_url: str, path: str, payload: dict | None = None) -> object:
+def request_json(server_url: str, path: str, payload: dict | None = None, agent_token: str = "") -> object:
     url = server_url.rstrip("/") + path
     data = None if payload is None else json.dumps(payload).encode("utf-8")
-    request = Request(url, data=data, headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    if agent_token:
+        headers[AGENT_TOKEN_HEADER] = agent_token
+    request = Request(url, data=data, headers=headers)
     if payload is not None:
         request.method = "POST"
     try:
@@ -51,20 +56,21 @@ def send_heartbeat(args: argparse.Namespace) -> object:
         agent_type="printer-controller",
         metadata=metadata,
     )
-    return request_json(args.server, "/api/agents/heartbeat", heartbeat.to_dict())
+    return request_json(args.server, "/api/agents/heartbeat", heartbeat.to_dict(), args.agent_token)
 
 
 def release_job(args: argparse.Namespace) -> object:
-    return request_json(args.server, f"/api/jobs/{args.job_id}/release", {})
+    return request_json(args.server, f"/api/jobs/{args.job_id}/release", {}, args.agent_token)
 
 
 def deny_job(args: argparse.Namespace) -> object:
-    return request_json(args.server, f"/api/jobs/{args.job_id}/deny", {"reason": args.reason})
+    return request_json(args.server, f"/api/jobs/{args.job_id}/deny", {"reason": args.reason}, args.agent_token)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Extreme Printer Controller prototype")
     parser.add_argument("--server", default="http://127.0.0.1:8080", help="Extreme Server URL")
+    parser.add_argument("--agent-token", default=os.environ.get("EPMS_AGENT_TOKEN", ""), help="Agent API token")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     platforms = subparsers.add_parser("platforms", help="List supported embedded/gateway platforms")
