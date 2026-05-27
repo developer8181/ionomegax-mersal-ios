@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - Command Center</title>
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <style>
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── Sidebar ─────────────────────────── */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-brand .brand-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 12px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.25);
+        }
+
+        .sidebar-brand h1 {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-cyan), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-brand .version {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 243, 255, 0.08);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 243, 255, 0.15);
+        }
+
+        .nav-item .nav-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .nav-item .nav-badge {
+            margin-left: auto;
+            background: rgba(255, 55, 95, 0.2);
+            color: var(--danger);
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ── Main Content ────────────────────── */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .topbar-search {
+            position: relative;
+        }
+
+        .topbar-search input {
+            width: 320px;
+            padding: 8px 12px 8px 36px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: var(--font-mono);
+        }
+
+        .topbar-search input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .topbar-search .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-time {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .alert-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        .alert-bell .alert-count {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 8px;
+        }
+
+        /* ── Content Area ────────────────────── */
+        .content {
+            padding: 24px;
+            flex: 1;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── Stats Grid ──────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .stat-card.cyan::before { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+        .stat-card.red::before { background: linear-gradient(90deg, var(--danger), transparent); }
+        .stat-card.green::before { background: linear-gradient(90deg, var(--success), transparent); }
+        .stat-card.amber::before { background: linear-gradient(90deg, var(--warning), transparent); }
+        .stat-card.purple::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+
+        .stat-card .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .stat-change {
+            font-size: 12px;
+            margin-top: 6px;
+            font-family: var(--font-mono);
+        }
+
+        /* ── Grid Layout ─────────────────────── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* ── Events Table ────────────────────── */
+        .events-table-wrap {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .event-row {
+            transition: background 0.15s;
+        }
+
+        /* ── Live Ticker ─────────────────────── */
+        .live-ticker {
+            background: rgba(0, 243, 255, 0.03);
+            border: 1px solid rgba(0, 243, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .live-ticker .live-badge {
+            background: var(--danger);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            animation: pulse 1.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        .ticker-content {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .ticker-scroll {
+            display: inline-block;
+            animation: ticker 30s linear infinite;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* ── Threat Level Bar ────────────────── */
+        .threat-meter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .threat-meter-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .threat-meter-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+            background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+        }
+
+        .threat-meter-label {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* ── IP Lookup Panel ─────────────────── */
+        .ip-lookup {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .ip-lookup input {
+            flex: 1;
+            padding: 10px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 14px;
+        }
+
+        .ip-lookup input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        /* ── Module Status Cards ─────────────── */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .module-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .module-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .module-icon.cyan { background: rgba(0, 243, 255, 0.1); }
+        .module-icon.red { background: rgba(255, 55, 95, 0.1); }
+        .module-icon.amber { background: rgba(255, 170, 0, 0.1); }
+        .module-icon.purple { background: rgba(168, 85, 247, 0.1); }
+        .module-icon.green { background: rgba(0, 255, 136, 0.1); }
+
+        .module-info h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .module-info p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ── Analysis Results ────────────────── */
+        .analysis-panel {
+            display: none;
+        }
+
+        .analysis-panel.visible {
+            display: block;
+        }
+
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .analysis-score {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            flex-shrink: 0;
+        }
+
+        .risk-factors {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 12px 0;
+        }
+
+        .risk-factor {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px 10px;
+            background: rgba(255, 55, 95, 0.05);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--danger);
+            color: var(--text-secondary);
+        }
+
+        .recommendations {
+            margin-top: 12px;
+        }
+
+        .recommendation {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px 10px;
+            color: var(--text-secondary);
+        }
+
+        .recommendation::before {
+            content: '>';
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+
+        /* ── Section headers ─────────────────── */
+        .section-view {
+            display: none;
+        }
+
+        .section-view.active {
+            display: block;
+        }
+
+        /* ── Responsive ──────────────────────── */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">&#x1F6E1;</div>
+                <h1>XIPGUARD</h1>
+                <div class="version">v{{ app_version }} &middot; {{ app_codename }}</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <div class="nav-item active" data-view="dashboard">
+                        <span class="nav-icon">&#x1F4CA;</span>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="nav-item" data-view="live-feed">
+                        <span class="nav-icon">&#x26A1;</span>
+                        <span>Live Feed</span>
+                        <span class="nav-badge" id="liveEventCount">0</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Intelligence</div>
+                    <div class="nav-item" data-view="ip-management">
+                        <span class="nav-icon">&#x1F310;</span>
+                        <span>IP Management</span>
+                    </div>
+                    <div class="nav-item" data-view="threat-analysis">
+                        <span class="nav-icon">&#x1F50D;</span>
+                        <span>Threat Analysis</span>
+                    </div>
+                    <div class="nav-item" data-view="events">
+                        <span class="nav-icon">&#x1F4DD;</span>
+                        <span>Event Log</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Security</div>
+                    <div class="nav-item" data-view="modules">
+                        <span class="nav-icon">&#x1F6E1;</span>
+                        <span>Security Modules</span>
+                    </div>
+                    <div class="nav-item" data-view="rules">
+                        <span class="nav-icon">&#x2699;</span>
+                        <span>Rules Engine</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <div class="nav-item" data-view="audit">
+                        <span class="nav-icon">&#x1F4CB;</span>
+                        <span>Audit Log</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <span class="pulse-dot active" id="wsStatus"></span>
+                    <span id="wsStatusText">Connecting...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main-content">
+            <div class="topbar">
+                <div class="topbar-left">
+                    <div class="topbar-search">
+                        <span class="search-icon">&#x1F50E;</span>
+                        <input type="text" placeholder="Search IP address, event, or rule..." id="globalSearch">
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="topbar-time" id="currentTime"></div>
+                    <div class="alert-bell" id="alertBell">
+                        &#x1F514;
+                        <span class="alert-count" id="alertCount">0</span>
+                    </div>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Live Ticker -->
+                <div class="live-ticker">
+                    <span class="live-badge">LIVE</span>
+                    <div class="ticker-content">
+                        <span class="ticker-scroll" id="tickerText">
+                            Extreme IP Guard active &bull; All systems operational &bull; Monitoring network traffic &bull; Threat engine running
+                        </span>
+                    </div>
+                </div>
+
+                <!-- ═══ Dashboard View ═══ -->
+                <div class="section-view active" id="view-dashboard">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Command Center</div>
+                            <div class="page-subtitle">Real-time security overview</div>
+                        </div>
+                        <button class="btn" onclick="refreshDashboard()">&#x1F504; Refresh</button>
+                    </div>
+
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="card stat-card cyan">
+                            <div class="stat-label">IPs Tracked</div>
+                            <div class="stat-value cyan" id="statTotalIPs">-</div>
+                        </div>
+                        <div class="card stat-card red">
+                            <div class="stat-label">Active Threats</div>
+                            <div class="stat-value red" id="statActiveThreats">-</div>
+                        </div>
+                        <div class="card stat-card amber">
+                            <div class="stat-label">Blocked IPs</div>
+                            <div class="stat-value amber" id="statBlockedIPs">-</div>
+                        </div>
+                        <div class="card stat-card green">
+                            <div class="stat-label">Whitelisted</div>
+                            <div class="stat-value green" id="statWhitelisted">-</div>
+                        </div>
+                        <div class="card stat-card purple">
+                            <div class="stat-label">Events (24h)</div>
+                            <div class="stat-value purple" id="statEvents24h">-</div>
+                        </div>
+                        <div class="card stat-card cyan">
+                            <div class="stat-label">Active Rules</div>
+                            <div class="stat-value cyan" id="statActiveRules">-</div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 24px;">
+                        <div class="card-header">
+                            <span class="card-title">System Threat Level</span>
+                            <span class="badge badge-info" id="globalThreatBadge">NOMINAL</span>
+                        </div>
+                        <div class="threat-meter">
+                            <span class="text-muted" style="font-size: 11px;">SAFE</span>
+                            <div class="threat-meter-bar">
+                                <div class="threat-meter-fill" id="globalThreatFill" style="width: 0%"></div>
+                            </div>
+                            <span class="threat-meter-label text-cyan" id="globalThreatScore">0</span>
+                            <span class="text-muted" style="font-size: 11px;">CRITICAL</span>
+                        </div>
+                    </div>
+
+                    <div class="grid-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Recent Threat Events</span>
+                                <button class="btn" onclick="switchView('events')">View All</button>
+                            </div>
+                            <div class="events-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Type</th>
+                                            <th>Level</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentEventsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Threat by Country</span>
+                            </div>
+                            <div id="countryList" style="max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ IP Management View ═══ -->
+                <div class="section-view" id="view-ip-management">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">IP Management</div>
+                            <div class="page-subtitle">Monitor and control IP addresses</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn" onclick="showAddIPModal()">+ Add IP</button>
+                            <button class="btn" onclick="loadIPs()">&#x1F504; Refresh</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                        <select class="btn" id="ipFilterStatus" onchange="loadIPs()">
+                            <option value="">All Statuses</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="whitelisted">Whitelisted</option>
+                            <option value="quarantined">Quarantined</option>
+                            <option value="monitored">Monitored</option>
+                        </select>
+                        <input type="number" placeholder="Min threat score" id="ipFilterThreat" class="btn" style="width: 160px;" onchange="loadIPs()">
+                    </div>
+
+                    <div class="card">
+                        <div class="events-table-wrap" style="max-height: 600px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Status</th>
+                                        <th>Threat Score</th>
+                                        <th>Country</th>
+                                        <th>Requests</th>
+                                        <th>Last Seen</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ipTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Threat Analysis View ═══ -->
+                <div class="section-view" id="view-threat-analysis">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Threat Analysis</div>
+                            <div class="page-subtitle">Deep IP intelligence and risk assessment</div>
+                        </div>
+                    </div>
+
+                    <div class="ip-lookup">
+                        <input type="text" placeholder="Enter IP address to analyze (e.g. 192.168.1.1)" id="analysisIP">
+                        <button class="btn btn-primary" onclick="analyzeIP()">&#x1F50D; Analyze</button>
+                    </div>
+
+                    <div class="analysis-panel" id="analysisPanel">
+                        <div class="card" style="margin-bottom: 20px;">
+                            <div class="analysis-header">
+                                <div class="analysis-score" id="analysisScore">-</div>
+                                <div>
+                                    <h3 id="analysisIPDisplay" style="font-family: var(--font-mono);">-</h3>
+                                    <div id="analysisThreatLevel" class="badge" style="margin-top: 6px;">-</div>
+                                    <div style="margin-top: 8px; font-size: 12px; color: var(--text-muted);" id="analysisGeo">-</div>
+                                </div>
+                            </div>
+
+                            <div class="grid-2" style="margin-bottom: 0;">
+                                <div>
+                                    <h4 style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Risk Factors</h4>
+                                    <div class="risk-factors" id="riskFactors"></div>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Recommendations</h4>
+                                    <div class="recommendations" id="recommendations"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="card">
+                                <div class="card-title" style="margin-bottom: 12px;">Network Intelligence</div>
+                                <div id="networkInfo" style="font-size: 13px;"></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-title" style="margin-bottom: 12px;">Behavioral Profile</div>
+                                <div id="behavioralInfo" style="font-size: 13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Events View ═══ -->
+                <div class="section-view" id="view-events">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Event Log</div>
+                            <div class="page-subtitle">Complete threat event history</div>
+                        </div>
+                        <button class="btn" onclick="loadEvents()">&#x1F504; Refresh</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="events-table-wrap" style="max-height: 700px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Time</th>
+                                        <th>Type</th>
+                                        <th>Level</th>
+                                        <th>Description</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="eventsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Security Modules View ═══ -->
+                <div class="section-view" id="view-modules">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Security Modules</div>
+                            <div class="page-subtitle">Active protection systems status</div>
+                        </div>
+                    </div>
+
+                    <div class="module-grid" id="modulesGrid">
+                        <div class="card module-card">
+                            <div class="module-icon cyan">&#x1F6E1;</div>
+                            <div class="module-info">
+                                <h4>Threat Engine</h4>
+                                <p class="text-green">Active - Analyzing traffic</p>
+                            </div>
+                        </div>
+                        <div class="card module-card">
+                            <div class="module-icon red">&#x26A0;</div>
+                            <div class="module-info">
+                                <h4>DDoS Shield</h4>
+                                <p id="ddosStatus">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="card module-card">
+                            <div class="module-icon amber">&#x23F1;</div>
+                            <div class="module-info">
+                                <h4>Rate Limiter</h4>
+                                <p id="rateLimitStatus">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="card module-card">
+                            <div class="module-icon purple">&#x1F50D;</div>
+                            <div class="module-info">
+                                <h4>Port Scan Detector</h4>
+                                <p id="portScanStatus">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="card module-card">
+                            <div class="module-icon red">&#x1F512;</div>
+                            <div class="module-info">
+                                <h4>Brute Force Guard</h4>
+                                <p id="bruteForceStatus">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="card module-card">
+                            <div class="module-icon green">&#x1F4C8;</div>
+                            <div class="module-info">
+                                <h4>Anomaly Detector</h4>
+                                <p id="anomalyStatus">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">DDoS Analysis</span>
+                            </div>
+                            <div id="ddosDetails" style="font-size: 13px;">Loading...</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Active Port Scans</span>
+                            </div>
+                            <div id="portScanDetails" style="font-size: 13px;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Rules View ═══ -->
+                <div class="section-view" id="view-rules">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Rules Engine</div>
+                            <div class="page-subtitle">Automated security policy management</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="showCreateRuleModal()">+ Create Rule</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="events-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Action</th>
+                                        <th>Priority</th>
+                                        <th>Hits</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rulesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Live Feed View ═══ -->
+                <div class="section-view" id="view-live-feed">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Live Threat Feed</div>
+                            <div class="page-subtitle">Real-time event stream</div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="pulse-dot active"></span>
+                            <span style="font-size: 12px; color: var(--text-muted);">Streaming</span>
+                        </div>
+                    </div>
+
+                    <div class="card" style="max-height: 700px; overflow-y: auto;" id="liveFeedContainer">
+                        <div id="liveFeedContent" style="font-family: var(--font-mono); font-size: 12px; line-height: 1.8;"></div>
+                    </div>
+                </div>
+
+                <!-- ═══ Audit View ═══ -->
+                <div class="section-view" id="view-audit">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Audit Log</div>
+                            <div class="page-subtitle">System activity tracking</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="events-table-wrap" style="max-height: 700px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Actor</th>
+                                        <th>Action</th>
+                                        <th>Target</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
