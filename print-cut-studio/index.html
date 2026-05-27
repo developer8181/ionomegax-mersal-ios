@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Print Cut Studio — تصميم وطباعة وقص</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <h1>Print Cut Studio</h1>
+        <p class="subtitle">نظام تصميم · طباعة · قص بالتسجيل (Contour / Print &amp; Cut)</p>
+      </header>
+
+      <aside class="sidebar">
+        <section>
+          <h2>لوحة العمل</h2>
+          <label>
+            العرض (مم)
+            <input type="number" id="bed-width" value="300" min="50" max="2000" />
+          </label>
+          <label>
+            الارتفاع (مم)
+            <input type="number" id="bed-height" value="400" min="50" max="2000" />
+          </label>
+          <button type="button" id="btn-resize-bed">تطبيق الحجم</button>
+        </section>
+
+        <section>
+          <h2>إضافة عناصر</h2>
+          <div class="btn-row">
+            <button type="button" id="btn-add-rect">مستطيل</button>
+            <button type="button" id="btn-add-circle">دائرة</button>
+            <button type="button" id="btn-add-text">نص</button>
+          </div>
+          <label class="file-label">
+            استيراد SVG
+            <input type="file" id="import-svg" accept=".svg,image/svg+xml" />
+          </label>
+        </section>
+
+        <section>
+          <h2>طباعة وقص</h2>
+          <label>
+            وضع الطبقة
+            <select id="layer-mode">
+              <option value="both">طباعة + قص</option>
+              <option value="print">طباعة فقط</option>
+              <option value="cut">قص فقط</option>
+            </select>
+          </label>
+          <label>
+            إزاحة خط القص (مم)
+            <input type="number" id="contour-offset" value="2" min="0" max="50" step="0.5" />
+          </label>
+          <button type="button" id="btn-contour">إنشاء خط قص (Contour)</button>
+          <hr />
+          <label>
+            حجم علامة التسجيل (مم)
+            <input type="number" id="reg-size" value="5" min="2" max="20" step="0.5" />
+          </label>
+          <label>
+            سُمك العلامة (مم)
+            <input type="number" id="reg-thickness" value="0.5" min="0.1" max="3" step="0.1" />
+          </label>
+          <label>
+            هامش العلامات (مم)
+            <input type="number" id="reg-margin" value="8" min="2" max="50" step="1" />
+          </label>
+          <button type="button" id="btn-reg-marks">إضافة علامات تسجيل</button>
+          <button type="button" id="btn-clear-reg" class="secondary">إزالة العلامات</button>
+        </section>
+
+        <section>
+          <h2>تصدير</h2>
+          <button type="button" id="btn-export-print-svg">SVG للطباعة</button>
+          <button type="button" id="btn-export-cut-svg">SVG للقص</button>
+          <button type="button" id="btn-export-hpgl">HPGL للقاطعة</button>
+          <button type="button" id="btn-print" class="primary">معاينة الطباعة</button>
+        </section>
+
+        <section class="help">
+          <h2>سير العمل</h2>
+          <ol>
+            <li>صمم أو استورد SVG</li>
+            <li>أنشئ خط القص وعلامات التسجيل</li>
+            <li>صدّر SVG واطبع من الطابعة</li>
+            <li>حمّل HPGL على القاطعة للقص حول الطباعة</li>
+          </ol>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <div class="toolbar">
+          <span id="selection-info">لا يوجد تحديد</span>
+          <button type="button" id="btn-delete" class="danger" disabled>حذف</button>
+          <button type="button" id="btn-bring-front">للأمام</button>
+          <button type="button" id="btn-send-back">للخلف</button>
+        </div>
+        <div id="canvas-wrap">
+          <svg id="design-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
