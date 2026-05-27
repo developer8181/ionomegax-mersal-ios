@@ -33,15 +33,16 @@ lb config noauto \
   --mirror-bootstrap "http://deb.debian.org/debian" \
   --mirror-chroot "http://deb.debian.org/debian" \
   --mirror-chroot-security "http://security.debian.org/debian-security" \
-  --parent-debian-chroot-security bookworm-security \
+  --mirror-binary "http://deb.debian.org/debian" \
+  --mirror-binary-security "http://security.debian.org/debian-security" \
+  --security true \
   --bootappend-live "boot=live components quiet splash hostname=mersal-os username=mersal" \
   --memtest none \
   --iso-application "Mersal OS" \
   --iso-volume "MERSAL_OS_1_0" \
   --iso-preparer "Extreme Technology Company" \
   --iso-publisher "Ionomegax" \
-  --win32-loader false \
-  --apt-recommends false
+  --win32-loader false
 
 mkdir -p config/package-lists config/hooks/normal
 cp "$ROOT/build/package-lists/mersal.list.chroot" config/package-lists/mersal.list.chroot
