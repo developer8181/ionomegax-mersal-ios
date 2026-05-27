@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extreme IP Guard</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0f1f33;
+      --panel-2: #142840;
+      --text: #e7f0ff;
+      --muted: #9bb0ca;
+      --accent: #20d6a3;
+      --danger: #ff5d73;
+      --warn: #ffcc66;
+      --line: #25415f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(32, 214, 163, .18), transparent 34rem),
+        radial-gradient(circle at top right, rgba(78, 137, 255, .16), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header { padding: 2rem; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); letter-spacing: -.06em; }
+    h2 { margin: 0 0 1rem; }
+    p { color: var(--muted); }
+    main { display: grid; gap: 1rem; padding: 1rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
+    .card, section {
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)), var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 1rem;
+      box-shadow: 0 18px 40px rgba(0,0,0,.22);
+    }
+    .metric { font-size: 2.2rem; font-weight: 800; }
+    .label { color: var(--muted); font-size: .9rem; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(20rem, .8fr); gap: 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid var(--line); padding: .75rem; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+    .pill { display: inline-flex; border-radius: 999px; padding: .18rem .55rem; font-weight: 700; font-size: .78rem; background: var(--panel-2); }
+    .low { color: var(--accent); }
+    .medium { color: var(--warn); }
+    .high, .critical, .deny, .quarantine { color: var(--danger); }
+    code { color: var(--accent); }
+    @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Extreme IP Guard</h1>
+    <p>Transparent endpoint risk, data-loss prevention, asset posture, and response orchestration prototype.</p>
+  </header>
+  <main>
+    <div class="cards" id="metrics"></div>
+    <div class="grid">
+      <section>
+        <h2>Highest-risk assets</h2>
+        <table>
+          <thead><tr><th>Asset</th><th>Owner</th><th>Risk</th><th>Status</th><th>Reasons</th></tr></thead>
+          <tbody id="assets"></tbody>
+        </table>
+      </section>
+      <section>
+        <h2>Risk distribution</h2>
+        <div id="riskCounts"></div>
+        <h2 style="margin-top:2rem;">Active policies</h2>
+        <div id="policies"></div>
+      </section>
+    </div>
+    <section>
+      <h2>Recent DLP events</h2>
+      <table>
+        <thead><tr><th>Action</th><th>User</th><th>Asset</th><th>Data</th><th>Destination</th><th>Reason</th></tr></thead>
+        <tbody id="events"></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[char]));
+    const pill = (value) => `<span class="pill ${escapeHtml(value)}">${escapeHtml(value)}</span>`;
+
+    async function loadDashboard() {
+      const response = await fetch("/api/dashboard");
+      const data = await response.json();
+      const totals = data.totals;
+      document.getElementById("metrics").innerHTML = [
+        ["Assets", totals.assets],
+        ["Critical assets", totals.critical_assets],
+        ["DLP events", totals.dlp_events],
+        ["Blocked events", totals.blocked_events],
+      ].map(([label, value]) => `<div class="card"><div class="metric">${value}</div><div class="label">${label}</div></div>`).join("");
+
+      document.getElementById("assets").innerHTML = data.recent_assets.map((asset) => `
+        <tr>
+          <td><strong>${escapeHtml(asset.hostname)}</strong><br><span class="label">${escapeHtml(asset.ip_address || "no ip")}</span></td>
+          <td>${escapeHtml(asset.owner || "-")}<br><span class="label">${escapeHtml(asset.department)}</span></td>
+          <td>${pill(asset.risk_level)}<br><code>${asset.risk_score}/100</code></td>
+          <td>${escapeHtml(asset.status)}</td>
+          <td>${escapeHtml((asset.risk_reasons || []).slice(0, 3).join("; "))}</td>
+        </tr>
+      `).join("");
+
+      document.getElementById("riskCounts").innerHTML = ["low", "medium", "high", "critical"].map((level) => `
+        <p>${pill(level)} <strong>${data.risk_counts[level] || 0}</strong></p>
+      `).join("");
+
+      document.getElementById("policies").innerHTML = data.policies.map((policy) => `
+        <p><strong>${escapeHtml(policy.name)}</strong><br><span class="label">${escapeHtml(policy.description)}</span></p>
+      `).join("");
+
+      document.getElementById("events").innerHTML = data.recent_dlp_events.map((event) => `
+        <tr>
+          <td>${pill(event.action)}<br><span class="${escapeHtml(event.severity)}">${escapeHtml(event.severity)}</span></td>
+          <td>${escapeHtml(event.username || "-")}</td>
+          <td>${escapeHtml(event.asset_hostname || "-")}</td>
+          <td>${escapeHtml(event.sensitivity)} via ${escapeHtml(event.channel)}<br><span class="label">${event.bytes_count} bytes</span></td>
+          <td>${escapeHtml(event.destination || "-")}</td>
+          <td>${escapeHtml(event.reason)}</td>
+        </tr>
+      `).join("");
+    }
+    loadDashboard().catch((error) => {
+      document.body.insertAdjacentHTML("beforeend", `<pre>${escapeHtml(error.stack || error.message)}</pre>`);
+    });
+  </script>
+</body>
+</html>
+
