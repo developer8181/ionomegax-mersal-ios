@@ -28,10 +28,14 @@ class StorageWorkflowTests(unittest.TestCase):
             copies=1,
             color=False,
             duplex=False,
+            source="print-provider",
+            agent_id="provider-1",
         )
 
         updated_user = next(row for row in self.db.list_users() if row["id"] == user["id"])
         self.assertEqual(job["status"], "printed")
+        self.assertEqual(job["source"], "print-provider")
+        self.assertEqual(job["agent_id"], "provider-1")
         self.assertEqual(updated_user["balance_cents"], user["balance_cents"] - job["cost_cents"])
 
     def test_hold_job_when_quota_is_insufficient(self):

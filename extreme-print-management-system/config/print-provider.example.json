@@ -1,0 +1,7 @@
+{
+  "server": "http://127.0.0.1:8080",
+  "agent_id": "print-provider-main-server",
+  "spooler": "cups",
+  "queue_names": ["Main Office HP", "Library BW"],
+  "offline_queue": "data/print-provider-offline.jsonl"
+}

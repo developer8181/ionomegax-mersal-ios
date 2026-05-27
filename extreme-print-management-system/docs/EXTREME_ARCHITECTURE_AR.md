@@ -96,7 +96,12 @@ Printer / MFD
 - تطبيق قرار الخادم.
 - حفظ queue محلي مؤقت عند انقطاع الاتصال.
 
-النسخة الحالية مدمجة ضمن مفهوم `printer_controller.py` كبداية، ويجب فصلها لاحقًا عندما يبدأ التكامل الحقيقي مع أنظمة الطباعة.
+النسخة الحالية:
+
+- `print_provider.py`
+- `epms/print_provider.py`
+
+وهي نسخة CLI/Prototype تستقبل أحداث spooler بشكل JSON أو parameters، ترسلها إلى السيرفر، وتحفظها في queue محلي عند انقطاع الاتصال.
 
 ## 4. Extreme Printer Controller
 
