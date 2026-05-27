@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extreme IP Guard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Adaptive cyber defense platform</p>
+        <h1>Extreme IP Guard</h1>
+        <p>
+          Zero-trust egress analytics, adaptive enforcement, and analyst-ready visibility for risky IP traffic.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <span class="badge">Server + Sensor MVP</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="cards" class="cards"></section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Simulate network event</h2>
+            <p>Drive the risk engine with an outbound connection scenario and review the automated decision.</p>
+          </div>
+        </div>
+        <form id="eventForm" class="grid-form">
+          <label>
+            Asset
+            <select name="asset_id" id="eventAsset" required></select>
+          </label>
+          <label>
+            Source IP
+            <input name="source_ip" value="10.10.20.17" required />
+          </label>
+          <label>
+            Destination IP
+            <input name="destination_ip" value="203.0.113.45" required />
+          </label>
+          <label>
+            Destination port
+            <input name="destination_port" type="number" min="1" max="65535" value="445" required />
+          </label>
+          <label>
+            Protocol
+            <select name="protocol">
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+              <option value="quic">QUIC</option>
+              <option value="icmp">ICMP</option>
+            </select>
+          </label>
+          <label>
+            Country
+            <input name="country" value="RU" maxlength="2" />
+          </label>
+          <label>
+            Process
+            <input name="process_name" value="powershell.exe" />
+          </label>
+          <label>
+            Reputation (0-100)
+            <input name="ip_reputation_score" type="number" min="0" max="100" value="92" />
+          </label>
+          <label>
+            Burst connections
+            <input name="burst_connections" type="number" min="0" value="240" />
+          </label>
+          <label>
+            Bytes out
+            <input name="bytes_out" type="number" min="0" value="24500000" />
+          </label>
+          <label>
+            Bytes in
+            <input name="bytes_in" type="number" min="0" value="1200000" />
+          </label>
+          <label class="checkbox">
+            <input name="tor_exit_node" type="checkbox" />
+            TOR / anonymized path
+          </label>
+          <label class="checkbox">
+            <input name="geo_anomaly" type="checkbox" checked />
+            Geo anomaly
+          </label>
+          <button type="submit">Submit event</button>
+        </form>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Protected assets</h2>
+              <p>Trust score and posture update automatically as incidents appear.</p>
+            </div>
+          </div>
+          <div id="assets"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Active policies</h2>
+              <p>Thresholds and trust boundaries currently enforced by the engine.</p>
+            </div>
+          </div>
+          <div id="policies"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Open incidents</h2>
+            <p>Resolve or triage disruptive decisions triggered by the policy engine.</p>
+          </div>
+        </div>
+        <div id="incidents"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Recent network events</h2>
+            <p>Every event records risk score, severity, automated action, and rationale.</p>
+          </div>
+        </div>
+        <div id="events"></div>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <h2>Top assets by risk</h2>
+          <div id="assetReport"></div>
+        </article>
+        <article class="panel">
+          <h2>Country risk report</h2>
+          <div id="countryReport"></div>
+        </article>
+      </section>
+    </main>
+
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
