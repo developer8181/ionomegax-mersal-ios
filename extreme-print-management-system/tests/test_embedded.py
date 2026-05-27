@@ -27,6 +27,7 @@ class EmbeddedAdapterTests(unittest.TestCase):
         adapter = HPAdapter(server_url="http://127.0.0.1:8080", device_address="https://mfd.example/oxp")
         caps = adapter.device_capabilities()
         self.assertEqual(caps["vendor"], "hp")
+        self.assertEqual(caps["sdk"]["status"], "active")
         self.assertIn("release", caps["capabilities"])
 
     def test_gateway_authenticate_and_list_held(self):

@@ -1,4 +1,4 @@
-"""Embedded printer controller adapters."""
+"""Embedded printer controller adapters with activated vendor SDKs."""
 
 from __future__ import annotations
 
@@ -8,32 +8,28 @@ from .base import EmbeddedAdapter
 from .canon import CanonMEAPAdapter
 from .gateway import GatewayAdapter
 from .hp import HPAdapter
+from .konica import KonicaMinoltaOpenAPIAdapter
+from .kyocera import KyoceraHyPASAdapter
+from .lexmark import LexmarkESFAdapter
+from .olivetti import OlivettiConnectAdapter
+from .ricoh import RicohSmartSDKAdapter
+from .sdk_registry import get_sdk_runtime, is_sdk_active, list_active_sdks
+from .xerox import XeroxEIPAdapter
 
 _ADAPTERS: dict[str, type[EmbeddedAdapter]] = {
     "hp": HPAdapter,
     "canon": CanonMEAPAdapter,
-    "ricoh": HPAdapter,
-    "xerox": HPAdapter,
-    "sharp": HPAdapter,
-    "konica-minolta": HPAdapter,
-    "toshiba": HPAdapter,
-    "kyocera": HPAdapter,
-    "lexmark": HPAdapter,
-    "epson": HPAdapter,
+    "kyocera": KyoceraHyPASAdapter,
+    "olivetti": OlivettiConnectAdapter,
+    "xerox": XeroxEIPAdapter,
+    "lexmark": LexmarkESFAdapter,
+    "ricoh": RicohSmartSDKAdapter,
+    "konica-minolta": KonicaMinoltaOpenAPIAdapter,
     "generic": GatewayAdapter,
 }
 
 
 def get_adapter(*, vendor: str, server_url: str, agent_token: str = "", device_address: str = "") -> EmbeddedAdapter:
     key = normalize_vendor(vendor)
-    if key == "canon":
-        return CanonMEAPAdapter(server_url=server_url, agent_token=agent_token, device_address=device_address)
-    if key != "generic" and key in _ADAPTERS and _ADAPTERS[key] is HPAdapter:
-        return HPAdapter(
-            vendor=key,
-            server_url=server_url,
-            agent_token=agent_token,
-            device_address=device_address,
-        )
     adapter_cls = _ADAPTERS.get(key, GatewayAdapter)
     return adapter_cls(server_url=server_url, agent_token=agent_token, device_address=device_address)

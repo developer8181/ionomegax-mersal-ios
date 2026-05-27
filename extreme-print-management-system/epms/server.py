@@ -16,7 +16,8 @@ from .auth import SESSION_COOKIE, SESSION_HEADER, user_to_dict
 from .config import Settings
 from .core import money_to_cents
 from .policy import scrub_job_document
-from .embedded import get_adapter
+from .embedded import get_adapter, list_active_sdks
+from .embedded.sdk_clients.registry import list_device_clients
 from .health import health_report
 from .security import AGENT_TOKEN_HEADER, is_authorized_agent_token
 from .storage import Database
@@ -66,6 +67,14 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._require_permission("view", lambda: self._send_json(self.database.list_pricing_rules()))
         if path == "/api/printer-platforms":
             return self._send_json(supported_platforms())
+        if path == "/api/sdk/vendors":
+            return self._send_json(
+                {
+                    "vendors": list_active_sdks(),
+                    "device_clients": list_device_clients(),
+                    "java_jar_dir": "sdk/jars",
+                }
+            )
         if path == "/api/settings":
             return self._require_permission("manage_settings", lambda: self._send_json(self._settings_payload()))
         if path == "/api/readiness":

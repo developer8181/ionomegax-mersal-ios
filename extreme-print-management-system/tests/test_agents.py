@@ -6,6 +6,7 @@ from epms.agents import build_heartbeat, normalize_vendor, platform_profile, sup
 class AgentMetadataTests(unittest.TestCase):
     def test_normalizes_vendor_names(self):
         self.assertEqual(normalize_vendor("Konica Minolta"), "konica-minolta")
+        self.assertEqual(normalize_vendor("Olivetti INFOchip"), "olivetti")
         self.assertEqual(normalize_vendor("unknown brand"), "generic")
 
     def test_platform_profile_includes_fallback_for_generic_printers(self):
@@ -22,7 +23,16 @@ class AgentMetadataTests(unittest.TestCase):
         self.assertIn("canon", vendors)
         self.assertIn("ricoh", vendors)
         self.assertIn("xerox", vendors)
+        self.assertIn("kyocera", vendors)
+        self.assertIn("olivetti", vendors)
+        self.assertIn("lexmark", vendors)
+        self.assertIn("konica-minolta", vendors)
         self.assertIn("generic", vendors)
+
+    def test_platform_profile_includes_active_sdk(self):
+        profile = platform_profile("kyocera")
+        self.assertEqual(profile["sdk"]["status"], "active")
+        self.assertTrue(profile["sdk_active"])
 
     def test_build_heartbeat_rejects_unknown_agent_type(self):
         with self.assertRaises(ValueError):

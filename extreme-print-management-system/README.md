@@ -116,6 +116,17 @@ cd extreme-print-management-system
 python3 -m unittest discover -s tests
 ```
 
-## Remaining vendor-specific work
+## Vendor SDK pack
 
-Production platform code is complete for server, policies, agents, CUPS/Windows adapters, Site Server, Release Station, and deployment. **Per-printer embedded SDK binaries** (HP OXP, Canon MEAP, Ricoh SmartSDK, etc.) still require certification and vendor SDK projects — the shared controller registry and CLI protocol are ready to host those adapters.
+Full SDK integration for **HP, Canon, Ricoh, Xerox, Konica Minolta, Kyocera, Lexmark, Olivetti**:
+
+- Python HTTP clients: `epms/embedded/sdk_clients/` (Extreme servlet + native vendor paths)
+- Java servlet + per-vendor bridges: `sdk/java/`
+- Official vendor JARs: place in `sdk/jars/` (from manufacturer partner portal)
+
+```bash
+curl http://127.0.0.1:8080/api/sdk/vendors
+python3 printer_controller.py login --vendor kyocera --username sara --device-address https://mfd.local/
+```
+
+Certified on-device binaries still come from each manufacturer; EPMS ships the integration layer and build scaffolds.

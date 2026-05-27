@@ -15,24 +15,28 @@ SUPPORTED_EMBEDDED_PLATFORMS: dict[str, dict[str, Any]] = {
     "hp": {
         "platform": "OXP / Workpath / FutureSmart",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
     "canon": {
         "platform": "MEAP",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
     "ricoh": {
         "platform": "SmartSDK / SOP",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
     "xerox": {
         "platform": "EIP",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
@@ -45,6 +49,7 @@ SUPPORTED_EMBEDDED_PLATFORMS: dict[str, dict[str, Any]] = {
     "konica-minolta": {
         "platform": "OpenAPI / i-Option",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
@@ -57,12 +62,21 @@ SUPPORTED_EMBEDDED_PLATFORMS: dict[str, dict[str, Any]] = {
     "kyocera": {
         "platform": "HyPAS",
         "embedded": True,
+        "sdk_active": True,
+        "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
+        "fallback": "print-provider-gateway",
+    },
+    "olivetti": {
+        "platform": "Olivetti Connect / INFOchip",
+        "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
     "lexmark": {
         "platform": "eSF",
         "embedded": True,
+        "sdk_active": True,
         "capabilities": ["release", "copy_tracking", "scan_tracking", "card_auth"],
         "fallback": "print-provider-gateway",
     },
@@ -96,8 +110,10 @@ class AgentHeartbeat:
 
 def normalize_vendor(vendor: str) -> str:
     value = vendor.strip().lower().replace("_", "-").replace(" ", "-")
-    if value in {"konica", "konica-minolta", "konicaminolta"}:
+    if value in {"konica", "konica-minolta", "konicaminolta", "km"}:
         return "konica-minolta"
+    if value.startswith("olivetti") or value in {"infochip", "olivetti-infochip"}:
+        return "olivetti"
     if value in SUPPORTED_EMBEDDED_PLATFORMS:
         return value
     return "generic"
@@ -107,6 +123,12 @@ def platform_profile(vendor: str) -> dict[str, Any]:
     normalized = normalize_vendor(vendor)
     profile = SUPPORTED_EMBEDDED_PLATFORMS[normalized].copy()
     profile["vendor"] = normalized
+    try:
+        from epms.embedded.sdk_registry import get_sdk_runtime
+
+        profile["sdk"] = get_sdk_runtime(normalized).to_dict()
+    except ImportError:
+        profile["sdk"] = {"status": "unknown"}
     return profile
 
 

@@ -1,0 +1,21 @@
+{
+  "activated_vendors": [
+    "kyocera",
+    "olivetti",
+    "xerox",
+    "lexmark",
+    "ricoh",
+    "konica-minolta",
+    "hp",
+    "canon"
+  ],
+  "device_urls": {
+    "kyocera": "https://mfd.example.local/hypas/extreme",
+    "olivetti": "https://mfd.example.local/olivetti/connect",
+    "xerox": "https://mfd.example.local/xerox/eip",
+    "lexmark": "https://mfd.example.local/lexmark/esf",
+    "ricoh": "https://mfd.example.local/ricoh/smartsdk",
+    "konica-minolta": "https://mfd.example.local/km/openapi"
+  },
+  "notes": "Set EPMS_SDK_ALL=active or per-vendor EPMS_SDK_KYOCERA=active. Use EPMS_SDK_VENDOR=disable to turn off one vendor."
+}
