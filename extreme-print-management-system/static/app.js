@@ -4,14 +4,293 @@ const state = {
   jobs: [],
   agents: [],
   dashboard: {},
+  lang: localStorage.getItem("epms-language") || "en",
 };
 
+const messages = {
+  en: {
+    brandName: "Extreme Print",
+    brandSubtitle: "Enterprise Control",
+    languageLabel: "Language",
+    navCommand: "Command Center",
+    navJobs: "Secure Jobs",
+    navFleet: "Fleet",
+    navAgents: "Agents",
+    navReports: "Intelligence",
+    demoOnline: "Enterprise Demo Online",
+    demoOnlineText: "Server, agents, providers and controllers are visible in one console.",
+    heroEyebrow: "Private print governance platform",
+    heroTitle: "Extreme Print Management System",
+    heroDescription:
+      "Centralized print security, quotas, embedded device control, direct-print monitoring, offline provider queues, and executive-grade reporting.",
+    loadDemo: "Load enterprise demo",
+    resetQuotas: "Reset monthly quotas",
+    liveControlPlane: "Live control plane",
+    trackedDecisions: "tracked print decisions",
+    secureRelease: "Secure Release",
+    quotaEngine: "Quota Engine",
+    providerQueue: "Provider Queue",
+    embeddedReady: "Embedded Ready",
+    componentServer: "Extreme Server",
+    componentServerText: "Policy brain, quotas, transactions, reporting, and dashboard APIs.",
+    componentClient: "Client Agent",
+    componentClientText: "Balance popups, account selection, direct-print monitor, and user feedback.",
+    componentProvider: "Print Provider",
+    componentProviderText: "Windows/CUPS gateway concept with offline JSONL replay for outages.",
+    componentPrinter: "Printer Controller",
+    componentPrinterText: "Vendor adapter layer for HP, Canon, Ricoh, Xerox, Sharp, Kyocera, and more.",
+    policySimulator: "Policy simulator",
+    submitTitle: "Submit controlled print job",
+    submitDescription: "Simulate print-server or client-agent submission with live quota and device-policy checks.",
+    realtimeDecisioning: "Real-time decisioning",
+    fieldUser: "User",
+    fieldPrinter: "Printer",
+    fieldDocument: "Document",
+    fieldPages: "Pages",
+    fieldCopies: "Copies",
+    fieldAccount: "Account / department",
+    fieldSource: "Source",
+    fieldAgent: "Agent ID",
+    fieldColor: "Color",
+    fieldDuplex: "Duplex",
+    defaultDocument: "Executive dossier.pdf",
+    defaultAccount: "Executive Office",
+    sourceWeb: "Admin Console",
+    sourceClientAgent: "Client Agent",
+    sourcePrintProvider: "Print Provider",
+    sourcePrinterController: "Printer Controller",
+    runPolicy: "Run print policy",
+    usersTitle: "Users and balances",
+    usersDescription: "Quota, budget and overdraft visibility for every identity.",
+    printersTitle: "Printer fleet",
+    printersDescription: "Device capability, pricing and operational status.",
+    jobsTitle: "Secure print decisions",
+    jobsDescription: "Held jobs can be released or denied by an administrator or printer controller.",
+    findMe: "Find-Me / Hold-Release",
+    agentsTitle: "Agent mesh",
+    agentsDescription: "Registered clients, print providers, site servers, and printer controllers.",
+    readinessTitle: "System readiness",
+    readinessDescription: "Demo-grade readiness across distributed components.",
+    topUsersTitle: "Top users",
+    printerUsageTitle: "Printer usage",
+    sourceIntelTitle: "Job source intelligence",
+    cardIdentities: "Identities",
+    cardPrinterFleet: "Printer Fleet",
+    cardActiveAgents: "Active Agents",
+    cardPrintedJobs: "Printed Jobs",
+    cardHeldJobs: "Held Jobs",
+    cardTotalPages: "Total Pages",
+    cardCharged: "Charged",
+    cardEcoSavings: "Eco Savings",
+    thName: "Name",
+    thDepartment: "Department",
+    thBalance: "Balance",
+    thMonthlyQuota: "Monthly quota",
+    thOverdraft: "Overdraft",
+    thAction: "Action",
+    thDevice: "Device",
+    thLocation: "Location",
+    thColor: "Color",
+    thDuplex: "Duplex",
+    thBw: "BW",
+    thStatus: "Status",
+    thId: "ID",
+    thDocument: "Document",
+    thIdentity: "Identity",
+    thPrinter: "Printer",
+    thPages: "Pages",
+    thCost: "Cost",
+    thSource: "Source",
+    thAgent: "Agent",
+    thType: "Type",
+    thHost: "Host",
+    thVersion: "Version",
+    thMetadata: "Metadata",
+    thPrintedJobs: "Printed jobs",
+    thJobs: "Jobs",
+    yes: "Yes",
+    no: "No",
+    addCredit: "Add $5",
+    release: "Release",
+    deny: "Deny",
+    ready: "Ready",
+    pending: "Pending",
+    noRecords: "No records yet. Load the enterprise demo to populate the control plane.",
+    extremeServer: "Extreme Server",
+    clientAgent: "Client Agent",
+    printProvider: "Print Provider",
+    printerController: "Printer Controller",
+    siteServerArchitecture: "Site Server Architecture",
+    statusPrinted: "Printed",
+    statusHeld: "Held",
+    statusDenied: "Denied",
+    statusOnline: "Online",
+    statusMaintenance: "Maintenance",
+    sourceWebLabel: "Admin Console",
+    sourceClientAgentLabel: "Client Agent",
+    sourcePrintProviderLabel: "Print Provider",
+    sourcePrinterControllerLabel: "Printer Controller",
+    sourceSiteServerLabel: "Site Server",
+    toastCredit: "Emergency credit added",
+    toastReleased: "Held job released",
+    toastDenied: "Held job denied",
+    toastQuotas: "Monthly quotas reset",
+    toastDemo: "Enterprise demo data loaded",
+    toastJob: "Job #{id} {status}: {reason}",
+    deniedReason: "Denied from command center",
+  },
+  ar: {
+    brandName: "إكستريم برنت",
+    brandSubtitle: "تحكم مؤسسي",
+    languageLabel: "اللغة",
+    navCommand: "مركز التحكم",
+    navJobs: "مهام آمنة",
+    navFleet: "الأسطول",
+    navAgents: "الوكلاء",
+    navReports: "الذكاء التشغيلي",
+    demoOnline: "العرض المؤسسي يعمل",
+    demoOnlineText: "السيرفر والوكلاء ومزودو الطباعة ووحدات التحكم ظاهرة في لوحة واحدة.",
+    heroEyebrow: "منصة خاصة لحوكمة الطباعة",
+    heroTitle: "نظام إكستريم لإدارة الطباعة",
+    heroDescription:
+      "أمان مركزي للطباعة، حصص وأرصدة، تحكم بالأجهزة المدمجة، مراقبة الطباعة المباشرة، طوابير دون اتصال، وتقارير تنفيذية.",
+    loadDemo: "تحميل عرض مؤسسي",
+    resetQuotas: "تصفير الحصص الشهرية",
+    liveControlPlane: "لوحة تحكم مباشرة",
+    trackedDecisions: "قرار طباعة متتبع",
+    secureRelease: "إطلاق آمن",
+    quotaEngine: "محرك الحصص",
+    providerQueue: "طابور المزود",
+    embeddedReady: "جاهز للتضمين",
+    componentServer: "سيرفر إكستريم",
+    componentServerText: "عقل السياسات والحصص والمعاملات والتقارير وواجهات التحكم.",
+    componentClient: "برنامج العميل",
+    componentClientText: "عرض الرصيد، اختيار الحساب، مراقبة الطباعة المباشرة وتنبيهات المستخدم.",
+    componentProvider: "مزود الطباعة",
+    componentProviderText: "بوابة Windows/CUPS مع إعادة تشغيل طابور JSONL عند الانقطاع.",
+    componentPrinter: "وحدة التحكم بالطابعة",
+    componentPrinterText: "طبقة مواءمة للبائعين مثل HP وCanon وRicoh وXerox وSharp وKyocera وغيرها.",
+    policySimulator: "محاكي السياسات",
+    submitTitle: "إرسال مهمة طباعة مراقبة",
+    submitDescription: "حاكي إرسالًا من خادم الطباعة أو برنامج العميل مع فحص مباشر للحصة وسياسات الجهاز.",
+    realtimeDecisioning: "قرار فوري",
+    fieldUser: "المستخدم",
+    fieldPrinter: "الطابعة",
+    fieldDocument: "المستند",
+    fieldPages: "الصفحات",
+    fieldCopies: "النسخ",
+    fieldAccount: "الحساب / القسم",
+    fieldSource: "المصدر",
+    fieldAgent: "معرف الوكيل",
+    fieldColor: "ألوان",
+    fieldDuplex: "وجهين",
+    defaultDocument: "ملف تنفيذي.pdf",
+    defaultAccount: "مكتب الإدارة",
+    sourceWeb: "لوحة الإدارة",
+    sourceClientAgent: "برنامج العميل",
+    sourcePrintProvider: "مزود الطباعة",
+    sourcePrinterController: "وحدة الطابعة",
+    runPolicy: "تشغيل سياسة الطباعة",
+    usersTitle: "المستخدمون والأرصدة",
+    usersDescription: "رؤية الحصص والميزانيات وحد السحب لكل هوية.",
+    printersTitle: "أسطول الطابعات",
+    printersDescription: "إمكانيات الأجهزة والأسعار والحالة التشغيلية.",
+    jobsTitle: "قرارات الطباعة الآمنة",
+    jobsDescription: "يمكن إطلاق المهام المحجوزة أو رفضها من المدير أو وحدة الطابعة.",
+    findMe: "Find-Me / حجز وإطلاق",
+    agentsTitle: "شبكة الوكلاء",
+    agentsDescription: "العملاء ومزودو الطباعة وسيرفرات المواقع ووحدات التحكم المسجلة.",
+    readinessTitle: "جاهزية النظام",
+    readinessDescription: "جاهزية العرض عبر المكونات الموزعة.",
+    topUsersTitle: "أكثر المستخدمين",
+    printerUsageTitle: "استخدام الطابعات",
+    sourceIntelTitle: "تحليل مصادر المهام",
+    cardIdentities: "الهويات",
+    cardPrinterFleet: "أسطول الطابعات",
+    cardActiveAgents: "الوكلاء النشطون",
+    cardPrintedJobs: "مهام مطبوعة",
+    cardHeldJobs: "مهام محجوزة",
+    cardTotalPages: "إجمالي الصفحات",
+    cardCharged: "المبلغ المحصل",
+    cardEcoSavings: "وفورات تقديرية",
+    thName: "الاسم",
+    thDepartment: "القسم",
+    thBalance: "الرصيد",
+    thMonthlyQuota: "الحصة الشهرية",
+    thOverdraft: "حد السحب",
+    thAction: "الإجراء",
+    thDevice: "الجهاز",
+    thLocation: "الموقع",
+    thColor: "ألوان",
+    thDuplex: "وجهين",
+    thBw: "أبيض وأسود",
+    thStatus: "الحالة",
+    thId: "المعرف",
+    thDocument: "المستند",
+    thIdentity: "الهوية",
+    thPrinter: "الطابعة",
+    thPages: "الصفحات",
+    thCost: "التكلفة",
+    thSource: "المصدر",
+    thAgent: "الوكيل",
+    thType: "النوع",
+    thHost: "المضيف",
+    thVersion: "الإصدار",
+    thMetadata: "البيانات",
+    thPrintedJobs: "مهام مطبوعة",
+    thJobs: "المهام",
+    yes: "نعم",
+    no: "لا",
+    addCredit: "إضافة 5$",
+    release: "إطلاق",
+    deny: "رفض",
+    ready: "جاهز",
+    pending: "قيد التجهيز",
+    noRecords: "لا توجد سجلات بعد. حمّل العرض المؤسسي لملء لوحة التحكم.",
+    extremeServer: "سيرفر إكستريم",
+    clientAgent: "برنامج العميل",
+    printProvider: "مزود الطباعة",
+    printerController: "وحدة التحكم بالطابعة",
+    siteServerArchitecture: "معمارية سيرفر الموقع",
+    statusPrinted: "مطبوع",
+    statusHeld: "محجوز",
+    statusDenied: "مرفوض",
+    statusOnline: "متصل",
+    statusMaintenance: "صيانة",
+    sourceWebLabel: "لوحة الإدارة",
+    sourceClientAgentLabel: "برنامج العميل",
+    sourcePrintProviderLabel: "مزود الطباعة",
+    sourcePrinterControllerLabel: "وحدة الطابعة",
+    sourceSiteServerLabel: "سيرفر الموقع",
+    toastCredit: "تمت إضافة رصيد طارئ",
+    toastReleased: "تم إطلاق المهمة المحجوزة",
+    toastDenied: "تم رفض المهمة المحجوزة",
+    toastQuotas: "تم تصفير الحصص الشهرية",
+    toastDemo: "تم تحميل بيانات العرض المؤسسي",
+    toastJob: "المهمة #{id} {status}: {reason}",
+    deniedReason: "مرفوضة من مركز التحكم",
+  },
+};
+
+const t = (key) => messages[state.lang][key] || messages.en[key] || key;
 const money = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
-const yesNo = (value) => (value ? "Yes" : "No");
-const titleCase = (value) =>
-  String(value || "")
-    .replaceAll("-", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const yesNo = (value) => (value ? t("yes") : t("no"));
+
+const sourceLabels = {
+  web: "sourceWebLabel",
+  "client-agent": "sourceClientAgentLabel",
+  "print-provider": "sourcePrintProviderLabel",
+  "printer-controller": "sourcePrinterControllerLabel",
+  "site-server": "sourceSiteServerLabel",
+};
+
+const statusLabels = {
+  printed: "statusPrinted",
+  held: "statusHeld",
+  denied: "statusDenied",
+  online: "statusOnline",
+  maintenance: "statusMaintenance",
+};
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -37,7 +316,29 @@ async function refresh() {
   render();
 }
 
+function setLanguage(lang) {
+  state.lang = lang === "ar" ? "ar" : "en";
+  localStorage.setItem("epms-language", state.lang);
+  document.documentElement.lang = state.lang;
+  document.documentElement.dir = state.lang === "ar" ? "rtl" : "ltr";
+  applyTranslations();
+  render();
+}
+
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-value]").forEach((element) => {
+    element.value = t(element.dataset.i18nValue);
+  });
+  document.querySelectorAll(".language-toggle button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.lang === state.lang);
+  });
+}
+
 function render() {
+  applyTranslations();
   renderCards();
   renderSelects();
   renderUsers();
@@ -52,14 +353,14 @@ function render() {
 function renderCards() {
   const dashboard = state.dashboard;
   document.querySelector("#cards").innerHTML = [
-    ["Identities", dashboard.users],
-    ["Printer Fleet", dashboard.printers],
-    ["Active Agents", dashboard.agents],
-    ["Printed Jobs", dashboard.printed_jobs],
-    ["Held Jobs", dashboard.held_jobs],
-    ["Total Pages", dashboard.pages],
-    ["Charged", money(dashboard.charged_cents)],
-    ["Eco Savings", money(dashboard.estimated_savings_cents)],
+    [t("cardIdentities"), dashboard.users],
+    [t("cardPrinterFleet"), dashboard.printers],
+    [t("cardActiveAgents"), dashboard.agents],
+    [t("cardPrintedJobs"), dashboard.printed_jobs],
+    [t("cardHeldJobs"), dashboard.held_jobs],
+    [t("cardTotalPages"), dashboard.pages],
+    [t("cardCharged"), money(dashboard.charged_cents)],
+    [t("cardEcoSavings"), money(dashboard.estimated_savings_cents)],
   ]
     .map(([label, value]) => `<article class="card"><span>${label}</span><strong>${value ?? 0}</strong></article>`)
     .join("");
@@ -76,21 +377,21 @@ function renderSelects() {
 
 function renderUsers() {
   document.querySelector("#users").innerHTML = table(
-    ["Name", "Department", "Balance", "Monthly quota", "Overdraft", "Action"],
+    [t("thName"), t("thDepartment"), t("thBalance"), t("thMonthlyQuota"), t("thOverdraft"), t("thAction")],
     state.users.map((user) => [
       `<strong>${escapeHtml(user.display_name)}</strong><br><span class="muted">@${escapeHtml(user.username)}</span>`,
       escapeHtml(user.department),
       money(user.balance_cents),
       money(user.monthly_quota_cents),
       money(user.overdraft_cents),
-      `<button class="small" data-credit="${user.id}">Add $5</button>`,
+      `<button class="small" data-credit="${user.id}">${t("addCredit")}</button>`,
     ]),
   );
 }
 
 function renderPrinters() {
   document.querySelector("#printers").innerHTML = table(
-    ["Device", "Location", "Color", "Duplex", "BW", "Color", "Status"],
+    [t("thDevice"), t("thLocation"), t("thColor"), t("thDuplex"), t("thBw"), t("thColor"), t("thStatus")],
     state.printers.map((printer) => [
       `<strong>${escapeHtml(printer.name)}</strong>`,
       escapeHtml(printer.location),
@@ -98,14 +399,14 @@ function renderPrinters() {
       yesNo(printer.duplex_supported),
       money(printer.bw_page_cents),
       money(printer.color_page_cents),
-      `<span class="status ${printer.status}">${escapeHtml(printer.status)}</span>`,
+      `<span class="status ${printer.status}">${statusText(printer.status)}</span>`,
     ]),
   );
 }
 
 function renderJobs() {
   document.querySelector("#jobsTable").innerHTML = table(
-    ["ID", "Document", "Identity", "Printer", "Pages", "Cost", "Source", "Status", "Action"],
+    [t("thId"), t("thDocument"), t("thIdentity"), t("thPrinter"), t("thPages"), t("thCost"), t("thSource"), t("thStatus"), t("thAction")],
     state.jobs.map((job) => [
       `#${job.id}`,
       `<strong>${escapeHtml(job.document_name)}</strong><br><span class="muted">${escapeHtml(job.account)}</span>`,
@@ -113,10 +414,10 @@ function renderJobs() {
       escapeHtml(job.printer_name),
       `${job.pages} x ${job.copies}`,
       money(job.cost_cents),
-      `<span class="badge">${escapeHtml(job.source || "web")}</span>`,
-      `<span class="status ${job.status}">${job.status}</span><br><span class="muted">${escapeHtml(job.reason)}</span>`,
+      `<span class="badge">${sourceText(job.source || "web")}</span>`,
+      `<span class="status ${job.status}">${statusText(job.status)}</span><br><span class="muted">${escapeHtml(job.reason)}</span>`,
       job.status === "held"
-        ? `<button class="small" data-release="${job.id}">Release</button> <button class="small danger" data-deny="${job.id}">Deny</button>`
+        ? `<button class="small" data-release="${job.id}">${t("release")}</button> <button class="small danger" data-deny="${job.id}">${t("deny")}</button>`
         : "",
     ]),
   );
@@ -124,10 +425,10 @@ function renderJobs() {
 
 function renderAgents() {
   document.querySelector("#agentsTable").innerHTML = table(
-    ["Agent", "Type", "Host", "Version", "Metadata"],
+    [t("thAgent"), t("thType"), t("thHost"), t("thVersion"), t("thMetadata")],
     state.agents.map((agent) => [
       `<strong>${escapeHtml(agent.agent_id)}</strong>`,
-      `<span class="badge">${escapeHtml(agent.agent_type)}</span>`,
+      `<span class="badge">${sourceText(agent.agent_type)}</span>`,
       `${escapeHtml(agent.hostname)}<br><span class="muted">${escapeHtml(agent.os_name)}</span>`,
       escapeHtml(agent.version),
       escapeHtml(compactMetadata(agent.metadata)),
@@ -138,11 +439,11 @@ function renderAgents() {
 function renderReadiness() {
   const readiness = state.dashboard.readiness || {};
   const labels = {
-    server: "Extreme Server",
-    client_agent: "Client Agent",
-    print_provider: "Print Provider",
-    printer_controller: "Printer Controller",
-    site_server_planned: "Site Server Architecture",
+    server: t("extremeServer"),
+    client_agent: t("clientAgent"),
+    print_provider: t("printProvider"),
+    printer_controller: t("printerController"),
+    site_server_planned: t("siteServerArchitecture"),
   };
   document.querySelector("#readiness").innerHTML = Object.entries(labels)
     .map(([key, label]) => {
@@ -150,7 +451,7 @@ function renderReadiness() {
       return `
         <div class="ready-row">
           <strong>${label}</strong>
-          <span class="badge ${ready ? "ready" : "not-ready"}">${ready ? "Ready" : "Pending"}</span>
+          <span class="badge ${ready ? "ready" : "not-ready"}">${ready ? t("ready") : t("pending")}</span>
         </div>
       `;
     })
@@ -159,22 +460,22 @@ function renderReadiness() {
 
 function renderReports() {
   document.querySelector("#userReport").innerHTML = table(
-    ["User", "Printed jobs", "Cost"],
+    [t("fieldUser"), t("thPrintedJobs"), t("thCost")],
     (state.dashboard.by_user || []).map((row) => [escapeHtml(row.display_name), row.jobs, money(row.cost_cents)]),
   );
   document.querySelector("#printerReport").innerHTML = table(
-    ["Printer", "Printed jobs", "Pages"],
+    [t("fieldPrinter"), t("thPrintedJobs"), t("thPages")],
     (state.dashboard.by_printer || []).map((row) => [escapeHtml(row.name), row.jobs, row.pages]),
   );
   document.querySelector("#sourceReport").innerHTML = table(
-    ["Source", "Jobs", "Cost"],
-    (state.dashboard.by_source || []).map((row) => [titleCase(row.source), row.jobs, money(row.cost_cents)]),
+    [t("thSource"), t("thJobs"), t("thCost")],
+    (state.dashboard.by_source || []).map((row) => [sourceText(row.source), row.jobs, money(row.cost_cents)]),
   );
 }
 
 function table(headers, rows) {
   if (!rows.length) {
-    return `<p class="muted">No records yet. Load the enterprise demo to populate the control plane.</p>`;
+    return `<p class="muted">${t("noRecords")}</p>`;
   }
   return `
     <table>
@@ -194,6 +495,21 @@ function compactMetadata(metadata) {
     .join(" | ");
 }
 
+function sourceText(value) {
+  return t(sourceLabels[value] || "") || titleCase(value);
+}
+
+function statusText(value) {
+  return t(statusLabels[value] || "") || titleCase(value);
+}
+
+function titleCase(value) {
+  return String(value || "")
+    .replaceAll("-", " ")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -209,6 +525,10 @@ function toast(message) {
   element.classList.add("show");
   setTimeout(() => element.classList.remove("show"), 2800);
 }
+
+document.querySelectorAll(".language-toggle button").forEach((button) => {
+  button.addEventListener("click", () => setLanguage(button.dataset.lang));
+});
 
 document.querySelector("#jobForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -227,7 +547,7 @@ document.querySelector("#jobForm").addEventListener("submit", async (event) => {
   };
   try {
     const job = await api("/api/jobs", { method: "POST", body: JSON.stringify(payload) });
-    toast(`Job #${job.id} ${job.status}: ${job.reason}`);
+    toast(t("toastJob").replace("{id}", job.id).replace("{status}", statusText(job.status)).replace("{reason}", job.reason));
     await refresh();
   } catch (error) {
     toast(error.message);
@@ -241,17 +561,17 @@ document.body.addEventListener("click", async (event) => {
   try {
     if (creditId) {
       await api(`/api/users/${creditId}/credit`, { method: "POST", body: JSON.stringify({ amount: "5.00" }) });
-      toast("Emergency credit added");
+      toast(t("toastCredit"));
       await refresh();
     }
     if (releaseId) {
       await api(`/api/jobs/${releaseId}/release`, { method: "POST", body: "{}" });
-      toast("Held job released");
+      toast(t("toastReleased"));
       await refresh();
     }
     if (denyId) {
-      await api(`/api/jobs/${denyId}/deny`, { method: "POST", body: JSON.stringify({ reason: "Denied from command center" }) });
-      toast("Held job denied");
+      await api(`/api/jobs/${denyId}/deny`, { method: "POST", body: JSON.stringify({ reason: t("deniedReason") }) });
+      toast(t("toastDenied"));
       await refresh();
     }
   } catch (error) {
@@ -262,7 +582,7 @@ document.body.addEventListener("click", async (event) => {
 document.querySelector("#resetQuotas").addEventListener("click", async () => {
   try {
     await api("/api/quotas/reset", { method: "POST", body: "{}" });
-    toast("Monthly quotas reset");
+    toast(t("toastQuotas"));
     await refresh();
   } catch (error) {
     toast(error.message);
@@ -272,11 +592,12 @@ document.querySelector("#resetQuotas").addEventListener("click", async () => {
 document.querySelector("#loadDemo").addEventListener("click", async () => {
   try {
     await api("/api/demo/reset", { method: "POST", body: "{}" });
-    toast("Enterprise demo data loaded");
+    toast(t("toastDemo"));
     await refresh();
   } catch (error) {
     toast(error.message);
   }
 });
 
+setLanguage(state.lang);
 refresh().catch((error) => toast(error.message));
