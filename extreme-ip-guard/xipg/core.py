@@ -5,6 +5,17 @@ from __future__ import annotations
 import ipaddress
 from dataclasses import dataclass
 
+LOCAL_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("::1/128"),
+)
+
 
 @dataclass(frozen=True)
 class GuardPolicy:
@@ -54,9 +65,9 @@ def parse_networks(values: tuple[str, ...]) -> tuple[ipaddress._BaseNetwork, ...
     return tuple(ipaddress.ip_network(item, strict=False) for item in values)
 
 
-def is_private_or_reserved(value: str) -> bool:
+def is_private_or_local(value: str) -> bool:
     ip_value = ipaddress.ip_address(normalize_ip(value))
-    return ip_value.is_private or ip_value.is_loopback or ip_value.is_reserved or ip_value.is_link_local
+    return any(ip_value in network for network in LOCAL_NETWORKS)
 
 
 def score_event(event: NetworkEvent, policy: GuardPolicy) -> RiskDecision:
@@ -138,9 +149,9 @@ def score_event(event: NetworkEvent, policy: GuardPolicy) -> RiskDecision:
         score -= 10
         reasons.append("destination belongs to a trusted network")
 
-    if is_private_or_reserved(destination_ip) and source_value.version == destination_value.version:
+    if is_private_or_local(destination_ip) and source_value.version == destination_value.version:
         score -= 8
-        reasons.append("destination is private or reserved space")
+        reasons.append("destination is private or local network space")
 
     score = max(0, min(score, 100))
     severity = severity_for_score(score)

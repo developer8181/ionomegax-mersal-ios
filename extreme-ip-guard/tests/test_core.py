@@ -88,6 +88,28 @@ class CoreRulesTests(unittest.TestCase):
 
         self.assertEqual(decision.action, "quarantine")
 
+    def test_reserved_documentation_ip_does_not_get_private_discount(self):
+        decision = score_event(
+            NetworkEvent(
+                source_ip="10.10.20.17",
+                destination_ip="203.0.113.45",
+                destination_port=443,
+                protocol="tcp",
+                country="US",
+                bytes_out=0,
+                bytes_in=0,
+                process_name="curl",
+                ip_reputation_score=0,
+                tor_exit_node=False,
+                geo_anomaly=False,
+                burst_connections=0,
+                asset_criticality="medium",
+            ),
+            DEFAULT_POLICY,
+        )
+
+        self.assertNotIn("destination is private or local network space", decision.reasons)
+
 
 if __name__ == "__main__":
     unittest.main()
