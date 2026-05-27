@@ -1,19 +1,23 @@
-"""Minimal HTTP API for the Xtreme IP Guard prototype."""
+"""Ionomegax Mersal Guard — HTTP API and Command Center."""
 
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .auth import authorize
+from .brand import BRAND
 from .core import EndpointEvent, PolicyRule
 from .storage import Database
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DB = PROJECT_ROOT / "data" / "xtreme-ip-guard.sqlite3"
+DEFAULT_DB = PROJECT_ROOT / "data" / "mersal-guard.sqlite3"
+WEB_ROOT = PROJECT_ROOT / "web"
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -21,16 +25,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.database = database
         super().__init__(*args, **kwargs)
 
-    def do_GET(self) -> None:  # noqa: N802 - stdlib method name
+    def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
-        if path == "/":
-            return self._send_json(
-                {
-                    "name": "Xtreme IP Guard",
-                    "status": "running",
-                    "endpoints": ["/api/dashboard", "/api/endpoints", "/api/events", "/api/policies", "/api/agents"],
-                }
-            )
+        if path in {"/", "/console", "/console/"}:
+            return self._serve_file(WEB_ROOT / "index.html")
+        if path.startswith("/console/"):
+            return self._serve_file(WEB_ROOT / path.removeprefix("/console/"))
+        if not self._authorized():
+            return
+        if path == "/api/health":
+            return self._send_json({"status": "ok", "product": BRAND["full_name"]})
+        if path == "/api/brand":
+            return self._send_json(BRAND)
         if path == "/api/dashboard":
             return self._send_json(self.database.dashboard())
         if path == "/api/endpoints":
@@ -41,9 +47,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_policies())
         if path == "/api/agents":
             return self._send_json(self.database.list_agents())
+        if path.startswith("/api/endpoints/") and path.endswith("/directives"):
+            endpoint_id = self._path_part(path, 2)
+            return self._send_json(self.database.endpoint_directives(endpoint_id))
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
-    def do_POST(self) -> None:  # noqa: N802 - stdlib method name
+    def do_POST(self) -> None:  # noqa: N802
+        if not self._authorized():
+            return
         path = urlparse(self.path).path
         try:
             if path == "/api/agents/heartbeat":
@@ -104,7 +115,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
     def log_message(self, format: str, *args: object) -> None:
-        """Keep prototype output readable during tests and demos."""
+        return
+
+    def _authorized(self) -> bool:
+        token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "").removeprefix("Bearer ")
+        if authorize(token):
+            return True
+        self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        return False
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
@@ -120,20 +138,45 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _serve_file(self, relative: Path) -> None:
+        target = relative
+        if target.is_dir():
+            target = target / "index.html"
+        if not target.is_file():
+            target = WEB_ROOT / "index.html"
+        resolved = target.resolve()
+        web_root = WEB_ROOT.resolve()
+        if web_root not in resolved.parents and resolved != web_root / "index.html":
+            self.send_error(HTTPStatus.FORBIDDEN)
+            return
+        content_type, _ = mimetypes.guess_type(str(resolved))
+        body = resolved.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     @staticmethod
     def _path_part(path: str, index: int) -> str:
         parts = [part for part in path.split("/") if part]
         return parts[index]
 
 
-def run(host: str = "127.0.0.1", port: int = 8090) -> None:
-    database = Database(os.environ.get("XIG_DB", DEFAULT_DB))
+def run(host: str | None = None, port: int | None = None) -> None:
+    bind_host = host or os.environ.get("MERSAL_HOST", "0.0.0.0")
+    bind_port = port or int(os.environ.get("MERSAL_PORT", "8090"))
+    database = Database(os.environ.get("MERSAL_DB", os.environ.get("XIG_DB", DEFAULT_DB)))
     database.init_schema()
     database.seed_demo()
 
     def handler(*args, **kwargs):
         RequestHandler(*args, database=database, **kwargs)
 
-    server = ThreadingHTTPServer((host, port), handler)
-    print(f"Xtreme IP Guard running at http://{host}:{port}")
+    server = ThreadingHTTPServer((bind_host, bind_port), handler)
+    token = os.environ.get("MERSAL_API_TOKEN", "")
+    print(f"{BRAND['full_name']} running at http://{bind_host}:{bind_port}")
+    print(f"Command Center: http://{bind_host}:{bind_port}/console/")
+    if token:
+        print("API token authentication is enabled (X-Mersal-Token header).")
     server.serve_forever()

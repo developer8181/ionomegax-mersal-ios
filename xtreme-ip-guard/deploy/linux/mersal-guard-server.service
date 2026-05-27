@@ -1,0 +1,18 @@
+[Unit]
+Description=Ionomegax Mersal Guard Command Center
+After=network.target
+
+[Service]
+Type=simple
+User=mersal
+Group=mersal
+WorkingDirectory=/opt/mersal-guard
+Environment=MERSAL_HOST=0.0.0.0
+Environment=MERSAL_PORT=8090
+Environment=MERSAL_DB=/var/lib/mersal-guard/mersal-guard.sqlite3
+ExecStart=/usr/bin/python3 /opt/mersal-guard/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

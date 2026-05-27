@@ -309,6 +309,19 @@ class Database:
             row = db.execute("SELECT * FROM endpoints WHERE endpoint_id = ?", (endpoint_id,)).fetchone()
             return self._decode_endpoint(row)
 
+    def endpoint_directives(self, endpoint_id: str) -> dict[str, Any]:
+        endpoint = self.get_or_create_endpoint(endpoint_id)
+        policies = self.list_policies()
+        active = [policy for policy in policies if policy.get("enabled")]
+        return {
+            "endpoint_id": endpoint_id,
+            "isolated": bool(endpoint.get("isolated")),
+            "trust_score": int(endpoint.get("trust_score", 70)),
+            "policy_count": len(active),
+            "policies": active,
+            "actions": ["allow", "monitor", "warn", "block", "quarantine", "isolate_endpoint"],
+        }
+
     def get_or_create_endpoint(self, endpoint_id: str, *, owner: str = "") -> dict[str, Any]:
         with self.connect() as db:
             row = db.execute("SELECT * FROM endpoints WHERE endpoint_id = ?", (endpoint_id,)).fetchone()

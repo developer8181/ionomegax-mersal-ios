@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ionomegax Mersal Guard</title>
+    <link rel="stylesheet" href="/console/style.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">MG</span>
+          <div>
+            <strong data-i18n="brandName">Ionomegax Mersal Guard</strong>
+            <small data-i18n="brandSubtitle">Mersal Command Center</small>
+          </div>
+        </div>
+        <div class="lang-toggle">
+          <button type="button" data-lang="ar" class="active">العربية</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+        <nav>
+          <a href="#overview" class="active" data-i18n="navOverview">نظرة عامة</a>
+          <a href="#endpoints" data-i18n="navEndpoints">نقاط النهاية</a>
+          <a href="#events" data-i18n="navEvents">الأحداث</a>
+          <a href="#policies" data-i18n="navPolicies">السياسات</a>
+        </nav>
+        <div class="sidebar-card">
+          <span class="pulse"></span>
+          <strong data-i18n="liveLabel">منصة حية</strong>
+          <small data-i18n="liveHint">Linux · Windows · macOS</small>
+        </div>
+      </aside>
+      <main>
+        <header class="hero" id="overview">
+          <div>
+            <p class="eyebrow" data-i18n="heroEyebrow">Ionomegax — حماية مؤسسية</p>
+            <h1 data-i18n="heroTitle">Mersal Guard</h1>
+            <p data-i18n="heroBody">
+              منصة متكاملة لحماية نقاط النهاية ومنع تسرب البيانات مع وكلاء حقيقيين لأنظمة
+              Linux وWindows وmacOS وفرض سياسات محلي.
+            </p>
+          </div>
+          <div class="hero-panel">
+            <span class="chip" data-i18n="chip">LIVE</span>
+            <strong id="statEvents">0</strong>
+            <small data-i18n="statEventsLabel">أحداث مسجلة</small>
+          </div>
+        </header>
+        <section class="cards" id="cards"></section>
+        <section class="grid-two">
+          <article id="endpoints">
+            <h2 data-i18n="endpointsTitle">الأجهزة المدارة</h2>
+            <div class="table-wrap" id="endpointsTable"></div>
+          </article>
+          <article id="events">
+            <h2 data-i18n="eventsTitle">أحداث DLP الأخيرة</h2>
+            <div class="table-wrap" id="eventsTable"></div>
+          </article>
+        </section>
+        <section id="policies">
+          <h2 data-i18n="policiesTitle">سياسات الحماية</h2>
+          <div class="table-wrap" id="policiesTable"></div>
+        </section>
+        <footer>
+          <span>Ionomegax · Mersal Guard</span>
+          <span id="platforms"></span>
+        </footer>
+      </main>
+    </div>
+    <script src="/console/app.js"></script>
+  </body>
+</html>

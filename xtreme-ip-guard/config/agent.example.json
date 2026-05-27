@@ -1,12 +1,10 @@
 {
   "server": "http://127.0.0.1:8090",
-  "agent_id": "xig-agent-laptop-001",
+  "agent_id": "mersal-agent-laptop-001",
   "endpoint_id": "laptop-001",
   "owner": "sara",
   "site": "HQ",
-  "capabilities": [
-    "heartbeat",
-    "telemetry",
-    "policy-preview"
-  ]
+  "interval_seconds": 30,
+  "api_token": "",
+  "state_dir": "/var/lib/mersal-guard/agent-state"
 }
