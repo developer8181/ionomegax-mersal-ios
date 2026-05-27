@@ -7,97 +7,210 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Private print control platform</p>
-        <h1>Extreme Print Management System</h1>
-        <p>Track print jobs, enforce quotas, hold risky jobs, and report usage by user or printer.</p>
-      </div>
-      <button id="resetQuotas" class="secondary">Reset monthly quotas</button>
-    </header>
-
-    <main>
-      <section id="cards" class="cards"></section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Submit print job</h2>
-          <p>Simulates a controlled print request with quota and printer-policy checks.</p>
-        </div>
-        <form id="jobForm" class="grid-form">
-          <label>
-            User
-            <select name="user_id" id="jobUser" required></select>
-          </label>
-          <label>
-            Printer
-            <select name="printer_id" id="jobPrinter" required></select>
-          </label>
-          <label>
-            Document
-            <input name="document_name" value="Monthly report.pdf" required />
-          </label>
-          <label>
-            Pages
-            <input name="pages" type="number" min="1" value="8" required />
-          </label>
-          <label>
-            Copies
-            <input name="copies" type="number" min="1" value="1" required />
-          </label>
-          <label>
-            Account / department
-            <input name="account" value="Personal" />
-          </label>
-          <label class="checkbox">
-            <input name="color" type="checkbox" />
-            Color
-          </label>
-          <label class="checkbox">
-            <input name="duplex" type="checkbox" checked />
-            Duplex
-          </label>
-          <button type="submit">Submit job</button>
-        </form>
-      </section>
-
-      <section class="columns">
-        <article class="panel">
-          <div class="panel-header">
-            <h2>Users and balances</h2>
-            <p>Add emergency credit when a valid job is held by quota.</p>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">XP</span>
+          <div>
+            <strong>Extreme Print</strong>
+            <small>Enterprise Control</small>
           </div>
-          <div id="users"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <h2>Printers</h2>
-            <p>Device capabilities and page pricing.</p>
-          </div>
-          <div id="printers"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Recent print jobs</h2>
-          <p>Held jobs can be released or denied by an administrator.</p>
         </div>
-        <div id="jobs"></div>
-      </section>
+        <nav>
+          <a href="#command" class="active">Command Center</a>
+          <a href="#jobs">Secure Jobs</a>
+          <a href="#fleet">Fleet</a>
+          <a href="#agents">Agents</a>
+          <a href="#reports">Intelligence</a>
+        </nav>
+        <div class="sidebar-card">
+          <span class="pulse"></span>
+          <strong>Enterprise Demo Online</strong>
+          <small>Server, agents, providers and controllers are visible in one console.</small>
+        </div>
+      </aside>
 
-      <section class="columns">
-        <article class="panel">
-          <h2>Top users</h2>
-          <div id="userReport"></div>
-        </article>
-        <article class="panel">
-          <h2>Printer usage</h2>
-          <div id="printerReport"></div>
-        </article>
-      </section>
-    </main>
+      <main>
+        <header class="hero" id="command">
+          <div>
+            <p class="eyebrow">Private print governance platform</p>
+            <h1>Extreme Print Management System</h1>
+            <p>
+              Centralized print security, quotas, embedded device control, direct-print monitoring,
+              offline provider queues, and executive-grade reporting.
+            </p>
+            <div class="hero-actions">
+              <button id="loadDemo">Load enterprise demo</button>
+              <button id="resetQuotas" class="secondary">Reset monthly quotas</button>
+            </div>
+          </div>
+          <div class="hero-panel">
+            <span class="chip">LIVE CONTROL PLANE</span>
+            <strong id="heroJobs">0</strong>
+            <small>tracked print decisions</small>
+            <div class="mini-grid">
+              <span>Secure Release</span>
+              <span>Quota Engine</span>
+              <span>Provider Queue</span>
+              <span>Embedded Ready</span>
+            </div>
+          </div>
+        </header>
+
+        <section id="cards" class="cards"></section>
+
+        <section class="component-grid">
+          <article class="component server">
+            <span>01</span>
+            <h3>Extreme Server</h3>
+            <p>Policy brain, quotas, transactions, reporting, and dashboard APIs.</p>
+          </article>
+          <article class="component client">
+            <span>02</span>
+            <h3>Client Agent</h3>
+            <p>Balance popups, account selection, direct-print monitor, and user feedback.</p>
+          </article>
+          <article class="component provider">
+            <span>03</span>
+            <h3>Print Provider</h3>
+            <p>Windows/CUPS gateway concept with offline JSONL replay for outages.</p>
+          </article>
+          <article class="component printer">
+            <span>04</span>
+            <h3>Printer Controller</h3>
+            <p>Vendor adapter layer for HP, Canon, Ricoh, Xerox, Sharp, Kyocera, and more.</p>
+          </article>
+        </section>
+
+        <section class="panel control-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow dark">Policy simulator</p>
+              <h2>Submit controlled print job</h2>
+              <p>Simulate print-server or client-agent submission with live quota and device-policy checks.</p>
+            </div>
+            <span class="chip dark">Real-time decisioning</span>
+          </div>
+          <form id="jobForm" class="grid-form">
+            <label>
+              User
+              <select name="user_id" id="jobUser" required></select>
+            </label>
+            <label>
+              Printer
+              <select name="printer_id" id="jobPrinter" required></select>
+            </label>
+            <label>
+              Document
+              <input name="document_name" value="Executive dossier.pdf" required />
+            </label>
+            <label>
+              Pages
+              <input name="pages" type="number" min="1" value="24" required />
+            </label>
+            <label>
+              Copies
+              <input name="copies" type="number" min="1" value="1" required />
+            </label>
+            <label>
+              Account / department
+              <input name="account" value="Executive Office" />
+            </label>
+            <label>
+              Source
+              <select name="source">
+                <option value="web">Admin Console</option>
+                <option value="client-agent">Client Agent</option>
+                <option value="print-provider">Print Provider</option>
+                <option value="printer-controller">Printer Controller</option>
+              </select>
+            </label>
+            <label>
+              Agent ID
+              <input name="agent_id" value="demo-console" />
+            </label>
+            <label class="checkbox">
+              <input name="color" type="checkbox" checked />
+              Color
+            </label>
+            <label class="checkbox">
+              <input name="duplex" type="checkbox" checked />
+              Duplex
+            </label>
+            <button type="submit">Run print policy</button>
+          </form>
+        </section>
+
+        <section class="columns" id="fleet">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Users and balances</h2>
+                <p>Quota, budget and overdraft visibility for every identity.</p>
+              </div>
+            </div>
+            <div id="users" class="table-wrap"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Printer fleet</h2>
+                <p>Device capability, pricing and operational status.</p>
+              </div>
+            </div>
+            <div id="printers" class="table-wrap"></div>
+          </article>
+        </section>
+
+        <section class="panel" id="jobs">
+          <div class="panel-header">
+            <div>
+              <h2>Secure print decisions</h2>
+              <p>Held jobs can be released or denied by an administrator or printer controller.</p>
+            </div>
+            <span class="chip dark">Find-Me / Hold-Release</span>
+          </div>
+          <div id="jobsTable" class="table-wrap"></div>
+        </section>
+
+        <section class="columns" id="agents">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Agent mesh</h2>
+                <p>Registered clients, print providers, site servers, and printer controllers.</p>
+              </div>
+            </div>
+            <div id="agentsTable" class="table-wrap"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>System readiness</h2>
+                <p>Demo-grade readiness across distributed components.</p>
+              </div>
+            </div>
+            <div id="readiness" class="readiness"></div>
+          </article>
+        </section>
+
+        <section class="columns" id="reports">
+          <article class="panel">
+            <h2>Top users</h2>
+            <div id="userReport" class="table-wrap"></div>
+          </article>
+          <article class="panel">
+            <h2>Printer usage</h2>
+            <div id="printerReport" class="table-wrap"></div>
+          </article>
+          <article class="panel">
+            <h2>Job source intelligence</h2>
+            <div id="sourceReport" class="table-wrap"></div>
+          </article>
+        </section>
+      </main>
+    </div>
 
     <div id="toast" role="status"></div>
     <script src="/app.js"></script>
