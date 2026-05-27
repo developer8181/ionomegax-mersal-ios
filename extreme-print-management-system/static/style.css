@@ -77,12 +77,6 @@ body {
   backdrop-filter: blur(22px);
 }
 
-.brand,
-.hero,
-.panel,
-.card,
-.component,
-.sidebar-card,
 .hidden {
   display: none !important;
 }

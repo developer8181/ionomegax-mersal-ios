@@ -165,8 +165,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     agent_id=str(payload["agent_id"]),
                     agent_type=str(payload["agent_type"]),
                     hostname=str(payload["hostname"]),
-                    os_name=str(payload.get("os_name", ""),
-                    version=str(payload.get("version", ""),
+                    os_name=str(payload.get("os_name", "")),
+                    version=str(payload.get("version", "")),
                     metadata=payload.get("metadata", {}),
                 )
                 return self._send_json(agent)
