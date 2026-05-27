@@ -1,0 +1,61 @@
+{
+  "hp": {
+    "name": "HP OXP / Workpath",
+    "portal": "https://developers.hp.com/",
+    "sdk_pages": [
+      "https://developers.hp.com/oxpd",
+      "https://developers.hp.com/workpath"
+    ],
+    "expected_jars": ["oxp-sdk.jar", "workpath-sdk.jar", "hp-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "canon": {
+    "name": "Canon MEAP",
+    "portal": "https://developers.canon-europe.com/",
+    "sdk_pages": ["https://developers.canon-europe.com/developers/s/article/general-faq"],
+    "expected_jars": ["meap-sdk.jar", "canon-bridge.jar"],
+    "access": "request_access_required"
+  },
+  "ricoh": {
+    "name": "Ricoh SmartSDK",
+    "portal": "https://www.ricoh.com/products/duplo/smart-sdk",
+    "sdk_pages": ["https://www.ricoh-ap.com/sdk/"],
+    "expected_jars": ["smartsdk.jar", "ricoh-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "xerox": {
+    "name": "Xerox EIP",
+    "portal": "https://www.support.xerox.com/",
+    "sdk_pages": ["https://developer.xerox.com/"],
+    "expected_jars": ["eip-sdk.jar", "xerox-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "konica-minolta": {
+    "name": "Konica Minolta OpenAPI",
+    "portal": "https://www.konicaminolta.com/business/support/developers/index.html",
+    "sdk_pages": [],
+    "expected_jars": ["openapi-sdk.jar", "konica-minolta-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "kyocera": {
+    "name": "Kyocera HyPAS",
+    "portal": "https://www.kyoceradocumentsolutions.com/",
+    "sdk_pages": [],
+    "expected_jars": ["hypas-sdk.jar", "kyocera-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "lexmark": {
+    "name": "Lexmark eSF",
+    "portal": "https://developer.lexmark.com/",
+    "sdk_pages": [],
+    "expected_jars": ["esf-sdk.jar", "lexmark-bridge.jar"],
+    "access": "partner_login_required"
+  },
+  "olivetti": {
+    "name": "Olivetti Connect",
+    "portal": "https://www.olivetti.com/",
+    "sdk_pages": [],
+    "expected_jars": ["olivetti-connect-sdk.jar", "olivetti-bridge.jar"],
+    "access": "partner_login_required"
+  }
+}

@@ -1,5 +1,17 @@
 # Vendor SDK JARs (not included in git)
 
+## Automated assistant
+
+```bash
+python3 scripts/download_vendor_sdks.py --all
+```
+
+This builds Extreme `*-bridge.jar` files and development stubs. **Official vendor SDKs** must be downloaded from manufacturer portals (login required) and placed in `sdk/jars/incoming/`.
+
+See `docs/SDK_DOWNLOAD_AR.md` and `scripts/vendor_sdk_portals.json`.
+
+## Manual placement
+
 Place official manufacturer SDK files here before building Java bridges:
 
 | Vendor | Typical JAR names (examples) |
