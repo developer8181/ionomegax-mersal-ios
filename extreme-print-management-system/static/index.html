@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,47 +12,56 @@
         <div class="brand">
           <span class="brand-mark">XP</span>
           <div>
-            <strong>Extreme Print</strong>
-            <small>Enterprise Control</small>
+            <strong data-i18n="brandName">Extreme Print</strong>
+            <small data-i18n="brandSubtitle">Enterprise Control</small>
           </div>
         </div>
+
+        <div class="language-card">
+          <span data-i18n="languageLabel">Language</span>
+          <div class="language-toggle" role="group" aria-label="Language">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+          </div>
+        </div>
+
         <nav>
-          <a href="#command" class="active">Command Center</a>
-          <a href="#jobs">Secure Jobs</a>
-          <a href="#fleet">Fleet</a>
-          <a href="#agents">Agents</a>
-          <a href="#reports">Intelligence</a>
+          <a href="#command" class="active" data-i18n="navCommand">Command Center</a>
+          <a href="#jobs" data-i18n="navJobs">Secure Jobs</a>
+          <a href="#fleet" data-i18n="navFleet">Fleet</a>
+          <a href="#agents" data-i18n="navAgents">Agents</a>
+          <a href="#reports" data-i18n="navReports">Intelligence</a>
         </nav>
         <div class="sidebar-card">
           <span class="pulse"></span>
-          <strong>Enterprise Demo Online</strong>
-          <small>Server, agents, providers and controllers are visible in one console.</small>
+          <strong data-i18n="demoOnline">Enterprise Demo Online</strong>
+          <small data-i18n="demoOnlineText">Server, agents, providers and controllers are visible in one console.</small>
         </div>
       </aside>
 
       <main>
         <header class="hero" id="command">
           <div>
-            <p class="eyebrow">Private print governance platform</p>
-            <h1>Extreme Print Management System</h1>
-            <p>
+            <p class="eyebrow" data-i18n="heroEyebrow">Private print governance platform</p>
+            <h1 data-i18n="heroTitle">Extreme Print Management System</h1>
+            <p data-i18n="heroDescription">
               Centralized print security, quotas, embedded device control, direct-print monitoring,
               offline provider queues, and executive-grade reporting.
             </p>
             <div class="hero-actions">
-              <button id="loadDemo">Load enterprise demo</button>
-              <button id="resetQuotas" class="secondary">Reset monthly quotas</button>
+              <button id="loadDemo" data-i18n="loadDemo">Load enterprise demo</button>
+              <button id="resetQuotas" class="secondary" data-i18n="resetQuotas">Reset monthly quotas</button>
             </div>
           </div>
           <div class="hero-panel">
-            <span class="chip">LIVE CONTROL PLANE</span>
+            <span class="chip" data-i18n="liveControlPlane">LIVE CONTROL PLANE</span>
             <strong id="heroJobs">0</strong>
-            <small>tracked print decisions</small>
+            <small data-i18n="trackedDecisions">tracked print decisions</small>
             <div class="mini-grid">
-              <span>Secure Release</span>
-              <span>Quota Engine</span>
-              <span>Provider Queue</span>
-              <span>Embedded Ready</span>
+              <span data-i18n="secureRelease">Secure Release</span>
+              <span data-i18n="quotaEngine">Quota Engine</span>
+              <span data-i18n="providerQueue">Provider Queue</span>
+              <span data-i18n="embeddedReady">Embedded Ready</span>
             </div>
           </div>
         </header>
@@ -62,82 +71,82 @@
         <section class="component-grid">
           <article class="component server">
             <span>01</span>
-            <h3>Extreme Server</h3>
-            <p>Policy brain, quotas, transactions, reporting, and dashboard APIs.</p>
+            <h3 data-i18n="componentServer">Extreme Server</h3>
+            <p data-i18n="componentServerText">Policy brain, quotas, transactions, reporting, and dashboard APIs.</p>
           </article>
           <article class="component client">
             <span>02</span>
-            <h3>Client Agent</h3>
-            <p>Balance popups, account selection, direct-print monitor, and user feedback.</p>
+            <h3 data-i18n="componentClient">Client Agent</h3>
+            <p data-i18n="componentClientText">Balance popups, account selection, direct-print monitor, and user feedback.</p>
           </article>
           <article class="component provider">
             <span>03</span>
-            <h3>Print Provider</h3>
-            <p>Windows/CUPS gateway concept with offline JSONL replay for outages.</p>
+            <h3 data-i18n="componentProvider">Print Provider</h3>
+            <p data-i18n="componentProviderText">Windows/CUPS gateway concept with offline JSONL replay for outages.</p>
           </article>
           <article class="component printer">
             <span>04</span>
-            <h3>Printer Controller</h3>
-            <p>Vendor adapter layer for HP, Canon, Ricoh, Xerox, Sharp, Kyocera, and more.</p>
+            <h3 data-i18n="componentPrinter">Printer Controller</h3>
+            <p data-i18n="componentPrinterText">Vendor adapter layer for HP, Canon, Ricoh, Xerox, Sharp, Kyocera, and more.</p>
           </article>
         </section>
 
         <section class="panel control-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow dark">Policy simulator</p>
-              <h2>Submit controlled print job</h2>
-              <p>Simulate print-server or client-agent submission with live quota and device-policy checks.</p>
+              <p class="eyebrow dark" data-i18n="policySimulator">Policy simulator</p>
+              <h2 data-i18n="submitTitle">Submit controlled print job</h2>
+              <p data-i18n="submitDescription">Simulate print-server or client-agent submission with live quota and device-policy checks.</p>
             </div>
-            <span class="chip dark">Real-time decisioning</span>
+            <span class="chip dark" data-i18n="realtimeDecisioning">Real-time decisioning</span>
           </div>
           <form id="jobForm" class="grid-form">
             <label>
-              User
+              <span data-i18n="fieldUser">User</span>
               <select name="user_id" id="jobUser" required></select>
             </label>
             <label>
-              Printer
+              <span data-i18n="fieldPrinter">Printer</span>
               <select name="printer_id" id="jobPrinter" required></select>
             </label>
             <label>
-              Document
-              <input name="document_name" value="Executive dossier.pdf" required />
+              <span data-i18n="fieldDocument">Document</span>
+              <input name="document_name" value="Executive dossier.pdf" data-i18n-value="defaultDocument" required />
             </label>
             <label>
-              Pages
+              <span data-i18n="fieldPages">Pages</span>
               <input name="pages" type="number" min="1" value="24" required />
             </label>
             <label>
-              Copies
+              <span data-i18n="fieldCopies">Copies</span>
               <input name="copies" type="number" min="1" value="1" required />
             </label>
             <label>
-              Account / department
-              <input name="account" value="Executive Office" />
+              <span data-i18n="fieldAccount">Account / department</span>
+              <input name="account" value="Executive Office" data-i18n-value="defaultAccount" />
             </label>
             <label>
-              Source
+              <span data-i18n="fieldSource">Source</span>
               <select name="source">
-                <option value="web">Admin Console</option>
-                <option value="client-agent">Client Agent</option>
-                <option value="print-provider">Print Provider</option>
-                <option value="printer-controller">Printer Controller</option>
+                <option value="web" data-i18n="sourceWeb">Admin Console</option>
+                <option value="client-agent" data-i18n="sourceClientAgent">Client Agent</option>
+                <option value="print-provider" data-i18n="sourcePrintProvider">Print Provider</option>
+                <option value="printer-controller" data-i18n="sourcePrinterController">Printer Controller</option>
               </select>
             </label>
             <label>
-              Agent ID
+              <span data-i18n="fieldAgent">Agent ID</span>
               <input name="agent_id" value="demo-console" />
             </label>
             <label class="checkbox">
               <input name="color" type="checkbox" checked />
-              Color
+              <span data-i18n="fieldColor">Color</span>
             </label>
             <label class="checkbox">
               <input name="duplex" type="checkbox" checked />
-              Duplex
+              <span data-i18n="fieldDuplex">Duplex</span>
             </label>
-            <button type="submit">Run print policy</button>
+            <button type="submit" data-i18n="runPolicy">Run print policy</button>
           </form>
         </section>
 
@@ -145,8 +154,8 @@
           <article class="panel">
             <div class="panel-header">
               <div>
-                <h2>Users and balances</h2>
-                <p>Quota, budget and overdraft visibility for every identity.</p>
+                <h2 data-i18n="usersTitle">Users and balances</h2>
+                <p data-i18n="usersDescription">Quota, budget and overdraft visibility for every identity.</p>
               </div>
             </div>
             <div id="users" class="table-wrap"></div>
@@ -155,8 +164,8 @@
           <article class="panel">
             <div class="panel-header">
               <div>
-                <h2>Printer fleet</h2>
-                <p>Device capability, pricing and operational status.</p>
+                <h2 data-i18n="printersTitle">Printer fleet</h2>
+                <p data-i18n="printersDescription">Device capability, pricing and operational status.</p>
               </div>
             </div>
             <div id="printers" class="table-wrap"></div>
@@ -166,10 +175,10 @@
         <section class="panel" id="jobs">
           <div class="panel-header">
             <div>
-              <h2>Secure print decisions</h2>
-              <p>Held jobs can be released or denied by an administrator or printer controller.</p>
+              <h2 data-i18n="jobsTitle">Secure print decisions</h2>
+              <p data-i18n="jobsDescription">Held jobs can be released or denied by an administrator or printer controller.</p>
             </div>
-            <span class="chip dark">Find-Me / Hold-Release</span>
+            <span class="chip dark" data-i18n="findMe">Find-Me / Hold-Release</span>
           </div>
           <div id="jobsTable" class="table-wrap"></div>
         </section>
@@ -178,8 +187,8 @@
           <article class="panel">
             <div class="panel-header">
               <div>
-                <h2>Agent mesh</h2>
-                <p>Registered clients, print providers, site servers, and printer controllers.</p>
+                <h2 data-i18n="agentsTitle">Agent mesh</h2>
+                <p data-i18n="agentsDescription">Registered clients, print providers, site servers, and printer controllers.</p>
               </div>
             </div>
             <div id="agentsTable" class="table-wrap"></div>
@@ -187,8 +196,8 @@
           <article class="panel">
             <div class="panel-header">
               <div>
-                <h2>System readiness</h2>
-                <p>Demo-grade readiness across distributed components.</p>
+                <h2 data-i18n="readinessTitle">System readiness</h2>
+                <p data-i18n="readinessDescription">Demo-grade readiness across distributed components.</p>
               </div>
             </div>
             <div id="readiness" class="readiness"></div>
@@ -197,15 +206,15 @@
 
         <section class="columns" id="reports">
           <article class="panel">
-            <h2>Top users</h2>
+            <h2 data-i18n="topUsersTitle">Top users</h2>
             <div id="userReport" class="table-wrap"></div>
           </article>
           <article class="panel">
-            <h2>Printer usage</h2>
+            <h2 data-i18n="printerUsageTitle">Printer usage</h2>
             <div id="printerReport" class="table-wrap"></div>
           </article>
           <article class="panel">
-            <h2>Job source intelligence</h2>
+            <h2 data-i18n="sourceIntelTitle">Job source intelligence</h2>
             <div id="sourceReport" class="table-wrap"></div>
           </article>
         </section>

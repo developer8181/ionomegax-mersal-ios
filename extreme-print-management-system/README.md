@@ -18,6 +18,7 @@ The project is intentionally standalone and does not modify the existing Monal a
 - Print Provider CLI prototype for print-server/gateway spool events with an offline queue.
 - Printer Controller CLI prototype for embedded/gateway-side platform metadata and held-job actions.
 - Enterprise demo mode with polished command-center UI, readiness indicators, agent mesh, and source intelligence.
+- Light, comfortable dashboard theme with Arabic/English language switching and RTL support.
 - No external runtime dependencies; it uses Python's standard library.
 
 ## Product components
