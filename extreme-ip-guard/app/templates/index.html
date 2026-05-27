@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extreme IP Guard | Next-Gen Cybersecurity Platform</title>
+    <meta name="description" content="Advanced IP protection, threat intelligence, and network defense system">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/extreme.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+</head>
+<body>
+    <div class="cyber-grid"></div>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🛡️</div>
+                    <div class="logo-text">
+                        <h1>EXTREME IP GUARD</h1>
+                        <span>Cyber Defense v1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <div class="nav-item active" data-page="dashboard">
+                        <i class="fas fa-th-large"></i>
+                        <span>Command Center</span>
+                    </div>
+                    <div class="nav-item" data-page="ips">
+                        <i class="fas fa-network-wired"></i>
+                        <span>IP Intelligence</span>
+                        <span class="nav-badge" id="ipCount">--</span>
+                    </div>
+                    <div class="nav-item" data-page="alerts">
+                        <i class="fas fa-bell"></i>
+                        <span>Threat Alerts</span>
+                        <span class="nav-badge" id="alertCount">--</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Defense</div>
+                    <div class="nav-item" data-page="firewall">
+                        <i class="fas fa-fire"></i>
+                        <span>Firewall Engine</span>
+                    </div>
+                    <div class="nav-item" data-page="network">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Network Monitor</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Analysis</div>
+                    <div class="nav-item" data-page="analyze">
+                        <i class="fas fa-crosshairs"></i>
+                        <span>IP Analyzer</span>
+                    </div>
+                    <div class="nav-item" data-page="events">
+                        <i class="fas fa-history"></i>
+                        <span>System Events</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <span class="status-dot"></span>
+                    <span>System Operational</span>
+                </div>
+                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:6px">
+                    Engine v1.0.0 | Threat DB Updated
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <header class="topbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search IP addresses, threats, alerts...">
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="topbar-btn refresh-btn" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="topbar-btn" title="Notifications" onclick="XIG.navigateTo('alerts')">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge" id="notifBadge">!</span>
+                    </button>
+                    <button class="topbar-btn" title="Network Status" onclick="XIG.navigateTo('network')">
+                        <i class="fas fa-signal"></i>
+                    </button>
+                    <button class="topbar-btn" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- PAGE CONTENT -->
+            <div class="page-content" id="page-content">
+                <div class="loading-spinner"></div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container"></div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
