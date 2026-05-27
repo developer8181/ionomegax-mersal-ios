@@ -1,0 +1,22 @@
+name: Mersal Guard Tests
+
+on:
+  push:
+    paths:
+      - "xtreme-ip-guard/**"
+      - ".github/workflows/mersal-guard-tests.yml"
+  pull_request:
+    paths:
+      - "xtreme-ip-guard/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        working-directory: xtreme-ip-guard
+        run: python3 -m unittest discover -s tests -v

@@ -20,11 +20,21 @@
           <button type="button" data-lang="ar" class="active">العربية</button>
           <button type="button" data-lang="en">English</button>
         </div>
+        <div class="auth-card" id="authCard">
+          <span data-i18n="adminLogin">تسجيل المسؤول</span>
+          <input id="adminUser" type="text" autocomplete="username" />
+          <input id="adminPass" type="password" autocomplete="current-password" />
+          <button type="button" id="loginBtn" data-i18n="signIn">دخول</button>
+          <button type="button" id="logoutBtn" class="secondary hidden" data-i18n="signOut">خروج</button>
+          <small id="authStatus"></small>
+        </div>
         <nav>
           <a href="#overview" class="active" data-i18n="navOverview">نظرة عامة</a>
           <a href="#endpoints" data-i18n="navEndpoints">نقاط النهاية</a>
+          <a href="#agents" data-i18n="navAgents">الوكلاء</a>
           <a href="#events" data-i18n="navEvents">الأحداث</a>
           <a href="#policies" data-i18n="navPolicies">السياسات</a>
+          <a href="#audit" data-i18n="navAudit">التدقيق</a>
         </nav>
         <div class="sidebar-card">
           <span class="pulse"></span>
@@ -37,10 +47,7 @@
           <div>
             <p class="eyebrow" data-i18n="heroEyebrow">Ionomegax — حماية مؤسسية</p>
             <h1 data-i18n="heroTitle">Mersal Guard</h1>
-            <p data-i18n="heroBody">
-              منصة متكاملة لحماية نقاط النهاية ومنع تسرب البيانات مع وكلاء حقيقيين لأنظمة
-              Linux وWindows وmacOS وفرض سياسات محلي.
-            </p>
+            <p data-i18n="heroBody">منصة متكاملة لحماية نقاط النهاية ومنع تسرب البيانات.</p>
           </div>
           <div class="hero-panel">
             <span class="chip" data-i18n="chip">LIVE</span>
@@ -54,13 +61,37 @@
             <h2 data-i18n="endpointsTitle">الأجهزة المدارة</h2>
             <div class="table-wrap" id="endpointsTable"></div>
           </article>
+          <article id="agents">
+            <h2 data-i18n="agentsTitle">وكلاء نقاط النهاية</h2>
+            <div class="table-wrap" id="agentsTable"></div>
+          </article>
+        </section>
+        <section class="grid-two">
           <article id="events">
             <h2 data-i18n="eventsTitle">أحداث DLP الأخيرة</h2>
             <div class="table-wrap" id="eventsTable"></div>
           </article>
+          <article id="audit">
+            <h2 data-i18n="auditTitle">سجل التدقيق</h2>
+            <div class="table-wrap" id="auditTable"></div>
+          </article>
         </section>
         <section id="policies">
           <h2 data-i18n="policiesTitle">سياسات الحماية</h2>
+          <form id="policyForm" class="policy-form">
+            <input id="ruleId" placeholder="MERSAL-RULE-001" required />
+            <input id="ruleName" data-i18n-placeholder="ruleNamePh" placeholder="اسم السياسة" required />
+            <select id="ruleAction">
+              <option value="monitor">monitor</option>
+              <option value="warn">warn</option>
+              <option value="block">block</option>
+              <option value="quarantine">quarantine</option>
+              <option value="isolate_endpoint">isolate_endpoint</option>
+            </select>
+            <input id="ruleClass" placeholder="secret" />
+            <input id="ruleChannel" placeholder="removable_media" />
+            <button type="submit" data-i18n="addPolicy">إضافة سياسة</button>
+          </form>
           <div class="table-wrap" id="policiesTable"></div>
         </section>
         <footer>

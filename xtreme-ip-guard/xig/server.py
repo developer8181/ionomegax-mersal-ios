@@ -5,12 +5,20 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import ssl
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .auth import authorize
+from .auth import (
+    admin_password,
+    admin_username,
+    auth_required,
+    authorize,
+    create_session_token,
+    verify_admin,
+)
 from .brand import BRAND
 from .core import EndpointEvent, PolicyRule
 from .storage import Database
@@ -31,10 +39,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._serve_file(WEB_ROOT / "index.html")
         if path.startswith("/console/"):
             return self._serve_file(WEB_ROOT / path.removeprefix("/console/"))
+        if path == "/api/auth/status":
+            return self._send_json(
+                {
+                    "auth_required": auth_required(),
+                    "admin_configured": bool(admin_password()),
+                    "admin_username": admin_username(),
+                }
+            )
         if not self._authorized():
             return
         if path == "/api/health":
-            return self._send_json({"status": "ok", "product": BRAND["full_name"]})
+            return self._send_json({"status": "ok", "product": BRAND["full_name"], "version": self._version()})
         if path == "/api/brand":
             return self._send_json(BRAND)
         if path == "/api/dashboard":
@@ -47,15 +63,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_policies())
         if path == "/api/agents":
             return self._send_json(self.database.list_agents())
+        if path == "/api/audit":
+            return self._send_json(self.database.list_audit())
         if path.startswith("/api/endpoints/") and path.endswith("/directives"):
             endpoint_id = self._path_part(path, 2)
             return self._send_json(self.database.endpoint_directives(endpoint_id))
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path
+        if path == "/api/auth/login":
+            return self._handle_login()
         if not self._authorized():
             return
-        path = urlparse(self.path).path
+        actor = self._actor()
         try:
             if path == "/api/agents/heartbeat":
                 payload = self._read_json()
@@ -100,15 +121,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                     reason=str(payload.get("reason", "")),
                     enabled=bool(payload.get("enabled", True)),
                 )
-                return self._send_json(self.database.create_policy(policy), status=HTTPStatus.CREATED)
+                created = self.database.create_policy(policy)
+                self.database.record_audit(actor, "policy.create", target=policy.rule_id, details=created)
+                return self._send_json(created, status=HTTPStatus.CREATED)
 
             if path.startswith("/api/endpoints/") and path.endswith("/isolate"):
                 endpoint_id = self._path_part(path, 2)
-                return self._send_json(self.database.set_endpoint_isolation(endpoint_id, True))
+                result = self.database.set_endpoint_isolation(endpoint_id, True)
+                self.database.record_audit(actor, "endpoint.isolate", target=endpoint_id)
+                return self._send_json(result)
 
             if path.startswith("/api/endpoints/") and path.endswith("/restore"):
                 endpoint_id = self._path_part(path, 2)
-                return self._send_json(self.database.set_endpoint_isolation(endpoint_id, False))
+                result = self.database.set_endpoint_isolation(endpoint_id, False)
+                self.database.record_audit(actor, "endpoint.restore", target=endpoint_id)
+                return self._send_json(result)
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -117,12 +144,31 @@ class RequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         return
 
+    def _handle_login(self) -> None:
+        try:
+            payload = self._read_json()
+            username = str(payload.get("username", ""))
+            password = str(payload.get("password", ""))
+            if not verify_admin(username, password):
+                return self._send_json({"error": "invalid credentials"}, status=HTTPStatus.UNAUTHORIZED)
+            token = create_session_token(username)
+            self.database.record_audit(username, "admin.login", target="command-center")
+            return self._send_json({"token": token, "username": username, "role": "admin"})
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
     def _authorized(self) -> bool:
-        token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "").removeprefix("Bearer ")
+        token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "")
         if authorize(token):
             return True
         self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
         return False
+
+    def _actor(self) -> str:
+        auth = self.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            return "api-token"
+        return self.headers.get("X-Mersal-Actor", "admin")
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
@@ -162,6 +208,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         parts = [part for part in path.split("/") if part]
         return parts[index]
 
+    @staticmethod
+    def _version() -> str:
+        from . import __version__
+
+        return __version__
+
 
 def run(host: str | None = None, port: int | None = None) -> None:
     bind_host = host or os.environ.get("MERSAL_HOST", "0.0.0.0")
@@ -174,9 +226,19 @@ def run(host: str | None = None, port: int | None = None) -> None:
         RequestHandler(*args, database=database, **kwargs)
 
     server = ThreadingHTTPServer((bind_host, bind_port), handler)
-    token = os.environ.get("MERSAL_API_TOKEN", "")
-    print(f"{BRAND['full_name']} running at http://{bind_host}:{bind_port}")
-    print(f"Command Center: http://{bind_host}:{bind_port}/console/")
-    if token:
-        print("API token authentication is enabled (X-Mersal-Token header).")
+    cert = os.environ.get("MERSAL_TLS_CERT", "").strip()
+    key = os.environ.get("MERSAL_TLS_KEY", "").strip()
+    scheme = "http"
+    if cert and key and Path(cert).is_file() and Path(key).is_file():
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert, key)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        scheme = "https"
+
+    print(f"{BRAND['full_name']} running at {scheme}://{bind_host}:{bind_port}")
+    print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
+    if auth_required():
+        print("Authentication enabled (API token and/or admin password).")
+    if scheme == "https":
+        print("TLS enabled via MERSAL_TLS_CERT / MERSAL_TLS_KEY.")
     server.serve_forever()

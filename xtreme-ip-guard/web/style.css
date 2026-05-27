@@ -103,6 +103,28 @@ th { color: var(--muted); font-weight: 600; }
 }
 .tag.danger { color: #fecaca; background: rgba(220, 38, 38, 0.25); }
 .tag.ok { color: #bbf7d0; background: rgba(5, 150, 105, 0.25); }
+.auth-card, .policy-form {
+  display: flex; flex-direction: column; gap: 0.45rem;
+  padding: 0.85rem; border-radius: 10px; background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+.auth-card input, .policy-form input, .policy-form select {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); padding: 0.45rem 0.55rem;
+}
+button {
+  border: none; border-radius: 8px; padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; cursor: pointer; font-weight: 600;
+}
+button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+button.danger { background: var(--danger); }
+button.hidden { display: none; }
+.policy-form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem; margin-bottom: 1rem;
+}
+.actions button { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
 footer {
   margin-top: 2rem; color: var(--muted); display: flex;
   justify-content: space-between; gap: 1rem; flex-wrap: wrap;

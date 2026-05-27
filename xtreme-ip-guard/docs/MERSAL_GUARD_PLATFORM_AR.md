@@ -37,13 +37,30 @@ python3 agent.py daemon --config config/agent.json
 - مركز القيادة: **Mersal Command Center**
 - الوكيل: **Mersal Endpoint Agent**
 
-## حدود الإصدار 1.0
+## الإصدار 1.1 — ما أُضيف
 
-ما زال يتطلب تكاملًا إضافيًا للإنتاج الكامل:
+| الميزة | الوصف |
+| --- | --- |
+| تسجيل المسؤول | `MERSAL_ADMIN_USER` / `MERSAL_ADMIN_PASSWORD` + `/api/auth/login` |
+| رمز API للوكلاء | `MERSAL_API_TOKEN` + رأس `X-Mersal-Token` |
+| سجل التدقيق | جدول `audit_log` + عرض في المركز |
+| إدارة من الواجهة | عزل/استعادة الأجهزة، إضافة سياسات |
+| TLS اختياري | `MERSAL_TLS_CERT` و `MERSAL_TLS_KEY` |
+| التجهيز | `scripts/provision.sh` يولّد ملف أسرار |
+| Docker | `deploy/Dockerfile` و `docker-compose.yml` |
+| CI | GitHub Actions `mersal-guard-tests.yml` |
 
-- مصادقة مؤسسية (LDAP/Entra) وmTLS
-- وكيل موقّع كخدمة نظام على Windows/macOS
-- منع USB فعلي عبر سياسات MDM/EDR
+```bash
+./scripts/provision.sh mersal-guard.env
+source mersal-guard.env
+python3 app.py
+```
+
+## حدود ما زالت مفتوحة
+
+- LDAP/Entra ID
+- وكيل موقّع رسميًا من المتجر
+- منع USB عبر MDM/EDR
 - قاعدة بيانات HA وSIEM
 
-الإصدار الحالي مناسب للنشر التجريبي الداخلي، إثبات السياسات، وإدارة أسطول من مركز قيادة واحد.
+المنصة مناسبة للنشر الداخلي وإدارة الأسطول من مركز قيادة واحد.

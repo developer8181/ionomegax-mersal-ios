@@ -79,6 +79,15 @@ class Database:
                     metadata TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    actor TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    target TEXT NOT NULL DEFAULT '',
+                    details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
                 """
             )
 
@@ -309,6 +318,31 @@ class Database:
             row = db.execute("SELECT * FROM endpoints WHERE endpoint_id = ?", (endpoint_id,)).fetchone()
             return self._decode_endpoint(row)
 
+    def record_audit(
+        self,
+        actor: str,
+        action: str,
+        *,
+        target: str = "",
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload = json.dumps(details or {}, sort_keys=True)
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO audit_log (actor, action, target, details) VALUES (?, ?, ?, ?)",
+                (actor, action, target, payload),
+            )
+            row = db.execute("SELECT * FROM audit_log ORDER BY audit_id DESC LIMIT 1").fetchone()
+            return self._decode_audit(row)
+
+    def list_audit(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM audit_log ORDER BY audit_id DESC LIMIT ?",
+                (limit,),
+            )
+            return [self._decode_audit(row) for row in rows]
+
     def endpoint_directives(self, endpoint_id: str) -> dict[str, Any]:
         endpoint = self.get_or_create_endpoint(endpoint_id)
         policies = self.list_policies()
@@ -380,4 +414,9 @@ class Database:
     def _decode_agent(self, row: sqlite3.Row) -> dict[str, Any]:
         data = dict(row)
         data["metadata"] = self._decode_json(data["metadata"], {})
+        return data
+
+    def _decode_audit(self, row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["details"] = self._decode_json(data["details"], {})
         return data

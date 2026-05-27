@@ -29,11 +29,29 @@ Open the console:
 http://127.0.0.1:8090/console/
 ```
 
-Optional API token:
+### Production provisioning
 
 ```bash
-export MERSAL_API_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+./scripts/provision.sh mersal-guard.env
+source mersal-guard.env
 python3 app.py
+```
+
+This enables API token auth for agents and admin login for the Command Center.
+
+Optional TLS:
+
+```bash
+export MERSAL_TLS_CERT=/path/to/fullchain.pem
+export MERSAL_TLS_KEY=/path/to/privkey.pem
+python3 app.py
+```
+
+### Docker
+
+```bash
+./scripts/provision.sh mersal-guard.env
+docker compose -f deploy/docker-compose.yml up --build
 ```
 
 ### 2. Run the endpoint agent (daemon)
@@ -65,6 +83,9 @@ chmod +x scripts/install-linux.sh
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/console/` | Command Center UI |
+| `GET` | `/api/auth/status` | Whether authentication is required |
+| `POST` | `/api/auth/login` | Admin session token |
+| `GET` | `/api/audit` | Administrative audit trail |
 | `GET` | `/api/brand` | Product branding metadata |
 | `GET` | `/api/dashboard` | Console metrics |
 | `GET` | `/api/endpoints/{id}/directives` | Policies + isolation for agents |
