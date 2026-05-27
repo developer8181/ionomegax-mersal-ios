@@ -1,0 +1,22 @@
+name: EPMS Tests
+
+on:
+  push:
+    paths:
+      - "extreme-print-management-system/**"
+      - ".github/workflows/epms-tests.yml"
+  pull_request:
+    paths:
+      - "extreme-print-management-system/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        working-directory: extreme-print-management-system
+        run: python3 -m unittest discover -s tests -v

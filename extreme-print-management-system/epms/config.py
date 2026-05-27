@@ -23,6 +23,8 @@ class Settings:
     host: str
     port: int
     bootstrap_admin_password: str | None
+    production_mode: bool
+    seed_demo: bool
 
     @classmethod
     def from_environ(cls, *, project_root: Path, default_db: Path) -> Settings:
@@ -43,4 +45,16 @@ class Settings:
             host=os.environ.get("EPMS_HOST", "127.0.0.1"),
             port=int(os.environ.get("EPMS_PORT", "8080")),
             bootstrap_admin_password=os.environ.get("EPMS_BOOTSTRAP_ADMIN_PASSWORD", "").strip() or None,
+            production_mode=os.environ.get("EPMS_PRODUCTION", "").lower() in {"1", "true", "yes"},
+            seed_demo=cls._resolve_seed_demo(),
         )
+
+    @staticmethod
+    def _resolve_seed_demo() -> bool:
+        raw = os.environ.get("EPMS_SEED_DEMO", "").strip().lower()
+        if raw in {"1", "true", "yes"}:
+            return True
+        if raw in {"0", "false", "no"}:
+            return False
+        production = os.environ.get("EPMS_PRODUCTION", "").strip().lower() in {"1", "true", "yes"}
+        return not production

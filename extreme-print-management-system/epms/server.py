@@ -18,7 +18,10 @@ from .core import money_to_cents
 from .policy import scrub_job_document
 from .embedded import get_adapter, list_active_sdks
 from .embedded.sdk_clients.registry import list_device_clients
+from .device_servlet import handle_get as device_servlet_get
+from .device_servlet import handle_post as device_servlet_post
 from .health import health_report
+from .production import production_checklist, validate_production_settings
 from .security import AGENT_TOKEN_HEADER, is_authorized_agent_token
 from .storage import Database
 
@@ -49,6 +52,9 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._serve_release_station("index.html")
         if path.startswith("/release/"):
             return self._serve_release_station(path.removeprefix("/release/"))
+        device_response = device_servlet_get(path, self.database)
+        if device_response is not None:
+            return self._send_json(device_response)
         if path == "/api/auth/me":
             return self._handle_auth_me()
         if path == "/api/dashboard":
@@ -79,6 +85,13 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._require_permission("manage_settings", lambda: self._send_json(self._settings_payload()))
         if path == "/api/readiness":
             return self._readiness()
+        if path == "/api/production/checklist":
+            return self._send_json(
+                production_checklist(
+                    database_ok=True,
+                    settings=self.settings,
+                )
+            )
         if path == "/api/health":
             return self._send_json(
                 health_report(
@@ -98,6 +111,17 @@ class RequestHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         try:
+            payload = self._read_json(default={}) if path.startswith("/extreme/sdk/") else None
+            if path.startswith("/extreme/sdk/"):
+                device_response = device_servlet_post(
+                    path,
+                    self.database,
+                    payload or {},
+                    anonymize=self.settings.anonymize_documents,
+                )
+                if device_response is not None:
+                    return self._send_json(device_response)
+                return self._send_json({"error": "unknown device servlet path"}, status=HTTPStatus.NOT_FOUND)
             if path == "/api/auth/login":
                 return self._login()
             if path == "/api/auth/logout":
@@ -170,6 +194,11 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     lambda: self._send_json(self.database.purge_expired_audit_logs()),
                 )
             if path == "/api/demo/reset":
+                if self.settings.production_mode:
+                    return self._send_json(
+                        {"error": "demo reset is disabled in production"},
+                        status=HTTPStatus.FORBIDDEN,
+                    )
                 return self._require_permission("demo_reset", lambda: self._send_json(self.database.seed_enterprise_demo()))
             if path.startswith("/api/release/jobs/") and path.endswith("/release"):
                 parts = [part for part in path.split("/") if part]
@@ -216,8 +245,10 @@ class RequestHandler(SimpleHTTPRequestHandler):
                     "cups_provider",
                     "windows_spooler_adapter",
                     "release_station",
+                    "device_servlet",
                     "optional_tls",
                 ],
+                "production": production_checklist(database_ok=True, settings=self.settings),
             }
         )
 
@@ -334,6 +365,14 @@ class RequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def end_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        if self.settings.production_mode:
+            self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def _require_agent_auth(self) -> bool:
         provided = self.headers.get(AGENT_TOKEN_HEADER)
         if is_authorized_agent_token(provided, self.settings.agent_token):
@@ -369,9 +408,18 @@ def run(host: str | None = None, port: int | None = None) -> None:
     host = host or settings.host
     port = port or settings.port
 
+    errors, warnings = validate_production_settings(settings)
+    for message in warnings:
+        print(f"[EPMS] warning: {message}")
+    if errors:
+        for message in errors:
+            print(f"[EPMS] ERROR: {message}")
+        raise SystemExit("production configuration validation failed")
+
     database = create_database(settings)
     database.init_schema()
-    database.seed_demo()
+    if settings.seed_demo:
+        database.seed_demo()
     database.purge_expired_audit_logs()
     bootstrap = database.bootstrap_admin(password=settings.bootstrap_admin_password)
     if bootstrap:
@@ -388,9 +436,14 @@ def run(host: str | None = None, port: int | None = None) -> None:
         server.socket = context.wrap_socket(server.socket, server_side=True)
         protocol = "https"
 
-    print(f"Extreme Print Management System running at {protocol}://{host}:{port}")
+    mode = "PRODUCTION" if settings.production_mode else "development"
+    print(f"Extreme Print Management System [{mode}] at {protocol}://{host}:{port}")
+    print(f"[EPMS] Device servlet: {protocol}://{host}:{port}/extreme/sdk/v1/health")
     if settings.require_auth:
         print("[EPMS] Admin authentication is required for privileged API actions")
+    checklist = production_checklist(database_ok=True, settings=settings)
+    if settings.production_mode and checklist["ready"]:
+        print("[EPMS] Production checklist: READY")
     server.serve_forever()
 
 

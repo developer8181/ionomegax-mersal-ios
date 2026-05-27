@@ -1,0 +1,31 @@
+services:
+  epms:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "${EPMS_PORT:-8080}:8080"
+    environment:
+      EPMS_PRODUCTION: "1"
+      EPMS_HOST: "0.0.0.0"
+      EPMS_PORT: "8080"
+      EPMS_DB: /data/extreme-print-management.sqlite3
+      EPMS_REQUIRE_AUTH: "true"
+      EPMS_ANONYMIZE_DOCS: "true"
+      EPMS_AUDIT_RETENTION_DAYS: "365"
+      EPMS_SESSION_SECRET: ${EPMS_SESSION_SECRET:?set EPMS_SESSION_SECRET}
+      EPMS_AGENT_TOKEN: ${EPMS_AGENT_TOKEN:?set EPMS_AGENT_TOKEN}
+      EPMS_BOOTSTRAP_ADMIN_PASSWORD: ${EPMS_BOOTSTRAP_ADMIN_PASSWORD:-}
+      EPMS_SEED_DEMO: "0"
+    volumes:
+      - epms_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  epms_data:
