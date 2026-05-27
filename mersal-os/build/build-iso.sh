@@ -32,10 +32,8 @@ lb config noauto \
   --archive-areas "main contrib non-free non-free-firmware" \
   --mirror-bootstrap "http://deb.debian.org/debian" \
   --mirror-chroot "http://deb.debian.org/debian" \
-  --mirror-chroot-security "http://security.debian.org/debian-security" \
   --mirror-binary "http://deb.debian.org/debian" \
-  --mirror-binary-security "http://security.debian.org/debian-security" \
-  --security true \
+  --security false \
   --bootappend-live "boot=live components quiet splash hostname=mersal-os username=mersal" \
   --memtest none \
   --iso-application "Mersal OS" \
@@ -47,14 +45,17 @@ lb config noauto \
 mkdir -p config/package-lists config/hooks/normal config/archives
 cp "$ROOT/build/package-lists/mersal.list.chroot" config/package-lists/mersal.list.chroot
 cp "$ROOT/build/archives/debian.list.chroot" config/archives/debian.list.chroot
+cp "$ROOT/build/archives/debian.list.binary" config/archives/debian.list.binary
 cp "$ROOT/build/hooks/0001-fix-apt-security.chroot" config/hooks/normal/0001-fix-apt-security.chroot
 cp "$ROOT/build/hooks/0100-mersal.chroot" config/hooks/normal/0100-mersal.chroot
 chmod +x config/hooks/normal/*.chroot
 
-if [ "${MERSAL_ISO_NO_SECURITY:-0}" = "1" ]; then
-  echo "MERSAL_ISO_NO_SECURITY=1 — building without security repository"
-  lb config set security false
-fi
+# Patch any legacy live-build suite paths before image assembly
+find config -type f 2>/dev/null | while read -r file; do
+  if grep -q 'bookworm/updates' "$file" 2>/dev/null; then
+    sed -i 's|bookworm/updates|bookworm-security|g' "$file"
+  fi
+done
 
 export LB_INCLUDES="$WORK/config/includes.chroot"
 "$ROOT/build/sync-includes.sh"
