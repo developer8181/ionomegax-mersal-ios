@@ -1,0 +1,24 @@
+{
+  "policies": [
+    {
+      "name": "Allow corporate HTTPS",
+      "action": "allow",
+      "priority": 300,
+      "scope": "global",
+      "source_cidr": "10.0.0.0/8",
+      "destination_ports": "443",
+      "protocols": "tcp",
+      "min_trust_score": 40,
+      "description": "Standard HTTPS egress"
+    },
+    {
+      "name": "Deny IoT to internal",
+      "action": "deny",
+      "priority": 450,
+      "scope": "zone",
+      "zones": "iot",
+      "destination_cidr": "10.0.0.0/8",
+      "description": "Micro-segmentation: IoT isolation"
+    }
+  ]
+}

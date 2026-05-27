@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extreme IP Guard — Zero Trust NAC</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Zero Trust · NAC · Micro-Segmentation</p>
+        <h1>Extreme IP Guard</h1>
+        <p>
+          منصة تحكم متقدمة في الوصول الشبكي — تتجاوز أنظمة IP Guard التقليدية
+          بمحرك سياسات Zero Trust، كشف التهديدات السلوكي، وسلسلة تدقيق غير قابلة للتلاعب.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <span class="badge live">● LIVE</span>
+        <span class="badge" id="policyVersion">Policy v—</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="cards" class="cards"></section>
+
+      <section class="columns">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>تقييم الوصول</h2>
+            <p>محاكاة قرار Zero Trust لاتصال شبكي.</p>
+          </div>
+          <form id="evaluateForm" class="grid-form">
+            <label>
+              IP المصدر
+              <input name="source_ip" value="10.0.1.50" required />
+            </label>
+            <label>
+              IP الوجهة
+              <input name="destination_ip" value="8.8.8.8" required />
+            </label>
+            <label>
+              المنفذ
+              <input name="destination_port" type="number" value="443" required />
+            </label>
+            <label>
+              البروتوكول
+              <select name="protocol">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+                <option value="icmp">ICMP</option>
+              </select>
+            </label>
+            <label>
+              المنطقة
+              <select name="zone" id="zoneSelect"></select>
+            </label>
+            <label>
+              الجهاز
+              <select name="device_id" id="deviceSelect">
+                <option value="">— بدون جهاز —</option>
+              </select>
+            </label>
+            <button type="submit">تقييم</button>
+          </form>
+          <div id="evaluateResult" class="result-box hidden"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>حظر IP</h2>
+            <p>حظر فوري يدوي أو عبر Threat Intelligence.</p>
+          </div>
+          <form id="blockForm" class="grid-form">
+            <label>
+              الهدف
+              <input name="target" placeholder="203.0.113.50 أو 198.51.100.0/24" required />
+            </label>
+            <label>
+              النوع
+              <select name="target_type">
+                <option value="ip">IP</option>
+                <option value="cidr">CIDR</option>
+              </select>
+            </label>
+            <label>
+              السبب
+              <input name="reason" value="Manual security block" required />
+            </label>
+            <label>
+              TTL (ساعات)
+              <input name="ttl_hours" type="number" min="1" placeholder="اختياري" />
+            </label>
+            <button type="submit" class="danger">حظر</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>الأجهزة المسجّلة</h2>
+          <p>هوية الجهاز، ربط MAC/IP، درجة الثقة، والموافقة.</p>
+        </div>
+        <div id="devices"></div>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <h2>سياسات الشبكة</h2>
+          <div id="policies"></div>
+        </article>
+        <article class="panel">
+          <h2>الحظر النشط</h2>
+          <div id="blocks"></div>
+        </article>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <h2>أحداث الأمان</h2>
+          <div id="events"></div>
+        </article>
+        <article class="panel">
+          <h2>سجل الوصول</h2>
+          <div id="accessLog"></div>
+        </article>
+      </section>
+
+      <section class="columns">
+        <article class="panel">
+          <h2>تهديدات (24 ساعة)</h2>
+          <div id="threatReport"></div>
+        </article>
+        <article class="panel">
+          <h2>Agents النشطة</h2>
+          <div id="agents"></div>
+        </article>
+      </section>
+    </main>
+
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

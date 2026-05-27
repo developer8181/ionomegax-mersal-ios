@@ -1,0 +1,14 @@
+{
+  "server_url": "http://127.0.0.1:8090",
+  "agent_id": "edge-gateway-001",
+  "backend": "nftables",
+  "interfaces": ["eth0", "eth1"],
+  "fail_mode": "closed",
+  "policy_poll_seconds": 30,
+  "capabilities": {
+    "rate_limiting": true,
+    "geoip": false,
+    "conn_track": true,
+    "ddos_mitigation": true
+  }
+}

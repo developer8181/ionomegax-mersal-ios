@@ -1,0 +1,19 @@
+{
+  "server_url": "http://127.0.0.1:8090",
+  "agent_id": "endpoint-workstation-001",
+  "device_id": "dev-laptop-001",
+  "zone": "secure",
+  "posture_checks": {
+    "disk_encryption": true,
+    "firewall_enabled": true,
+    "antivirus_updated": true,
+    "os_patches_current": true,
+    "tpm_attestation": false
+  },
+  "peripheral_policy": {
+    "usb": "deny-unknown",
+    "bluetooth": "restricted",
+    "wifi_direct": "deny"
+  },
+  "heartbeat_interval_seconds": 60
+}
