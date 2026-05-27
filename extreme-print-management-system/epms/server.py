@@ -57,16 +57,18 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json(device_response)
         if path == "/api/auth/me":
             return self._handle_auth_me()
+        if path == "/api/demo/info":
+            return self._send_json(self._demo_info())
         if path == "/api/dashboard":
-            return self._send_json(self.database.dashboard())
+            return self._maybe_require_view(lambda: self._send_json(self.database.dashboard()))
         if path == "/api/users":
-            return self._send_json(self.database.list_users())
+            return self._maybe_require_view(lambda: self._send_json(self.database.list_users()))
         if path == "/api/printers":
-            return self._send_json(self.database.list_printers())
+            return self._maybe_require_view(lambda: self._send_json(self.database.list_printers()))
         if path == "/api/jobs":
-            return self._send_json(self.database.list_jobs())
+            return self._maybe_require_view(lambda: self._send_json(self.database.list_jobs()))
         if path == "/api/agents":
-            return self._send_json(self.database.list_agents())
+            return self._maybe_require_view(lambda: self._send_json(self.database.list_agents()))
         if path == "/api/audit-logs":
             return self._require_permission("view", lambda: self._send_json(self.database.list_audit_logs()))
         if path == "/api/pricing-rules":
@@ -127,6 +129,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
             if path == "/api/auth/logout":
                 return self._logout()
             if path == "/api/jobs":
+                if self.settings.require_auth:
+                    return self._require_permission("manage_jobs", self._submit_job)
                 return self._submit_job()
             if path.endswith("/release") and path.startswith("/api/jobs/"):
                 return self._require_permission(
@@ -263,10 +267,13 @@ class RequestHandler(SimpleHTTPRequestHandler):
 
     def _login(self) -> None:
         payload = self._read_json()
-        token, user = self.database.authenticate_admin(
-            username=str(payload["username"]),
-            password=str(payload["password"]),
-        )
+        try:
+            token, user = self.database.authenticate_admin(
+                username=str(payload["username"]),
+                password=str(payload["password"]),
+            )
+        except ValueError as exc:
+            return self._send_json({"error": str(exc)}, status=HTTPStatus.UNAUTHORIZED)
         body = {"token": token, "user": user_to_dict(user)}
         encoded = json.dumps(body, ensure_ascii=False).encode("utf-8")
         self.send_response(HTTPStatus.OK)
@@ -350,6 +357,31 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json({"error": "permission denied"}, status=HTTPStatus.FORBIDDEN)
         return handler()
 
+    def _maybe_require_view(self, handler):
+        if not self.settings.require_auth:
+            return handler()
+        return self._require_permission("view", handler)
+
+    def _demo_info(self) -> dict:
+        if not self.settings.live_demo or self.settings.production_mode:
+            return {
+                "live_demo": False,
+                "require_auth": self.settings.require_auth,
+                "accounts": [],
+            }
+        admin_password = self.settings.bootstrap_admin_password or "Extreme@Demo2026"
+        return {
+            "live_demo": True,
+            "require_auth": True,
+            "message": "Sign in with one of the demo accounts below. Protected actions require a valid session.",
+            "accounts": [
+                {"username": "admin", "password": admin_password, "role": "superadmin"},
+                {"username": "operator", "password": "Operator@Demo2026", "role": "operator"},
+                {"username": "viewer", "password": "Viewer@Demo2026", "role": "viewer"},
+            ],
+            "release_station_users": ["student-a", "finance", "itdesk", "sara"],
+        }
+
     def _read_json(self, default: dict | None = None) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
         if length == 0:
@@ -420,10 +452,23 @@ def run(host: str | None = None, port: int | None = None) -> None:
     database.init_schema()
     if settings.seed_demo:
         database.seed_demo()
+    if settings.live_demo:
+        database.seed_enterprise_demo()
     database.purge_expired_audit_logs()
-    bootstrap = database.bootstrap_admin(password=settings.bootstrap_admin_password)
+    demo_password = settings.bootstrap_admin_password or (
+        "Extreme@Demo2026" if settings.live_demo else None
+    )
+    bootstrap = database.bootstrap_admin(password=demo_password)
     if bootstrap:
         print(f"[EPMS] Bootstrap admin created: {bootstrap['username']} (change password immediately)")
+        if settings.live_demo:
+            print(f"[EPMS] Live demo admin password: {bootstrap.get('password', demo_password)}")
+    if settings.live_demo:
+        extra = database.seed_live_demo_admins()
+        for account in extra:
+            print(
+                f"[EPMS] Demo account: {account['username']} / {account['password']} ({account['role']})"
+            )
 
     def handler(*args, **kwargs):
         RequestHandler(*args, database=database, settings=settings, **kwargs)
@@ -439,7 +484,9 @@ def run(host: str | None = None, port: int | None = None) -> None:
     mode = "PRODUCTION" if settings.production_mode else "development"
     print(f"Extreme Print Management System [{mode}] at {protocol}://{host}:{port}")
     print(f"[EPMS] Device servlet: {protocol}://{host}:{port}/extreme/sdk/v1/health")
-    if settings.require_auth:
+    if settings.live_demo:
+        print("[EPMS] LIVE DEMO: authentication required — credentials at GET /api/demo/info")
+    elif settings.require_auth:
         print("[EPMS] Admin authentication is required for privileged API actions")
     checklist = production_checklist(database_ok=True, settings=settings)
     if settings.production_mode and checklist["ready"]:

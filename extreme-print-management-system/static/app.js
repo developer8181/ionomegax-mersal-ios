@@ -30,7 +30,9 @@ const messages = {
     adminLogin: "Admin sign-in",
     signIn: "Sign in",
     signOut: "Sign out",
-    adminGuest: "Guest mode (auth optional)",
+    adminGuest: "Sign in required to view data",
+    demoCredentialsTitle: "Live demo accounts",
+    demoCredentialsHint: "Use these credentials (copy/paste):",
     adminSignedIn: "Signed in as {name} ({role})",
     toastSignedIn: "Admin session started",
     toastSignedOut: "Admin session ended",
@@ -168,7 +170,9 @@ const messages = {
     adminLogin: "دخول المسؤول",
     signIn: "تسجيل الدخول",
     signOut: "تسجيل الخروج",
-    adminGuest: "وضع ضيف (المصادقة اختيارية)",
+    adminGuest: "يلزم تسجيل الدخول لعرض البيانات",
+    demoCredentialsTitle: "حسابات العرض الحي",
+    demoCredentialsHint: "استخدم بيانات الدخول التالية:",
     adminSignedIn: "مسجّل كـ {name} ({role})",
     toastSignedIn: "بدأت جلسة المسؤول",
     toastSignedOut: "انتهت جلسة المسؤول",
@@ -329,15 +333,23 @@ async function api(path, options = {}) {
 }
 
 async function refresh() {
-  const [dashboard, users, printers, jobs, agents] = await Promise.all([
-    api("/api/dashboard"),
-    api("/api/users"),
-    api("/api/printers"),
-    api("/api/jobs"),
-    api("/api/agents"),
-  ]);
-  Object.assign(state, { dashboard, users, printers, jobs, agents });
-  render();
+  try {
+    const [dashboard, users, printers, jobs, agents] = await Promise.all([
+      api("/api/dashboard"),
+      api("/api/users"),
+      api("/api/printers"),
+      api("/api/jobs"),
+      api("/api/agents"),
+    ]);
+    Object.assign(state, { dashboard, users, printers, jobs, agents });
+    render();
+  } catch (error) {
+    if (!state.adminUser && String(error.message).toLowerCase().includes("authentication")) {
+      render();
+      return;
+    }
+    toast(error.message);
+  }
 }
 
 function setLanguage(lang) {
@@ -638,6 +650,7 @@ function renderAdminAuth() {
     status.textContent = t("adminGuest");
     loginBtn.classList.remove("hidden");
     logoutBtn.classList.add("hidden");
+    renderDemoCredentials();
   }
 }
 
@@ -649,6 +662,33 @@ async function refreshAuth() {
     state.adminUser = null;
   }
   renderAdminAuth();
+  await renderDemoCredentials();
+}
+
+async function renderDemoCredentials() {
+  const box = document.querySelector("#demoCredentials");
+  if (!box) return;
+  try {
+    const info = await fetch("/api/demo/info").then((r) => r.json());
+    if (!info.live_demo || state.adminUser) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    const lines = (info.accounts || [])
+      .map(
+        (row) =>
+          `<div><code>${escapeHtml(row.username)}</code> / <code>${escapeHtml(row.password)}</code> <span class="muted">(${escapeHtml(row.role)})</span></div>`,
+      )
+      .join("");
+    box.innerHTML = `<strong>${escapeHtml(t("demoCredentialsTitle"))}</strong><span>${escapeHtml(t("demoCredentialsHint"))}</span>${lines}`;
+    box.classList.remove("hidden");
+    if (!document.querySelector("#adminUsername").value) {
+      document.querySelector("#adminUsername").value = "admin";
+    }
+  } catch {
+    box.classList.add("hidden");
+  }
 }
 
 document.querySelector("#adminLoginBtn")?.addEventListener("click", async () => {

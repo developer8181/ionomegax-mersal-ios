@@ -597,9 +597,35 @@ class Database:
             return {
                 "username": "admin",
                 "role": "superadmin",
+                "password": initial_password,
                 "bootstrap_password_set": password is not None,
                 "message": "Default admin account created. Change the password immediately.",
             }
+
+    def seed_live_demo_admins(self) -> list[dict[str, str]]:
+        """Create operator/viewer demo accounts (idempotent). Returns credential hints."""
+        accounts = [
+            ("operator", "operator", "Print Operator", "Operator@Demo2026"),
+            ("viewer", "viewer", "Read-only Auditor", "Viewer@Demo2026"),
+        ]
+        created: list[dict[str, str]] = []
+        with self.connect() as db:
+            for username, role, display_name, plain in accounts:
+                exists = db.execute(
+                    "SELECT 1 FROM admin_users WHERE username = ?",
+                    (username,),
+                ).fetchone()
+                if exists:
+                    continue
+                db.execute(
+                    """
+                    INSERT INTO admin_users (username, password_hash, role, display_name)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (username, hash_password(plain), role, display_name),
+                )
+                created.append({"username": username, "password": plain, "role": role})
+        return created
 
     def authenticate_admin(self, *, username: str, password: str) -> tuple[str, AdminUser]:
         with self.connect() as db:

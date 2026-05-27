@@ -97,6 +97,30 @@ body {
   margin-top: 0.35rem;
 }
 
+.demo-credentials {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px dashed var(--brand);
+  background: rgba(14, 165, 164, 0.08);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.demo-credentials strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--brand-dark);
+}
+
+.demo-credentials code {
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+}
+
 .language-card {
   border: 1px solid var(--line);
   box-shadow: var(--shadow);

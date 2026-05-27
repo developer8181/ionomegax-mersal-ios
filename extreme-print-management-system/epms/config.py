@@ -25,17 +25,22 @@ class Settings:
     bootstrap_admin_password: str | None
     production_mode: bool
     seed_demo: bool
+    live_demo: bool
 
     @classmethod
     def from_environ(cls, *, project_root: Path, default_db: Path) -> Settings:
         tls_cert = os.environ.get("EPMS_TLS_CERT", "").strip()
         tls_key = os.environ.get("EPMS_TLS_KEY", "").strip()
+        live_demo = os.environ.get("EPMS_LIVE_DEMO", "").lower() in {"1", "true", "yes"}
+        require_auth = os.environ.get("EPMS_REQUIRE_AUTH", "").lower() in {"1", "true", "yes"}
+        if live_demo:
+            require_auth = True
         return cls(
             db_path=Path(os.environ.get("EPMS_DB", str(default_db))),
             pg_dsn=os.environ.get("EPMS_PG_DSN", "").strip() or None,
             agent_token=os.environ.get("EPMS_AGENT_TOKEN", "").strip() or None,
             session_secret=os.environ.get("EPMS_SESSION_SECRET", "change-me-in-production"),
-            require_auth=os.environ.get("EPMS_REQUIRE_AUTH", "").lower() in {"1", "true", "yes"},
+            require_auth=require_auth,
             anonymize_documents=os.environ.get("EPMS_ANONYMIZE_DOCS", "").lower() in {"1", "true", "yes"},
             audit_retention_days=max(1, int(os.environ.get("EPMS_AUDIT_RETENTION_DAYS", "365"))),
             tls_cert=Path(tls_cert) if tls_cert else None,
@@ -47,6 +52,7 @@ class Settings:
             bootstrap_admin_password=os.environ.get("EPMS_BOOTSTRAP_ADMIN_PASSWORD", "").strip() or None,
             production_mode=os.environ.get("EPMS_PRODUCTION", "").lower() in {"1", "true", "yes"},
             seed_demo=cls._resolve_seed_demo(),
+            live_demo=live_demo,
         )
 
     @staticmethod
