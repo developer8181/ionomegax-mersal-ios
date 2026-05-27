@@ -1,3 +1,3 @@
 """Extreme Print Management System package."""
 
-__all__ = ["core", "server", "storage"]
+__all__ = ["agents", "core", "server", "storage"]

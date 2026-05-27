@@ -45,6 +45,7 @@ function renderCards() {
   document.querySelector("#cards").innerHTML = [
     ["Users", dashboard.users],
     ["Printers", dashboard.printers],
+    ["Agents", dashboard.agents],
     ["Print jobs", dashboard.jobs],
     ["Held jobs", dashboard.held_jobs],
     ["Pages", dashboard.pages],

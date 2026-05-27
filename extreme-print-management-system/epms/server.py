@@ -9,6 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .agents import supported_platforms
 from .core import money_to_cents
 from .storage import Database
 
@@ -35,6 +36,10 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return self._send_json(self.database.list_printers())
         if path == "/api/jobs":
             return self._send_json(self.database.list_jobs())
+        if path == "/api/agents":
+            return self._send_json(self.database.list_agents())
+        if path == "/api/printer-platforms":
+            return self._send_json(supported_platforms())
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib method name
@@ -72,6 +77,18 @@ class RequestHandler(SimpleHTTPRequestHandler):
 
             if path == "/api/quotas/reset":
                 return self._send_json(self.database.reset_monthly_quotas())
+
+            if path == "/api/agents/heartbeat":
+                payload = self._read_json()
+                agent = self.database.record_agent_heartbeat(
+                    agent_id=str(payload["agent_id"]),
+                    agent_type=str(payload["agent_type"]),
+                    hostname=str(payload["hostname"]),
+                    os_name=str(payload.get("os_name", "")),
+                    version=str(payload.get("version", "")),
+                    metadata=payload.get("metadata", {}),
+                )
+                return self._send_json(agent)
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError) as exc:

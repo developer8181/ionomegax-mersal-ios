@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -77,6 +78,18 @@ class Database:
                     note TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS agents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL UNIQUE,
+                    agent_type TEXT NOT NULL,
+                    hostname TEXT NOT NULL,
+                    os_name TEXT NOT NULL DEFAULT '',
+                    version TEXT NOT NULL DEFAULT '',
+                    metadata_json TEXT NOT NULL DEFAULT '{}',
+                    first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
                 """
             )
 
@@ -117,6 +130,12 @@ class Database:
     def list_printers(self) -> list[dict[str, Any]]:
         return self._fetch_all("SELECT * FROM printers ORDER BY name")
 
+    def list_agents(self) -> list[dict[str, Any]]:
+        agents = self._fetch_all("SELECT * FROM agents ORDER BY last_seen DESC")
+        for agent in agents:
+            agent["metadata"] = json.loads(agent.pop("metadata_json") or "{}")
+        return agents
+
     def list_jobs(self, limit: int = 100) -> list[dict[str, Any]]:
         return self._fetch_all(
             """
@@ -145,6 +164,46 @@ class Database:
                 (user_id, amount_cents, balance_after, note),
             )
             return self._row_to_dict(self._get_row(db, "SELECT * FROM users WHERE id = ?", (user_id,)))
+
+    def record_agent_heartbeat(
+        self,
+        *,
+        agent_id: str,
+        agent_type: str,
+        hostname: str,
+        os_name: str = "",
+        version: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        agent_id = agent_id.strip()
+        agent_type = agent_type.strip()
+        hostname = hostname.strip()
+        if not agent_id:
+            raise ValueError("agent_id is required")
+        if not agent_type:
+            raise ValueError("agent_type is required")
+        if not hostname:
+            raise ValueError("hostname is required")
+
+        metadata_json = json.dumps(metadata or {}, sort_keys=True)
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO agents (agent_id, agent_type, hostname, os_name, version, metadata_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(agent_id) DO UPDATE SET
+                    agent_type = excluded.agent_type,
+                    hostname = excluded.hostname,
+                    os_name = excluded.os_name,
+                    version = excluded.version,
+                    metadata_json = excluded.metadata_json,
+                    last_seen = CURRENT_TIMESTAMP
+                """,
+                (agent_id, agent_type, hostname, os_name, version, metadata_json),
+            )
+            agent = self._row_to_dict(self._get_row(db, "SELECT * FROM agents WHERE agent_id = ?", (agent_id,)))
+            agent["metadata"] = json.loads(agent.pop("metadata_json") or "{}")
+            return agent
 
     def submit_job(
         self,
@@ -294,6 +353,7 @@ class Database:
             )
             totals["users"] = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
             totals["printers"] = db.execute("SELECT COUNT(*) FROM printers").fetchone()[0]
+            totals["agents"] = db.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
             totals["by_user"] = self._fetch_all(
                 """
                 SELECT u.display_name, COUNT(j.id) AS jobs, COALESCE(SUM(j.cost_cents), 0) AS cost_cents

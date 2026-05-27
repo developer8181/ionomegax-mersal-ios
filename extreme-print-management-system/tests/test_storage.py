@@ -88,6 +88,29 @@ class StorageWorkflowTests(unittest.TestCase):
         self.assertEqual(job["status"], "denied")
         self.assertEqual(updated_user["balance_cents"], user["balance_cents"])
 
+    def test_record_agent_heartbeat_upserts_metadata(self):
+        first = self.db.record_agent_heartbeat(
+            agent_id="printer-controller-1",
+            agent_type="printer-controller",
+            hostname="mfd-gateway",
+            os_name="embedded",
+            version="0.1.0",
+            metadata={"vendor": "hp", "platform": "OXP"},
+        )
+        second = self.db.record_agent_heartbeat(
+            agent_id="printer-controller-1",
+            agent_type="printer-controller",
+            hostname="mfd-gateway",
+            os_name="embedded",
+            version="0.1.1",
+            metadata={"vendor": "hp", "platform": "Workpath"},
+        )
+
+        self.assertEqual(first["agent_id"], "printer-controller-1")
+        self.assertEqual(second["version"], "0.1.1")
+        self.assertEqual(second["metadata"]["platform"], "Workpath")
+        self.assertEqual(len(self.db.list_agents()), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

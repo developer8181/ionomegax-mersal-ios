@@ -1,0 +1,7 @@
+{
+  "server": "http://127.0.0.1:8080",
+  "agent_id": "printer-controller-main-office-hp",
+  "vendor": "hp",
+  "model": "FutureSmart MFP",
+  "device_address": "192.0.2.50"
+}
