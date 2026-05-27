@@ -1,0 +1,13 @@
+[Unit]
+Description=Mersal Endpoint Agent
+After=network.target mersal-command-center.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mersal-guard
+ExecStart=/usr/bin/python3 /opt/mersal-guard/agent.py daemon --config /etc/mersal-guard/agent.json
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,52 @@
+name: Mersal OS ISO Build
+
+on:
+  push:
+    paths:
+      - "mersal-os/**"
+      - "xtreme-ip-guard/**"
+      - ".github/workflows/mersal-os-iso.yml"
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install live-build
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            live-build debootstrap squashfs-tools xorriso isolinux syslinux-utils \
+            grub-pc-bin grub-efi-amd64-bin rsync openssl
+
+      - name: Build Mersal OS ISO
+        run: |
+          cd mersal-os
+          chmod +x build/*.sh
+          sudo ./build/build-iso.sh
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mersal-os-iso
+          path: |
+            mersal-os/dist/*.iso
+            mersal-os/dist/*.sha256
+          retention-days: 30
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Mersal OS core tests
+        working-directory: mersal-os
+        run: python3 -m unittest discover -s tests -v
+      - name: Mersal Guard tests
+        working-directory: xtreme-ip-guard
+        run: python3 -m unittest discover -s tests -v

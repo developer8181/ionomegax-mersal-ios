@@ -1,0 +1,12 @@
+[Unit]
+Description=Mersal Update Orbit (local manifest)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mersal-os/update-channel
+ExecStart=/usr/bin/python3 /opt/mersal-os/update-channel/server.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

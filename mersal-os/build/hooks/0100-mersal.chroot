@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+# Mersal OS chroot hook — enable services and permissions
+
+chmod +x /usr/local/bin/mersal-status /usr/local/bin/mersal-welcome /usr/local/bin/mersal-update 2>/dev/null || true
+chmod +x /opt/mersal-os/update-channel/server.py 2>/dev/null || true
+
+mkdir -p /var/lib/mersal-guard /var/lib/mersal-guard/agent-state
+chown -R 1000:1000 /var/lib/mersal-guard 2>/dev/null || true
+
+systemctl enable mersal-command-center.service || true
+systemctl enable mersal-guard-agent.service || true
+systemctl enable mersal-gateway.service || true
+systemctl enable mersal-update-orbit.service || true
+systemctl enable suricata.service || true
+systemctl enable cockpit.socket || true
+
+# Trial user for live and installed
+if ! id mersal >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -G sudo,audio,netdev mersal || true
+  echo "mersal:mersal" | chpasswd || true
+fi
+
+# Desktop autostart welcome (if X exists)
+mkdir -p /etc/skel/.config/autostart
+cat > /etc/skel/.config/autostart/mersal-welcome.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Mersal Welcome
+Exec=/usr/local/bin/mersal-welcome
+X-GNOME-Autostart-enabled=true
+EOF
+
+cp /etc/skel/.config/autostart/mersal-welcome.desktop /home/mersal/.config/autostart/ 2>/dev/null || true
