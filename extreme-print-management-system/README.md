@@ -102,7 +102,9 @@ python3 print_provider.py windows-poll --queue-name HQ_Printer --jobs-file jobs.
 | `POST` | `/api/audit-logs/purge` | Apply retention policy |
 | `GET` | `/api/release/held/{username}` | Held jobs for Release Station |
 | `POST` | `/api/release/jobs/{id}/release` | User release at device |
+| `GET` | `/api/health` | Liveness / database health |
 | `GET` | `/api/readiness` | Production readiness report |
+| `POST` | `/api/devices/login` | MFD user login via embedded adapter |
 | … | (see previous endpoints) | jobs, users, printers, agents, demo reset |
 
 Privileged endpoints honor `EPMS_REQUIRE_AUTH` and the `X-EPMS-Session` header (or `epms_session` cookie).
