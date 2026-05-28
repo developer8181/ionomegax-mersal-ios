@@ -1,7 +1,8 @@
 const I18N = {
   ar: {
     brandName: "Mersal Global Fabric",
-    brandSubtitle: "مركز القيادة العالمي",
+    brandSubtitle: "مركز القيادة العالمي للأمن السيبراني",
+    poweredByExtreme: "Powered by Extreme Technology Company",
     navReadiness: "الجاهزية",
     navOverview: "نظرة عامة",
     navGlobal: "المنصة العالمية",
@@ -101,7 +102,8 @@ const I18N = {
   },
   en: {
     brandName: "Mersal Global Fabric",
-    brandSubtitle: "Global Command Center",
+    brandSubtitle: "Global Cybersecurity Command Center",
+    poweredByExtreme: "Powered by Extreme Technology Company",
     navReadiness: "Readiness",
     navOverview: "Overview",
     navGlobal: "Global Platform",
@@ -891,7 +893,7 @@ async function initFromUrl() {
   applyLanguage(lang);
   startClock();
   await refresh();
-  const delay = capture ? 1200 : 600;
+  const delay = capture ? 2000 : 600;
   if (view) setTimeout(() => scrollToView(view), delay);
   if (openAbout === "1") setTimeout(() => openAboutDialog(), delay + 500);
 }

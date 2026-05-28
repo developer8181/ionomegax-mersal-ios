@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mersal · Global Security Command</title>
+    <title>Mersal · Global Cybersecurity Command Center</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,18 +16,31 @@
   <body>
     <div class="global-bg" aria-hidden="true"></div>
     <div class="grid-overlay" aria-hidden="true"></div>
+    <div class="particle-layer" aria-hidden="true">
+      <span class="orb orb-1"></span>
+      <span class="orb orb-2"></span>
+      <span class="orb orb-3"></span>
+      <span class="orb orb-4"></span>
+    </div>
+    <div class="scan-line" aria-hidden="true"></div>
 
     <div class="shell">
       <aside class="sidebar glass">
         <div class="brand">
-          <img class="brand-logo" src="/console/logo.svg" width="52" height="52" alt="Mersal" />
-          <div>
-            <strong data-i18n="brandName">Mersal Global Fabric</strong>
-            <small data-i18n="brandSubtitle">مركز القيادة العالمي</small>
+          <div class="brand-row">
+            <img class="brand-logo" src="/console/logo.svg" width="48" height="48" alt="Mersal" />
+            <div>
+              <strong data-i18n="brandName">Mersal Global Platform</strong>
+              <small data-i18n="brandSubtitle">مركز القيادة العالمي للأمن السيبراني</small>
+            </div>
+          </div>
+          <div class="brand-extreme">
+            <img src="/console/extreme-logo.svg" width="140" height="32" alt="Extreme Technology" class="extreme-logo" />
+            <small data-i18n="poweredByExtreme">Powered by Extreme Technology Company</small>
           </div>
         </div>
 
-        <div class="version-pill">v6.0 Global · 2026</div>
+        <div class="version-pill">v6.0 · Global SOC · 2026</div>
 
         <div class="lang-toggle">
           <button type="button" data-lang="ar" class="active">العربية</button>
@@ -289,7 +302,8 @@
           <div class="table-wrap" id="policiesTable"></div>
         </section>
 
-        <footer class="glass">
+        <footer class="glass footer-brand">
+          <img src="/console/extreme-logo.svg" width="120" height="28" alt="Extreme Technology" class="footer-extreme-logo" />
           <span id="copyrightFooter" data-i18n="copyrightShort">© 2009–2026 Extreme Technology · المهندس محمود راسم بياري · رام الله</span>
           <span id="platforms"></span>
         </footer>
@@ -299,6 +313,10 @@
     <dialog id="aboutDialog" class="about-dialog glass">
       <div class="about-inner">
         <button type="button" class="about-close" id="aboutCloseBtn" aria-label="Close">×</button>
+        <div class="about-brand-row">
+          <img src="/console/logo.svg" width="40" height="40" alt="Mersal" />
+          <img src="/console/extreme-logo.svg" width="130" height="30" alt="Extreme Technology" />
+        </div>
         <h2 id="aboutTitle">معلومات عن النظام</h2>
         <p class="about-product" id="aboutProduct"></p>
         <div class="about-block" id="aboutBodyAr"></div>
