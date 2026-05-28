@@ -31,7 +31,7 @@
           <small class="brand-powered" data-i18n="poweredByExtreme">Ionomegax · Extreme Technology Company</small>
         </div>
 
-        <div class="version-pill">v6.0 · Global SOC · 2026</div>
+        <div class="version-pill" id="versionPill">Mersal · 2026</div>
 
         <div class="lang-toggle">
           <button type="button" data-lang="ar" class="active">العربية</button>
@@ -48,6 +48,7 @@
         </div>
 
         <nav id="mainNav">
+          <a href="#integrations" data-nav="integrations"><span class="nav-icon">⎈</span><span data-i18n="navIntegrations">التكامل الكامل</span></a>
           <a href="#readiness" data-nav="readiness"><span class="nav-icon">✓</span><span data-i18n="navReadiness">الجاهزية</span></a>
           <a href="#overview" class="active" data-nav="overview"><span class="nav-icon">◈</span><span data-i18n="navOverview">نظرة عامة</span></a>
           <a href="#global" data-nav="global"><span class="nav-icon">🌐</span><span data-i18n="navGlobal">المنصة العالمية</span></a>
@@ -115,6 +116,34 @@
         </section>
 
         <section class="cards" id="cards"></section>
+
+        <section id="integrations" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="integrationsTitle">المنصة المتكاملة الكاملة</h2>
+              <p class="section-sub" data-i18n="integrationsSub">اعتماد مؤسسي · تكامل · دورة SOC موحّدة</p>
+            </div>
+            <div class="topbar-actions">
+              <button type="button" id="bootstrapBtn" class="secondary sm" data-i18n="bootstrapBtn">تهيئة مؤسسية</button>
+              <button type="button" id="completeCycleBtn" class="btn-primary sm" data-i18n="completeCycleBtn">دورة كاملة</button>
+            </div>
+          </div>
+          <div class="enterprise-grid" id="unifiedStats"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="adoptionTitle">اعتماد المؤسسة</h3>
+              <div id="adoptionPanel" class="readiness-grid"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="integrationHubTitle">نسيج التكامل</h3>
+              <div id="integrationHubPanel" class="table-wrap"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="capabilitiesTitle">القدرات الموحّدة</h3>
+            <div id="capabilitiesList" class="hero-badges"></div>
+          </article>
+        </section>
 
         <section id="readiness" class="panel-section glass readiness-section">
           <div class="section-head">

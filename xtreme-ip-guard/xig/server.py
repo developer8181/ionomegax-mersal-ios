@@ -95,6 +95,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             from .integrations.integration_hub import IntegrationHub
 
             return self._send_json(IntegrationHub(self.database).full_matrix())
+        if path == "/api/platform/unified" and self._authorized():
+            from .platform_ops.unified_platform import UnifiedPlatformController
+
+            return self._send_json(UnifiedPlatformController(self.database, self.fabric).full_dashboard())
         if path == "/api/platform/backups" and self._authorized():
             from .platform_ops.backup import BackupManager
 
@@ -296,6 +300,29 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             self.database.record_audit(self._actor(), "update.publish", target=meta.get("manifest_id", ""))
             return self._send_json(meta, status=HTTPStatus.CREATED)
+        if path == "/api/platform/complete-cycle":
+            if not self.fabric:
+                return self._send_json({"error": "fabric unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+            if not self._authorized():
+                return
+            from .platform_ops.unified_platform import UnifiedPlatformController
+
+            result = UnifiedPlatformController(self.database, self.fabric).run_complete_cycle()
+            self.database.record_audit(
+                self._actor(), "platform.complete_cycle", details={"keys": list(result.keys())}
+            )
+            return self._send_json(result)
+        if path == "/api/platform/bootstrap-enterprise":
+            if not self._authorized():
+                return
+            from .platform_ops.unified_platform import UnifiedPlatformController
+
+            tenant = self.headers.get("X-Mersal-Tenant", "default")
+            result = UnifiedPlatformController(self.database, self.fabric).bootstrap_enterprise(
+                tenant_id=tenant.strip() or "default"
+            )
+            self.database.record_audit(self._actor(), "platform.bootstrap", target=tenant)
+            return self._send_json(result)
         if path == "/api/platform/autonomous-cycle":
             if not self.fabric:
                 return self._send_json({"error": "fabric unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)

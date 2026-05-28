@@ -91,6 +91,16 @@ const I18N = {
     cardVulns: "ثغرات مفتوحة",
     cardCritical: "حرجة",
     fabricDone: "اكتملت الدورة",
+    navIntegrations: "التكامل الكامل",
+    integrationsTitle: "المنصة المتكاملة الكاملة",
+    integrationsSub: "اعتماد مؤسسي · SIEM · XDR · SOAR · EDR · SSO",
+    bootstrapBtn: "تهيئة مؤسسية",
+    completeCycleBtn: "دورة SOC كاملة",
+    adoptionTitle: "اعتماد المؤسسة",
+    integrationHubTitle: "نسيج التكامل",
+    capabilitiesTitle: "القدرات",
+    tierLabel: "التصنيف",
+    scoreLabel: "الدرجة",
     readinessTitle: "جاهزية الإنتاج",
     readinessSub: "فحوصات حقيقية للمنصة المتكاملة",
     readinessReady: "جاهز للتجربة",
@@ -192,6 +202,16 @@ const I18N = {
     cardVulns: "Open vulns",
     cardCritical: "Critical",
     fabricDone: "Cycle completed",
+    navIntegrations: "Full integration",
+    integrationsTitle: "Complete unified platform",
+    integrationsSub: "Enterprise adoption · SIEM · XDR · SOAR · EDR · SSO",
+    bootstrapBtn: "Enterprise bootstrap",
+    completeCycleBtn: "Full SOC cycle",
+    adoptionTitle: "Institution adoption",
+    integrationHubTitle: "Integration fabric",
+    capabilitiesTitle: "Capabilities",
+    tierLabel: "Tier",
+    scoreLabel: "Score",
     readinessTitle: "Production readiness",
     readinessSub: "Real platform checks — not cosmetic UI",
     readinessReady: "Trial ready",
@@ -712,6 +732,42 @@ function renderPolicies(rows) {
     .join("")}</tbody></table>`;
 }
 
+function renderUnified(unified, enterprise) {
+  const stats = document.getElementById("unifiedStats");
+  const adoption = document.getElementById("adoptionPanel");
+  const hub = document.getElementById("integrationHubPanel");
+  const caps = document.getElementById("capabilitiesList");
+  if (!stats || !unified) return;
+  const ent = enterprise || unified.enterprise_adoption || {};
+  stats.innerHTML = `
+    <div class="stat-card"><span>${t("tierLabel")}</span><strong>${ent.tier || unified.tier || "—"}</strong></div>
+    <div class="stat-card"><span>${t("scoreLabel")}</span><strong>${ent.percent ?? unified.adoption_percent ?? 0}%</strong></div>
+    <div class="stat-card"><span>SIEM</span><strong>${unified.modules?.siem?.alerts_open ?? 0}</strong></div>
+    <div class="stat-card"><span>XDR</span><strong>${unified.modules?.xdr?.findings_open ?? 0}</strong></div>
+  `;
+  if (adoption && ent.criteria) {
+    adoption.innerHTML = ent.criteria
+      .map(
+        (c) => `<div class="readiness-item ${c.ok ? "pass" : "fail"}"><span>${c.name}</span><small>${c.ok ? "✓" : "—"}</small></div>`
+      )
+      .join("");
+  }
+  if (hub && unified.integration_hub) {
+    const id = unified.integration_hub.identity || {};
+    const dp = unified.integration_hub.data_plane || {};
+    hub.innerHTML = `<table><tbody>
+      <tr><td>OIDC</td><td>${id.oidc?.configured ? "✓" : "—"}</td></tr>
+      <tr><td>SAML</td><td>${id.saml?.configured ? "✓" : "—"}</td></tr>
+      <tr><td>PostgreSQL</td><td>${dp.postgres_active ? "✓" : "—"}</td></tr>
+      <tr><td>Backup</td><td>${dp.backup?.ok ? "✓" : "—"}</td></tr>
+      <tr><td>TLS</td><td>${dp.tls ? "✓" : "—"}</td></tr>
+    </tbody></table>`;
+  }
+  if (caps && unified.capabilities) {
+    caps.innerHTML = unified.capabilities.map((c) => `<span class="badge">${c}</span>`).join("");
+  }
+}
+
 async function loadReadinessPublic() {
   try {
     const [readiness, build] = await Promise.all([
@@ -719,6 +775,8 @@ async function loadReadinessPublic() {
       fetch("/api/system/build").then((r) => r.json()),
     ]);
     renderReadiness(readiness, build);
+    const pill = document.getElementById("versionPill");
+    if (pill && build.version) pill.textContent = `Mersal v${build.version}`;
   } catch (e) {
     console.error(e);
   }
@@ -730,7 +788,7 @@ async function refresh() {
     return;
   }
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel, enterprise, matrix, global, globalMatrix] =
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel, enterprise, matrix, global, globalMatrix, unified, enterpriseReadiness] =
       await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
@@ -749,12 +807,17 @@ async function refresh() {
       api("/api/enterprise/matrix"),
       api("/api/global/dashboard"),
       api("/api/global/matrix"),
+      api("/api/platform/unified").catch(() => ({})),
+      fetch("/api/system/enterprise-readiness").then((r) => r.json()).catch(() => ({})),
     ]);
     const [readiness, build] = await Promise.all([
       fetch("/api/system/readiness").then((r) => r.json()),
       fetch("/api/system/build").then((r) => r.json()),
     ]);
     renderReadiness(readiness, build);
+    renderUnified(unified, enterpriseReadiness);
+    const pill = document.getElementById("versionPill");
+    if (pill && build.version) pill.textContent = `Mersal v${build.version}`;
     renderCards(dashboard.totals);
     renderGlobal(global, globalMatrix);
     renderEnterprise(enterprise);
@@ -793,6 +856,18 @@ document.getElementById("globalCycleBtn")?.addEventListener("click", async () =>
 
 document.getElementById("dailyRunBtn").addEventListener("click", async () => {
   await apiPost("/api/fabric/daily", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
+
+document.getElementById("completeCycleBtn")?.addEventListener("click", async () => {
+  await apiPost("/api/platform/complete-cycle", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
+
+document.getElementById("bootstrapBtn")?.addEventListener("click", async () => {
+  await apiPost("/api/platform/bootstrap-enterprise", {});
   document.getElementById("authStatus").textContent = t("fabricDone");
   refresh();
 });
