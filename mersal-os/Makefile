@@ -4,7 +4,7 @@ sync:
 	./build/sync-includes.sh
 
 iso:
-	./build/build-iso.sh
+	sudo ./build/build-iso-debootstrap.sh
 
 iso-docker:
 	./build/build-iso-docker.sh

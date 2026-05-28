@@ -14,7 +14,8 @@ It unifies:
 After building:
 
 ```bash
-./build/build-iso.sh
+sudo apt-get install -y debootstrap squashfs-tools xorriso isolinux syslinux-utils
+make iso
 ls -lh dist/*.iso
 ```
 

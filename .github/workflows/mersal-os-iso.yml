@@ -11,15 +11,20 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    container: debian:bookworm
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Mersal OS ISO (Debian bookworm container)
+      - name: Build Mersal OS ISO
         run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            debootstrap squashfs-tools xorriso isolinux syslinux-utils \
+            rsync openssl ca-certificates sudo
           cd mersal-os
           chmod +x build/*.sh
-          ./build/build-iso-docker.sh
+          ./build/build-iso-debootstrap.sh
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4

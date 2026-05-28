@@ -8,12 +8,19 @@
 4. من صفحة التشغيل الناجح: **Artifacts** → `mersal-os-iso`.
 5. حمّل `mersal-os-YYYYMMDD-amd64.iso` وملف `.sha256`.
 
-## الطريقة 2 — البناء المحلي
+## الطريقة 2 — البناء المحلي (موصى به)
 
 ```bash
 cd mersal-os
-sudo ./build/build-iso.sh
+sudo apt-get install -y debootstrap squashfs-tools xorriso isolinux syslinux-utils grub-pc-bin rsync
+sudo ./build/build-iso-debootstrap.sh
 ls -lh dist/
+```
+
+أو عبر live-build داخل Debian:
+
+```bash
+./build/build-iso-docker.sh
 ```
 
 ## التجربة في QEMU
