@@ -1,0 +1,10 @@
+{
+  "server": "http://127.0.0.1:8090",
+  "agent_id": "",
+  "endpoint_id": "",
+  "owner": "",
+  "site": "HQ",
+  "interval_seconds": 30,
+  "api_token": "",
+  "state_dir": ""
+}

@@ -1,0 +1,14 @@
+{
+  "extreme_orange": "#F57C00",
+  "extreme_orange_light": "#FFB74D",
+  "extreme_orange_dark": "#E65100",
+  "extreme_gray": "#616161",
+  "extreme_gray_light": "#BDBDBD",
+  "mersal_cyan": "#06B6D4",
+  "mersal_indigo": "#1E3A5F",
+  "mersal_night": "#0F172A",
+  "mersal_panel": "#1E293B",
+  "white": "#FFFFFF",
+  "success": "#059669",
+  "danger": "#DC2626"
+}

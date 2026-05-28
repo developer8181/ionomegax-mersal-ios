@@ -1,0 +1,9 @@
+{
+  "server": "http://127.0.0.1:8090",
+  "endpoint_id": "mersal-os-live",
+  "owner": "mersal",
+  "site": "Holon-Primary",
+  "interval_seconds": 45,
+  "api_token": "",
+  "state_dir": "/var/lib/mersal-guard/agent-state"
+}

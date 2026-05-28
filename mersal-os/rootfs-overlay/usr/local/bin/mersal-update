@@ -1,0 +1,7 @@
+#!/bin/bash
+# Mersal Update Orbit CLI
+set -euo pipefail
+URL="${MERSAL_UPDATE_URL:-http://127.0.0.1:8091/manifest.json}"
+echo "Fetching $URL ..."
+curl -fsSL "$URL" | python3 -m json.tool
+echo "Run with MERSAL_UPDATE_URL for remote orbit."

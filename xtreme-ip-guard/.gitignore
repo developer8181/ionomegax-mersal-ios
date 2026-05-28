@@ -1,3 +1,7 @@
 data/
 __pycache__/
 *.pyc
+mersal-guard.env
+mersal-guard.production.env
+*.production.env
+!mersal-guard.production.example.env

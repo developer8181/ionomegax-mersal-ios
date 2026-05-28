@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mersal · Global Cybersecurity Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/console/style.css" />
+    <link rel="icon" href="/console/logo.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div class="global-bg" aria-hidden="true"></div>
+    <div class="grid-overlay" aria-hidden="true"></div>
+    <div class="particle-layer" aria-hidden="true">
+      <span class="orb orb-1"></span>
+      <span class="orb orb-2"></span>
+      <span class="orb orb-3"></span>
+      <span class="orb orb-4"></span>
+    </div>
+    <div class="scan-line" aria-hidden="true"></div>
+
+    <div class="shell">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <img class="brand-logo-unified" src="/console/logo-unified.svg" width="100%" height="56" alt="Mersal by Extreme Technology" />
+          <small class="brand-powered" data-i18n="poweredByExtreme">Ionomegax · Extreme Technology Company</small>
+        </div>
+
+        <div class="version-pill">v6.0 · Global SOC · 2026</div>
+
+        <div class="lang-toggle">
+          <button type="button" data-lang="ar" class="active">العربية</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+
+        <div class="auth-card glass-inner" id="authCard">
+          <span class="label-accent" data-i18n="adminLogin">تسجيل المسؤول</span>
+          <input id="adminUser" type="text" autocomplete="username" />
+          <input id="adminPass" type="password" autocomplete="current-password" />
+          <button type="button" id="loginBtn" class="btn-primary" data-i18n="signIn">دخول</button>
+          <button type="button" id="logoutBtn" class="secondary hidden" data-i18n="signOut">خروج</button>
+          <small id="authStatus"></small>
+        </div>
+
+        <nav id="mainNav">
+          <a href="#readiness" data-nav="readiness"><span class="nav-icon">✓</span><span data-i18n="navReadiness">الجاهزية</span></a>
+          <a href="#overview" class="active" data-nav="overview"><span class="nav-icon">◈</span><span data-i18n="navOverview">نظرة عامة</span></a>
+          <a href="#global" data-nav="global"><span class="nav-icon">🌐</span><span data-i18n="navGlobal">المنصة العالمية</span></a>
+          <a href="#enterprise" data-nav="enterprise"><span class="nav-icon">◆</span><span data-i18n="navEnterprise">المنصة المؤسسية</span></a>
+          <a href="#xdr" data-nav="xdr"><span class="nav-icon">✦</span><span data-i18n="xdrTitle">XDR</span></a>
+          <a href="#fabric" data-nav="fabric"><span class="nav-icon">⬡</span><span data-i18n="navFabric">المنصة العالمية</span></a>
+          <a href="#ai" data-nav="ai"><span class="nav-icon">◎</span><span data-i18n="navAI">الذكاء الاصطناعي</span></a>
+          <a href="#endpoints" data-nav="endpoints"><span class="nav-icon">▣</span><span data-i18n="navEndpoints">نقاط النهاية</span></a>
+          <a href="#agents" data-nav="agents"><span class="nav-icon">◉</span><span data-i18n="navAgents">الوكلاء</span></a>
+          <a href="#events" data-nav="events"><span class="nav-icon">⚡</span><span data-i18n="navEvents">الأحداث</span></a>
+          <a href="#policies" data-nav="policies"><span class="nav-icon">🛡</span><span data-i18n="navPolicies">السياسات</span></a>
+          <a href="#audit" data-nav="audit"><span class="nav-icon">📜</span><span data-i18n="navAudit">التدقيق</span></a>
+          <button type="button" id="aboutSystemBtn" class="nav-about">
+            <span class="nav-icon">ℹ</span><span data-i18n="navAbout">معلومات عن النظام</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-card glass-inner">
+          <span class="pulse"></span>
+          <strong data-i18n="liveLabel">منصة حية</strong>
+          <small data-i18n="liveHint">Linux · Windows · macOS · Mersal OS</small>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar glass">
+          <div class="topbar-meta">
+            <span class="threat-badge" id="threatBadge">DEFCON 2</span>
+            <span id="liveClock">--:--:--</span>
+          </div>
+          <div class="topbar-title" data-i18n="topbarTitle">غرفة العمليات العالمية</div>
+          <div class="topbar-actions">
+            <button type="button" id="dailyRunBtn" class="btn-primary sm" data-i18n="fabricDaily">دورة يومية</button>
+            <button type="button" id="vulnScanBtn" class="secondary sm" data-i18n="fabricVuln">فحص ثغرات</button>
+          </div>
+        </header>
+
+        <section class="hero glass" id="overview">
+          <div class="hero-copy">
+            <p class="eyebrow" data-i18n="heroEyebrow">Ionomegax · Extreme Technology</p>
+            <h1><span data-i18n="heroTitle">Mersal</span> <span class="hero-glow" data-i18n="heroSuffix">العالمية</span></h1>
+            <p class="hero-lead" data-i18n="heroBody">منصة أمن سيبراني عالمية موحّدة — ذكاء اصطناعي · فحص ثغرات · تهديدات · SOAR.</p>
+            <div class="hero-badges">
+              <span class="badge" data-i18n="badgeAI">Neural Cortex</span>
+              <span class="badge" data-i18n="badgeVuln">فحص يومي</span>
+              <span class="badge" data-i18n="badgeSoar">SOAR</span>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <div class="globe-visual" aria-hidden="true">
+              <div class="orbit-ring ring-1"></div>
+              <div class="orbit-ring ring-2"></div>
+              <div class="globe-core"></div>
+              <div class="node n1"></div>
+              <div class="node n2"></div>
+              <div class="node n3"></div>
+            </div>
+            <div class="hero-panel glass-inner">
+              <span class="chip" data-i18n="chip">مباشر</span>
+              <strong id="statEvents">0</strong>
+              <small data-i18n="statEventsLabel">أحداث مسجلة</small>
+              <div class="posture-mini" id="heroPosture">—</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="cards" id="cards"></section>
+
+        <section id="readiness" class="panel-section glass readiness-section">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="readinessTitle">جاهزية الإنتاج</h2>
+              <p class="section-sub" data-i18n="readinessSub">فحوصات حقيقية — ليست واجهة وهمية</p>
+            </div>
+            <span class="readiness-pill" id="readinessPill">—</span>
+          </div>
+          <div class="readiness-grid" id="readinessGrid"></div>
+          <p class="build-line" id="buildLine"></p>
+        </section>
+
+        <section id="global" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="globalTitle">Mersal Global Platform</h2>
+              <p class="section-sub" data-i18n="globalSub">تعدد مستأجرين · RBAC · GRC · تقارير · TAXII · بث تنبيهات</p>
+            </div>
+            <button type="button" id="globalCycleBtn" class="btn-primary sm" data-i18n="globalCycle">دورة عالمية</button>
+          </div>
+          <div class="enterprise-grid" id="globalStats"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="tenantsTitle">المستأجرون</h3>
+              <div class="table-wrap" id="tenantsTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="rbacTitle">الأدوار والمستخدمون</h3>
+              <div class="table-wrap" id="rbacTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="globalMatrixTitle">مقارنة عالمية</h3>
+            <div class="table-wrap" id="globalMatrixTable"></div>
+          </article>
+        </section>
+
+        <section id="enterprise" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="enterpriseTitle">Mersal Enterprise Security Suite</h2>
+              <p class="section-sub" data-i18n="enterpriseSub">بديل متكامل — EDR · SIEM · IR · امتثال · شبكة</p>
+            </div>
+            <button type="button" id="enterpriseCycleBtn" class="btn-primary sm" data-i18n="enterpriseCycle">دورة مؤسسية</button>
+          </div>
+          <div class="enterprise-grid" id="enterpriseModules"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="siemTitle">SIEM — تنبيهات</h3>
+              <div class="table-wrap" id="siemTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="incidentsTitle">إدارة الحوادث</h3>
+              <div class="table-wrap" id="incidentsTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="matrixTitle">مقارنة مع الأنظمة التقليدية</h3>
+            <div class="table-wrap" id="matrixTable"></div>
+          </article>
+        </section>
+
+        <section id="xdr" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="xdrTitle">Mersal XDR</h2>
+              <p class="section-sub" data-i18n="xdrSub">ارتباط عبر الطبقات — SIEM · EDR · IDS · ثغرات</p>
+            </div>
+            <button type="button" id="xdrCorrelateBtn" class="btn-primary sm" data-i18n="xdrCorrelate">ارتباط XDR</button>
+          </div>
+          <div class="enterprise-grid" id="xdrStats"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="xdrFindingsTitle">نتائج XDR</h3>
+              <div class="table-wrap" id="xdrTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="logVaultTitle">Mersal Log Vault</h3>
+              <div class="table-wrap" id="logVaultTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="suricataTitle">Suricata IDS</h3>
+            <div class="table-wrap" id="suricataTable"></div>
+          </article>
+        </section>
+
+        <section id="fabric" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="fabricTitle">Mersal Global Security Fabric</h2>
+              <p class="section-sub" data-i18n="fabricSub">نسيج الأمن العالمي — فحص · تهديدات · استجابة</p>
+            </div>
+          </div>
+          <div class="fabric-posture" id="fabricPosture"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="fabricVulnsTitle">ثغرات مفتوحة</h3>
+              <div class="table-wrap" id="vulnTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="fabricSoarTitle">تنفيذ SOAR</h3>
+              <div class="table-wrap" id="soarTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner threat-intel-panel">
+            <h3 data-i18n="threatIntelTitle">تهديدات و CISA KEV</h3>
+            <div id="threatIntelSummary"></div>
+          </article>
+        </section>
+
+        <section id="ai" class="panel-section glass ai-section">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="aiTitle">Mersal Neural Cortex</h2>
+              <p class="section-sub" data-i18n="aiBody">عقل اصطناعي دفاعي — تعلم · تنبؤ · قرار</p>
+            </div>
+            <button type="button" id="aiTrainBtn" class="secondary" data-i18n="aiTrain">تدريب من السجل</button>
+          </div>
+          <div class="ai-capabilities" id="aiCapabilities"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="aiInsightsTitle">رؤى الذكاء الاصطناعي</h3>
+              <div class="table-wrap" id="aiInsightsTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="aiPredictionsTitle">تنبؤات المخاطر</h3>
+              <div class="table-wrap" id="aiPredictionsTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="aiSuggestionsTitle">سياسات مقترحة</h3>
+            <div class="table-wrap" id="aiSuggestionsTable"></div>
+          </article>
+        </section>
+
+        <section class="grid-two">
+          <article id="endpoints" class="glass">
+            <h2 data-i18n="endpointsTitle">الأجهزة المدارة</h2>
+            <div class="table-wrap" id="endpointsTable"></div>
+          </article>
+          <article id="agents" class="glass">
+            <h2 data-i18n="agentsTitle">وكلاء نقاط النهاية</h2>
+            <div class="table-wrap" id="agentsTable"></div>
+          </article>
+        </section>
+
+        <section class="grid-two">
+          <article id="events" class="glass">
+            <h2 data-i18n="eventsTitle">أحداث DLP الأخيرة</h2>
+            <div class="table-wrap" id="eventsTable"></div>
+          </article>
+          <article id="audit" class="glass">
+            <h2 data-i18n="auditTitle">سجل التدقيق</h2>
+            <div class="table-wrap" id="auditTable"></div>
+          </article>
+        </section>
+
+        <section id="policies" class="panel-section glass">
+          <h2 data-i18n="policiesTitle">سياسات الحماية</h2>
+          <form id="policyForm" class="policy-form glass-inner">
+            <input id="ruleId" placeholder="MERSAL-RULE-001" required />
+            <input id="ruleName" data-i18n-placeholder="ruleNamePh" placeholder="اسم السياسة" required />
+            <select id="ruleAction">
+              <option value="monitor">monitor</option>
+              <option value="warn">warn</option>
+              <option value="block">block</option>
+              <option value="quarantine">quarantine</option>
+              <option value="isolate_endpoint">isolate_endpoint</option>
+            </select>
+            <input id="ruleClass" placeholder="secret" />
+            <input id="ruleChannel" placeholder="removable_media" />
+            <button type="submit" class="btn-primary" data-i18n="addPolicy">إضافة سياسة</button>
+          </form>
+          <div class="table-wrap" id="policiesTable"></div>
+        </section>
+
+        <footer class="glass footer-brand">
+          <img src="/console/logo-unified.svg" width="200" height="44" alt="Mersal by Extreme Technology" class="footer-extreme-logo" />
+          <span id="copyrightFooter" data-i18n="copyrightShort">© 2009–2026 Extreme Technology · المهندس محمود راسم بياري · رام الله</span>
+          <span id="platforms"></span>
+        </footer>
+      </main>
+    </div>
+
+    <dialog id="aboutDialog" class="about-dialog glass">
+      <div class="about-inner">
+        <button type="button" class="about-close" id="aboutCloseBtn" aria-label="Close">×</button>
+        <div class="about-brand-row">
+          <img src="/console/logo-unified.svg" width="100%" height="52" alt="Mersal by Extreme Technology" />
+        </div>
+        <h2 id="aboutTitle">معلومات عن النظام</h2>
+        <p class="about-product" id="aboutProduct"></p>
+        <div class="about-block" id="aboutBodyAr"></div>
+        <div class="about-block about-block-en" id="aboutBodyEn"></div>
+        <p class="about-rights" id="aboutRights"></p>
+      </div>
+    </dialog>
+
+    <script src="/console/app.js"></script>
+  </body>
+</html>

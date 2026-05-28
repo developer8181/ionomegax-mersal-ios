@@ -1,0 +1,8 @@
+PRODUCT=Mersal OS
+VERSION=6.0.0
+CODENAME=global
+VENDOR=Ionomegax
+POWERED_BY=Extreme Technology Company
+COPYRIGHT=2009-2026 Eng. Mahmoud Rasem Bayari, Ramallah, Palestine
+LEAD_ENGINEER=Mahmoud Rasem Bayari
+BUILD_CHANNEL=stable

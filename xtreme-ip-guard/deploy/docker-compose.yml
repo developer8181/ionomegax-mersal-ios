@@ -1,0 +1,22 @@
+services:
+  mersal-guard:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8090:8090"
+    volumes:
+      - mersal-data:/var/lib/mersal-guard
+    environment:
+      MERSAL_PRODUCTION: "1"
+      MERSAL_BOOTSTRAP: "1"
+      MERSAL_ADMIN_USER: admin
+      MERSAL_ADMIN_PASSWORD: ${MERSAL_ADMIN_PASSWORD:-mersal-change-me}
+      MERSAL_API_TOKEN: ${MERSAL_API_TOKEN:-}
+    env_file:
+      - path: ../mersal-guard.env
+        required: false
+    restart: unless-stopped
+
+volumes:
+  mersal-data:

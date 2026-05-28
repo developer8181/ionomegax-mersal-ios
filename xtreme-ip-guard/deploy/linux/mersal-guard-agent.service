@@ -1,0 +1,14 @@
+[Unit]
+Description=Ionomegax Mersal Guard Endpoint Agent
+After=network.target mersal-guard-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/mersal-guard
+ExecStart=/usr/bin/python3 /opt/mersal-guard/agent.py daemon --config /etc/mersal-guard/agent.json
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

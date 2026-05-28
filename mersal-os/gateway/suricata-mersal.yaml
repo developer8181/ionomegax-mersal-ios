@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# Mersal Gateway IPS — Suricata baseline (enable after install)
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - suricata.rules
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert
+        - flow

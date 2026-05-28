@@ -1,0 +1,19 @@
+[Unit]
+Description=Mersal Command Center (Ionomegax)
+After=network.target
+
+[Service]
+Type=simple
+Environment=MERSAL_PRODUCTION=1
+Environment=MERSAL_BOOTSTRAP=1
+Environment=MERSAL_HOST=0.0.0.0
+Environment=MERSAL_PORT=8090
+Environment=MERSAL_DB=/var/lib/mersal-guard/mersal-guard.sqlite3
+Environment=MERSAL_KEV_FEED_URL=https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+WorkingDirectory=/opt/mersal-guard
+ExecStart=/usr/bin/python3 /opt/mersal-guard/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

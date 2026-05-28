@@ -1,110 +1,156 @@
-# Xtreme IP Guard
+# Ionomegax Mersal Global Security Platform
 
-Xtreme IP Guard is a standalone defensive endpoint-control and DLP prototype inspired by enterprise products such as IP-guard, but designed as a modern zero-trust platform rather than a simple monitoring tool.
+<p align="center">
+  <img src="web/logo-unified.svg" alt="Mersal by Extreme Technology" height="72" />
+  <br />
+  <strong>Powered by Extreme Technology Company</strong>
+</p>
 
-The project is intentionally standalone and does not modify the existing Monal application in this repository.
+**Mersal v8.3** is an **independent advanced cybersecurity platform** — PostgreSQL HA, SAML, SCIM, signed updates, **agent eBPF EDR** — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
 
-## Current prototype capabilities
+Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 
-- Central Xtreme Server with a JSON API.
-- SQLite persistence with demo seed data.
-- Endpoint/agent heartbeat registration.
-- Normalized endpoint telemetry ingestion.
-- Deterministic risk scoring for DLP and endpoint events.
-- Policy decisions: allow, monitor, warn, block, quarantine, isolate endpoint.
-- CLI endpoint agent prototype for heartbeat and simulated telemetry.
-- No external runtime dependencies; it uses Python's standard library.
+| Resource | Link |
+|----------|------|
+| v8.2 Complete (AR) | [docs/MERSAL_v8_2_COMPLETE_AR.md](docs/MERSAL_v8_2_COMPLETE_AR.md) |
+| v8 Standalone (AR) | [docs/MERSAL_v8_STANDALONE_AR.md](docs/MERSAL_v8_STANDALONE_AR.md) |
+| Professional (AR) | [docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md](docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md) |
+| Enterprise v7 (AR) | [docs/MERSAL_ENTERPRISE_v7_BANK_GOV_AR.md](docs/MERSAL_ENTERPRISE_v7_BANK_GOV_AR.md) |
+| v6 Global (AR) | [docs/MERSAL_GLOBAL_v6_AR.md](docs/MERSAL_GLOBAL_v6_AR.md) |
+| v6 Global (EN) | [docs/MERSAL_GLOBAL_v6_EN.md](docs/MERSAL_GLOBAL_v6_EN.md) |
+| Light UI release | [docs/GITHUB_RELEASE_v6_ui_light.md](docs/GITHUB_RELEASE_v6_ui_light.md) |
+| Screenshots (22) | [docs/screenshots/README.md](docs/screenshots/README.md) |
+| Latest release | [GitHub Releases](https://github.com/developer8181/ionomegax-mersal-ios/releases) |
 
-## Product components
+## Copyright
 
-| Component | Prototype file | Production role |
-| --- | --- | --- |
-| Xtreme Command Center | `app.py`, `xig/server.py` | Central API, dashboard, policy engine, audit store, integrations |
-| Xtreme Policy Brain | `xig/core.py` | Risk scoring, DLP policy decisions, future AI-assisted analytics |
-| Xtreme Data Vault | `xig/storage.py` | Prototype SQLite storage; production would use HA SQL + event stream |
-| Xtreme Endpoint Agent | `agent.py` | Workstation telemetry, policy enforcement, user prompts |
-| Xtreme Response Orchestrator | future service | Isolation, quarantine, SOAR, EDR/XDR integrations |
-| Xtreme Site Node | future service | Branch cache, offline enforcement, local event buffering |
+Designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems Engineer — Ramallah, Palestine. Founder of **Extreme Technology Company**. **All rights reserved © 2009–2026**. See [COPYRIGHT.md](COPYRIGHT.md) and Command Center → **About the System** / **معلومات عن النظام**.
 
-See the Arabic architecture notes:
+## Platform stack
 
-- `docs/XTREME_IP_GUARD_ARCHITECTURE_AR.md`
-- `docs/IP_GUARD_STUDY_AR.md`
+| Layer | Role |
+| --- | --- |
+| Mersal Command Center | Central API, policy engine, Arabic/English console |
+| Mersal XDR | Cross-layer correlation (`xig/xdr/`) |
+| Mersal SIEM | Alerts, MITRE ATT&CK (`xig/siem/`) |
+| Mersal Log Vault | Log ingest & search (`xig/logvault/`) |
+| Mersal Global Security Fabric | Vuln scan, threat intel, SOAR (`xig/fabric/`) |
+| Mersal Neural Cortex | AI learning, anomaly detection (`xig/ai/`) |
+| Mersal Policy Brain | Risk scoring and DLP decisions (`xig/core.py`) |
+| Mersal Data Vault | SQLite persistence (`xig/storage.py`) |
+| Mersal Endpoint Agent | OS sensors, heartbeat daemon, enforcement (`agent.py`, `xig/agent_runtime.py`) |
+| OS adapters | Linux (procfs/sysfs), Windows (PowerShell/WMI), macOS (diskutil) |
 
-## Run locally
+## Integrated build (recommended)
+
+```bash
+cd xtreme-ip-guard
+make build-all    # unit tests + smoke verify + optional Docker
+make verify       # tests + HTTP smoke only
+```
+
+Production trial:
+
+```bash
+make production-env
+source mersal-guard.production.env
+python3 app.py
+# or: python3 -m xig
+```
+
+Readiness (no auth): `GET /api/system/readiness`  
+Build metadata: `GET /api/system/build`
+
+See [docs/PRODUCTION_TRIAL_AR.md](docs/PRODUCTION_TRIAL_AR.md) and [docs/BUILD_INTEGRATED_AR.md](docs/BUILD_INTEGRATED_AR.md).
+
+## Quick start
+
+### 1. Start the server
 
 ```bash
 cd xtreme-ip-guard
 python3 app.py
 ```
 
-Then open:
+Open the console:
 
 ```text
-http://127.0.0.1:8090
+http://127.0.0.1:8090/console/
 ```
 
-The default database is created at:
-
-```text
-xtreme-ip-guard/data/xtreme-ip-guard.sqlite3
-```
-
-To use a different database file:
+### Production provisioning
 
 ```bash
-XIG_DB=/path/to/xig.sqlite3 python3 app.py
+./scripts/provision.sh mersal-guard.env
+source mersal-guard.env
+python3 app.py
 ```
 
-## Run the endpoint agent prototype
-
-In another terminal while the server is running:
+Or full production install with TLS:
 
 ```bash
-cd xtreme-ip-guard
+sudo bash scripts/install-production.sh
+```
+
+This enables API token auth for agents and admin login for the Command Center.
+
+Optional TLS:
+
+```bash
+export MERSAL_TLS_CERT=/path/to/fullchain.pem
+export MERSAL_TLS_KEY=/path/to/privkey.pem
+python3 app.py
+```
+
+### Docker
+
+```bash
+./scripts/provision.sh mersal-guard.env
+docker compose -f deploy/docker-compose.yml up --build
+```
+
+### 2. Run the endpoint agent (daemon)
+
+Edit `config/agent.json`, then:
+
+```bash
+python3 agent.py daemon --config config/agent.json
+```
+
+One-shot commands:
+
+```bash
+python3 agent.py profile
+python3 agent.py sensors
 python3 agent.py heartbeat --endpoint-id laptop-001 --owner sara
-python3 agent.py simulate-event \
-  --endpoint-id laptop-001 \
-  --actor sara \
-  --event-type file_copy \
-  --channel removable_media \
-  --classification secret \
-  --resource /finance/payroll.xlsx \
-  --destination usb:Kingston \
-  --severity 25
+python3 agent.py status
 ```
 
-## API overview
+### 3. Linux production install
+
+```bash
+chmod +x scripts/install-linux.sh
+./scripts/install-linux.sh
+```
+
+## API (selected)
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/dashboard` | Totals, recent events, action summary |
-| `GET` | `/api/endpoints` | Registered endpoints and isolation state |
-| `GET` | `/api/events` | Recent normalized security events |
-| `GET` | `/api/policies` | Active and inactive policy rules |
-| `GET` | `/api/agents` | Registered endpoint agents |
-| `POST` | `/api/agents/heartbeat` | Register or refresh an endpoint agent |
-| `POST` | `/api/events` | Ingest endpoint/DLP telemetry and evaluate policy |
-| `POST` | `/api/policies` | Create a policy rule |
-| `POST` | `/api/endpoints/{id}/isolate` | Mark an endpoint as isolated |
-| `POST` | `/api/endpoints/{id}/restore` | Restore an isolated endpoint |
+| `GET` | `/console/` | Command Center UI |
+| `GET` | `/api/auth/status` | Whether authentication is required |
+| `POST` | `/api/auth/login` | Admin session token |
+| `GET` | `/api/audit` | Administrative audit trail |
+| `GET` | `/api/brand` | Product branding metadata |
+| `GET` | `/api/system/readiness` | Production readiness report |
+| `GET` | `/api/system/build` | Build version and git metadata |
+| `GET` | `/api/threat/intel` | Threat intel + CISA KEV summary |
+| `GET` | `/api/dashboard` | Console metrics |
+| `GET` | `/api/endpoints/{id}/directives` | Policies + isolation for agents |
+| `POST` | `/api/agents/heartbeat` | Agent registration |
+| `POST` | `/api/events` | Telemetry + policy decision |
 
-Example event submission:
-
-```bash
-curl -X POST http://127.0.0.1:8090/api/events \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "endpoint_id": "laptop-001",
-    "actor": "sara",
-    "event_type": "file_copy",
-    "channel": "removable_media",
-    "resource": "/finance/payroll.xlsx",
-    "classification": "secret",
-    "destination": "usb:Kingston",
-    "severity": 25
-  }'
-```
+Use header `X-Mersal-Token` when `MERSAL_API_TOKEN` is set.
 
 ## Tests
 
@@ -115,4 +161,9 @@ python3 -m unittest discover -s tests
 
 ## Security note
 
-This is a defensive prototype. It does not install kernel drivers, intercept live traffic, exfiltrate data, or perform destructive endpoint actions. Production enforcement must use signed agents, least privilege, tamper protection, audited administrative workflows, and explicit customer authorization.
+Mersal Guard is a defensive platform. Local enforcement writes state under `~/.mersal-guard` and optional Linux udev hints. Full USB/network blocking requires administrator-approved OS integration (EDR, MDM, firewall). Always deploy with signed agents, least privilege, and customer authorization.
+
+## Documentation
+
+- `docs/MERSAL_GUARD_PLATFORM_AR.md`
+- `docs/XTREME_IP_GUARD_ARCHITECTURE_AR.md` (legacy study notes)

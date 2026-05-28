@@ -1,0 +1,14 @@
+# Mersal Guard — optional enterprise dependencies
+# Core platform runs on Python 3.12+ stdlib only.
+
+# LDAP / Active Directory (bank & government SSO path)
+ldap3>=2.9.1
+
+# Native YARA hunting (optional; regex engine used if missing)
+yara-python>=4.5.0
+
+# PostgreSQL HA backend (optional; SQLite default)
+psycopg[binary]>=3.2.0
+
+# Field-level encryption helpers (optional)
+cryptography>=42.0.0

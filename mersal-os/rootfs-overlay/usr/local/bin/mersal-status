@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+echo "=== Mersal OS Status ==="
+[ -f /etc/mersal-os/release ] && cat /etc/mersal-os/release
+echo ""
+systemctl is-active mersal-command-center.service 2>/dev/null && echo "Command Center: active" || echo "Command Center: inactive"
+systemctl is-active mersal-guard-agent.service 2>/dev/null && echo "Guard Agent: active" || echo "Guard Agent: inactive"
+systemctl is-active mersal-gateway.service 2>/dev/null && echo "Gateway (nftables): active" || echo "Gateway: inactive"
+command -v nft >/dev/null && nft list ruleset 2>/dev/null | head -20 || true
+echo ""
+echo "Open: http://127.0.0.1:8090/console/"
+echo ""
+echo "Copyright (c) 2009-2026 Extreme Technology · Eng. Mahmoud Rasem Bayari · Ramallah"

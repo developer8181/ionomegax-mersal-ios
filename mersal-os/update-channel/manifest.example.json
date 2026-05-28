@@ -1,0 +1,18 @@
+{
+  "channel": "stable",
+  "version": "1.0.0",
+  "issued_at": "2026-05-27T00:00:00Z",
+  "publisher": "Extreme Technology Company",
+  "product": "Mersal OS",
+  "packages": [
+    {
+      "name": "mersal-guard",
+      "version": "1.1.0",
+      "sha256": "replace-me"
+    }
+  ],
+  "signatures": {
+    "ips": "orbits/security/rules-20260527.tar.gz",
+    "policy": "orbits/policy/bundle-v1.json"
+  }
+}

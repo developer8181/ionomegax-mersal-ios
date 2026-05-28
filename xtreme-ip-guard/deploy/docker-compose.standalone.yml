@@ -1,0 +1,51 @@
+# Mersal v8 — fully independent stack (PostgreSQL + platform + optional syslog sink)
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mersal
+      POSTGRES_PASSWORD: ${MERSAL_PG_PASSWORD:-mersal-pg-change-me}
+      POSTGRES_DB: mersal
+    volumes:
+      - mersal-pg:/var/lib/postgresql/data
+      - ./postgres/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mersal"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mersal-guard:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    volumes:
+      - mersal-data:/var/lib/mersal-guard
+      - mersal-tls:/var/lib/mersal-guard/tls
+    environment:
+      MERSAL_PRODUCTION: "1"
+      MERSAL_BOOTSTRAP: "1"
+      MERSAL_AUTONOMOUS: "1"
+      MERSAL_REQUIRE_AGENT_KEYS: "1"
+      MERSAL_SIGNING_SECRET: ${MERSAL_SIGNING_SECRET}
+      MERSAL_API_TOKEN: ${MERSAL_API_TOKEN}
+      MERSAL_ADMIN_PASSWORD: ${MERSAL_ADMIN_PASSWORD}
+      MERSAL_POSTGRES_DSN: postgresql://mersal:${MERSAL_PG_PASSWORD:-mersal-pg-change-me}@postgres:5432/mersal
+    restart: unless-stopped
+
+  # Optional: local syslog receiver for testing SIEM export
+  syslog-ng:
+    image: balabit/syslog-ng:4.7.1
+    profiles: ["siem-lab"]
+    ports:
+      - "514:514/udp"
+
+volumes:
+  mersal-pg:
+  mersal-data:
+  mersal-tls:
