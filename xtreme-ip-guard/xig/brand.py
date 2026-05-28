@@ -10,7 +10,7 @@ from .credits import COPYRIGHT_YEARS, CREDITS_AR, CREDITS_EN, system_about
 BRAND = {
     "company": "Ionomegax",
     "product": "Mersal Guard",
-    "full_name": "Ionomegax Mersal Enterprise Security Suite",
+    "full_name": "Ionomegax Mersal XDR Enterprise Platform",
     "fabric": "Mersal Global Security Fabric",
     "enterprise_suite": "Mersal Enterprise Security Suite",
     "ai_engine": "Mersal Neural Cortex",

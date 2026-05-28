@@ -27,7 +27,7 @@
           </div>
         </div>
 
-        <div class="version-pill">v4.0 Enterprise · 2026</div>
+        <div class="version-pill">v5.0 XDR · 2026</div>
 
         <div class="lang-toggle">
           <button type="button" data-lang="ar" class="active">العربية</button>
@@ -46,6 +46,7 @@
         <nav id="mainNav">
           <a href="#overview" class="active" data-nav="overview"><span class="nav-icon">◈</span><span data-i18n="navOverview">نظرة عامة</span></a>
           <a href="#enterprise" data-nav="enterprise"><span class="nav-icon">◆</span><span data-i18n="navEnterprise">المنصة المؤسسية</span></a>
+          <a href="#xdr" data-nav="xdr"><span class="nav-icon">✦</span><span data-i18n="xdrTitle">XDR</span></a>
           <a href="#fabric" data-nav="fabric"><span class="nav-icon">⬡</span><span data-i18n="navFabric">المنصة العالمية</span></a>
           <a href="#ai" data-nav="ai"><span class="nav-icon">◎</span><span data-i18n="navAI">الذكاء الاصطناعي</span></a>
           <a href="#endpoints" data-nav="endpoints"><span class="nav-icon">▣</span><span data-i18n="navEndpoints">نقاط النهاية</span></a>
@@ -143,6 +144,31 @@
           <article class="glass-inner">
             <h3 data-i18n="matrixTitle">مقارنة مع الأنظمة التقليدية</h3>
             <div class="table-wrap" id="matrixTable"></div>
+          </article>
+        </section>
+
+        <section id="xdr" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="xdrTitle">Mersal XDR</h2>
+              <p class="section-sub" data-i18n="xdrSub">ارتباط عبر الطبقات — SIEM · EDR · IDS · ثغرات</p>
+            </div>
+            <button type="button" id="xdrCorrelateBtn" class="btn-primary sm" data-i18n="xdrCorrelate">ارتباط XDR</button>
+          </div>
+          <div class="enterprise-grid" id="xdrStats"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="xdrFindingsTitle">نتائج XDR</h3>
+              <div class="table-wrap" id="xdrTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="logVaultTitle">Mersal Log Vault</h3>
+              <div class="table-wrap" id="logVaultTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="suricataTitle">Suricata IDS</h3>
+            <div class="table-wrap" id="suricataTable"></div>
           </article>
         </section>
 

@@ -71,10 +71,12 @@ def bootstrap_organization(database: "Database", *, site_name: str = "Primary Si
 
     fabric = MersalSecurityFabric(database)
     from .compliance.framework import NIST_CSF_CONTROLS
+    from .edr.yara_engine import DEFAULT_YARA_RULES
     from .siem.rules import DEFAULT_SIEM_RULES
 
     database.ensure_siem_rules(DEFAULT_SIEM_RULES)
     database.ensure_compliance_controls(NIST_CSF_CONTROLS)
+    database.ensure_yara_rules(DEFAULT_YARA_RULES)
     feeds = fabric.feeds.sync_all(remote_url=_kev_feed_url())
     scan = fabric.scanner.scan_all_endpoints(scope="bootstrap")
     daily = fabric.run_daily_now()

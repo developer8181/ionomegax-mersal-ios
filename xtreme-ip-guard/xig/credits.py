@@ -51,7 +51,7 @@ SOURCE_HEADER = f"""\
 def system_about(*, version: str = "2.0.0") -> dict:
     """Payload for /api/system/about and Command Center modal."""
     return {
-        "product": "Mersal Enterprise Security Suite",
+        "product": "Mersal XDR Enterprise Security Suite",
         "operating_system": "Mersal OS",
         "version": version,
         "vendor": "Ionomegax",

@@ -280,6 +280,58 @@ class Database:
                     risk INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS log_records (
+                    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source TEXT NOT NULL,
+                    host TEXT NOT NULL DEFAULT '',
+                    facility TEXT NOT NULL DEFAULT '',
+                    severity INTEGER NOT NULL DEFAULT 30,
+                    message TEXT NOT NULL,
+                    raw TEXT NOT NULL DEFAULT '',
+                    endpoint_id TEXT NOT NULL DEFAULT '',
+                    metadata TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS suricata_alerts (
+                    alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    signature_id INTEGER NOT NULL,
+                    signature TEXT NOT NULL,
+                    category TEXT NOT NULL DEFAULT '',
+                    severity INTEGER NOT NULL DEFAULT 50,
+                    src_ip TEXT NOT NULL DEFAULT '',
+                    dest_ip TEXT NOT NULL DEFAULT '',
+                    proto TEXT NOT NULL DEFAULT '',
+                    mitre_technique TEXT NOT NULL DEFAULT '',
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS xdr_findings (
+                    finding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    severity INTEGER NOT NULL,
+                    confidence REAL NOT NULL DEFAULT 0.8,
+                    status TEXT NOT NULL DEFAULT 'open',
+                    endpoint_id TEXT NOT NULL DEFAULT '',
+                    sources TEXT NOT NULL DEFAULT '[]',
+                    mitre_techniques TEXT NOT NULL DEFAULT '[]',
+                    recommended_action TEXT NOT NULL DEFAULT 'investigate',
+                    details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS yara_rules (
+                    rule_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    pattern TEXT NOT NULL,
+                    target TEXT NOT NULL DEFAULT 'process',
+                    severity INTEGER NOT NULL DEFAULT 70,
+                    mitre_technique TEXT NOT NULL DEFAULT '',
+                    enabled INTEGER NOT NULL DEFAULT 1
+                );
                 """
             )
 
@@ -546,6 +598,15 @@ class Database:
             alerts = SiemCorrelator(self).process_event(decoded)
             if alerts:
                 IncidentManager(self).sync_from_alerts(alerts)
+            if int(decoded.get("risk_score", 0)) >= 50:
+                self.ingest_log_record(
+                    source="dlp-event",
+                    message=f"{decoded.get('event_type')}: {decoded.get('resource')} -> {decoded.get('action')}",
+                    host=str(decoded.get("endpoint_id", "")),
+                    severity=int(decoded.get("risk_score", 30)),
+                    endpoint_id=str(decoded.get("endpoint_id", "")),
+                    metadata={"event_id": decoded.get("event_id"), "channel": decoded.get("channel")},
+                )
         except Exception:  # noqa: BLE001 — enterprise modules must not break ingest
             pass
         return decoded
@@ -1303,6 +1364,201 @@ class Database:
                     (limit,),
                 )
             return [dict(row) for row in rows]
+
+    def ingest_log_record(
+        self,
+        *,
+        source: str,
+        message: str,
+        host: str = "",
+        facility: str = "",
+        severity: int = 30,
+        endpoint_id: str = "",
+        raw: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO log_records (
+                    source, host, facility, severity, message, raw, endpoint_id, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source,
+                    host,
+                    facility,
+                    severity,
+                    message,
+                    raw or message,
+                    endpoint_id,
+                    json.dumps(metadata or {}, sort_keys=True),
+                ),
+            )
+            row = db.execute("SELECT * FROM log_records ORDER BY log_id DESC LIMIT 1").fetchone()
+            data = dict(row)
+            data["metadata"] = self._decode_json(data["metadata"], {})
+            return data
+
+    def search_logs(self, *, query: str = "", limit: int = 100) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if query.strip():
+                pattern = f"%{query.strip()}%"
+                rows = db.execute(
+                    """
+                    SELECT * FROM log_records
+                    WHERE message LIKE ? OR host LIKE ? OR source LIKE ?
+                    ORDER BY log_id DESC LIMIT ?
+                    """,
+                    (pattern, pattern, pattern, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM log_records ORDER BY log_id DESC LIMIT ?",
+                    (limit,),
+                )
+            results = []
+            for row in rows:
+                data = dict(row)
+                data["metadata"] = self._decode_json(data["metadata"], {})
+                results.append(data)
+            return results
+
+    def logvault_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            total = db.execute("SELECT COUNT(*) FROM log_records").fetchone()[0]
+            sources = [
+                dict(row)
+                for row in db.execute(
+                    "SELECT source, COUNT(*) AS count FROM log_records GROUP BY source ORDER BY count DESC"
+                )
+            ]
+        return {"total_logs": total, "by_source": sources}
+
+    def record_suricata_alert(self, alert: dict[str, Any]) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO suricata_alerts (
+                    signature_id, signature, category, severity, src_ip, dest_ip,
+                    proto, mitre_technique, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(alert.get("signature_id", 0)),
+                    str(alert.get("signature", "unknown")),
+                    str(alert.get("category", "")),
+                    int(alert.get("severity", 50)),
+                    str(alert.get("src_ip", "")),
+                    str(alert.get("dest_ip", "")),
+                    str(alert.get("proto", "")),
+                    str(alert.get("mitre_technique", "")),
+                    json.dumps(alert.get("payload", {}), sort_keys=True),
+                ),
+            )
+            row = db.execute("SELECT * FROM suricata_alerts ORDER BY alert_id DESC LIMIT 1").fetchone()
+            return self._decode_suricata(row)
+
+    def list_suricata_alerts(self, *, limit: int = 50, status: str = "open") -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM suricata_alerts WHERE status = ? ORDER BY alert_id DESC LIMIT ?",
+                (status, limit),
+            )
+            return [self._decode_suricata(row) for row in rows]
+
+    def create_xdr_finding(
+        self,
+        *,
+        title: str,
+        severity: int,
+        endpoint_id: str = "",
+        sources: list[str] | None = None,
+        mitre_techniques: list[str] | None = None,
+        recommended_action: str = "investigate",
+        details: dict[str, Any] | None = None,
+        confidence: float = 0.8,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO xdr_findings (
+                    title, severity, confidence, endpoint_id, sources, mitre_techniques,
+                    recommended_action, details
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    title,
+                    severity,
+                    confidence,
+                    endpoint_id,
+                    json.dumps(sources or [], sort_keys=True),
+                    json.dumps(mitre_techniques or [], sort_keys=True),
+                    recommended_action,
+                    json.dumps(details or {}, sort_keys=True),
+                ),
+            )
+            row = db.execute("SELECT * FROM xdr_findings ORDER BY finding_id DESC LIMIT 1").fetchone()
+            return self._decode_xdr(row)
+
+    def list_xdr_findings(self, *, limit: int = 30, status: str = "open") -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM xdr_findings WHERE status = ? ORDER BY finding_id DESC LIMIT ?",
+                (status, limit),
+            )
+            return [self._decode_xdr(row) for row in rows]
+
+    def xdr_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            open_count = db.execute(
+                "SELECT COUNT(*) FROM xdr_findings WHERE status = 'open'"
+            ).fetchone()[0]
+            critical = db.execute(
+                "SELECT COUNT(*) FROM xdr_findings WHERE status = 'open' AND severity >= 85"
+            ).fetchone()[0]
+        return {"open_findings": open_count, "critical_open": critical}
+
+    def ensure_yara_rules(self, rules: list[dict[str, Any]]) -> int:
+        inserted = 0
+        with self.connect() as db:
+            for rule in rules:
+                cursor = db.execute(
+                    """
+                    INSERT OR IGNORE INTO yara_rules (
+                        rule_id, name, pattern, target, severity, mitre_technique, enabled
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(rule["rule_id"]),
+                        str(rule["name"]),
+                        str(rule["pattern"]),
+                        str(rule.get("target", "process")),
+                        int(rule.get("severity", 70)),
+                        str(rule.get("mitre_technique", "")),
+                        int(rule.get("enabled", True)),
+                    ),
+                )
+                inserted += cursor.rowcount
+        return inserted
+
+    def list_yara_rules(self) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("SELECT * FROM yara_rules WHERE enabled = 1")]
+
+    @staticmethod
+    def _decode_suricata(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["payload"] = Database._decode_json(data["payload"], {})
+        return data
+
+    @staticmethod
+    def _decode_xdr(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["sources"] = Database._decode_json(data["sources"], [])
+        data["mitre_techniques"] = Database._decode_json(data["mitre_techniques"], [])
+        data["details"] = Database._decode_json(data["details"], {})
+        return data
 
     @staticmethod
     def _decode_siem_alert(row: sqlite3.Row) -> dict[str, Any]:

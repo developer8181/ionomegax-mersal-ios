@@ -129,6 +129,26 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_network_flows())
         if path == "/api/network/policy" and self.fabric:
             return self._send_json(self.fabric.enterprise.firewall.build_policy())
+        if path == "/api/xdr/dashboard" and self.fabric:
+            return self._send_json(self.fabric.enterprise.xdr.dashboard())
+        if path == "/api/xdr/findings":
+            return self._send_json(self.database.list_xdr_findings())
+        if path == "/api/logs/search":
+            query = urlparse(self.path).query
+            q = ""
+            if "q=" in query:
+                from urllib.parse import parse_qs
+
+                q = parse_qs(query).get("q", [""])[0]
+            if self.fabric:
+                return self._send_json(self.fabric.enterprise.logvault.search(query=q))
+            return self._send_json(self.database.search_logs(query=q))
+        if path == "/api/logs/dashboard" and self.fabric:
+            return self._send_json(self.fabric.enterprise.logvault.dashboard())
+        if path == "/api/suricata/alerts":
+            return self._send_json(self.database.list_suricata_alerts())
+        if path == "/api/yara/rules":
+            return self._send_json(self.database.list_yara_rules())
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -248,6 +268,35 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 result = IncidentManager(self.database).close_incident(incident_id, actor=actor)
                 self.database.record_audit(actor, "incident.close", target=incident_id)
+                return self._send_json(result)
+
+            if path == "/api/logs/ingest":
+                payload = self._read_json()
+                records = payload if isinstance(payload, list) else payload.get("records", [])
+                if self.fabric:
+                    result = self.fabric.enterprise.logvault.ingest_batch(records)
+                else:
+                    from .logvault import LogVault
+
+                    result = LogVault(self.database).ingest_batch(records)
+                return self._send_json(result, status=HTTPStatus.CREATED)
+
+            if path == "/api/suricata/ingest":
+                payload = self._read_json()
+                alerts = payload if isinstance(payload, list) else payload.get("alerts", [])
+                if self.fabric:
+                    result = self.fabric.enterprise.suricata.ingest_payload(alerts)
+                else:
+                    from .siem.suricata import SuricataIngester
+
+                    result = SuricataIngester(self.database).ingest_payload(alerts)
+                return self._send_json(result, status=HTTPStatus.CREATED)
+
+            if path == "/api/xdr/correlate":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.enterprise.xdr.run_correlation()
+                self.database.record_audit(actor, "xdr.correlate", details=result)
                 return self._send_json(result)
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")

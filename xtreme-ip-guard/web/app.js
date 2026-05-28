@@ -15,6 +15,12 @@ const I18N = {
     siemTitle: "SIEM — تنبيهات",
     incidentsTitle: "إدارة الحوادث",
     matrixTitle: "مقارنة القدرات",
+    xdrTitle: "Mersal XDR",
+    xdrSub: "كشف واستجابة عبر كل الطبقات",
+    xdrCorrelate: "ارتباط XDR",
+    xdrFindingsTitle: "نتائج XDR",
+    logVaultTitle: "سجلات مركزية",
+    suricataTitle: "تنبيهات Suricata",
     complianceLabel: "امتثال NIST",
     edrLabel: "كشوفات EDR",
     navAI: "الذكاء الاصطناعي",
@@ -99,6 +105,12 @@ const I18N = {
     siemTitle: "SIEM alerts",
     incidentsTitle: "Incident response",
     matrixTitle: "Capability comparison",
+    xdrTitle: "Mersal XDR",
+    xdrSub: "Cross-layer detection and response",
+    xdrCorrelate: "Run XDR correlation",
+    xdrFindingsTitle: "XDR findings",
+    logVaultTitle: "Log Vault",
+    suricataTitle: "Suricata IDS",
     complianceLabel: "NIST compliance",
     edrLabel: "EDR detections",
     navAI: "AI Cortex",
@@ -363,6 +375,52 @@ function renderEnterprise(ent) {
           .map(
             (i) =>
               `<tr><td>${i.incident_id}</td><td>${i.severity}</td><td>${i.status}</td><td>${i.title}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+}
+
+function renderXdr(ent) {
+  const xdr = ent?.modules?.xdr || {};
+  const summary = xdr.summary || {};
+  const stats = document.getElementById("xdrStats");
+  if (stats) {
+    stats.innerHTML = `
+      <div class="ai-stat"><span>XDR</span><strong>${summary.open_findings ?? 0}</strong></div>
+      <div class="ai-stat"><span>Critical</span><strong>${summary.critical_open ?? 0}</strong></div>
+      <div class="ai-stat"><span>Logs</span><strong>${ent?.modules?.logvault?.summary?.total_logs ?? 0}</strong></div>
+      <div class="ai-stat"><span>IDS</span><strong>${ent?.modules?.suricata?.open_alerts ?? 0}</strong></div>`;
+  }
+  const findings = xdr.findings || [];
+  const xdrEl = document.getElementById("xdrTable");
+  if (xdrEl) {
+    xdrEl.innerHTML = findings.length
+      ? `<table><thead><tr><th>Title</th><th>Host</th><th>Sev</th><th>MITRE</th><th>Action</th></tr></thead><tbody>${findings
+          .map(
+            (f) => `<tr><td>${f.title}</td><td>${f.endpoint_id}</td><td>${f.severity}</td><td>${(f.mitre_techniques || []).join(",")}</td><td>${f.recommended_action}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+  const logs = ent?.modules?.logvault?.recent || [];
+  const logEl = document.getElementById("logVaultTable");
+  if (logEl) {
+    logEl.innerHTML = logs.length
+      ? `<table><thead><tr><th>Source</th><th>Host</th><th>Message</th></tr></thead><tbody>${logs
+          .slice(0, 12)
+          .map((l) => `<tr><td>${l.source}</td><td>${l.host}</td><td>${l.message}</td></tr>`)
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+  const ids = ent?.modules?.suricata?.recent || [];
+  const surEl = document.getElementById("suricataTable");
+  if (surEl) {
+    surEl.innerHTML = ids.length
+      ? `<table><thead><tr><th>Sig</th><th>IPs</th><th>MITRE</th></tr></thead><tbody>${ids
+          .map(
+            (a) =>
+              `<tr><td>${a.signature}</td><td>${a.src_ip} → ${a.dest_ip}</td><td>${a.mitre_technique || ""}</td></tr>`
           )
           .join("")}</tbody></table>`
       : `<p>${t("empty")}</p>`;
@@ -637,6 +695,7 @@ async function refresh() {
     renderReadiness(readiness, build);
     renderCards(dashboard.totals);
     renderEnterprise(enterprise);
+    renderXdr(enterprise);
     renderMatrix(matrix);
     renderFabric(fabric, vulns, soarRuns, posture);
     renderThreatIntel(threatIntel);
@@ -651,6 +710,11 @@ async function refresh() {
     console.error(error);
   }
 }
+
+document.getElementById("xdrCorrelateBtn").addEventListener("click", async () => {
+  await apiPost("/api/xdr/correlate", {});
+  refresh();
+});
 
 document.getElementById("enterpriseCycleBtn").addEventListener("click", async () => {
   await apiPost("/api/enterprise/cycle", {});

@@ -26,7 +26,7 @@ done
 curl -sf http://127.0.0.1:8090/api/system/about | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-assert d.get('version','').startswith('4.0'), d
+assert d.get('version','').startswith('5.0'), d
 print('about:', d.get('version'))
 "
 

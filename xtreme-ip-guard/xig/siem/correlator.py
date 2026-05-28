@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from .mitre import map_event, map_rule
 from .rules import DEFAULT_SIEM_RULES
 
 if TYPE_CHECKING:
@@ -30,6 +31,10 @@ class SiemCorrelator:
                 continue
             condition = rule.get("condition") or {}
             if self._matches(event_row, condition, ai_meta):
+                mitre = map_rule(str(rule["rule_id"])) or map_event(
+                    str(event_row.get("event_type", "")),
+                    str(event_row.get("classification", "")),
+                )
                 alert = self.db.create_siem_alert(
                     rule_id=str(rule["rule_id"]),
                     title=str(rule["name"]),
@@ -41,6 +46,7 @@ class SiemCorrelator:
                         "event_type": event_row.get("event_type"),
                         "action": event_row.get("action"),
                         "risk_score": event_row.get("risk_score"),
+                        "mitre_technique": mitre,
                     },
                 )
                 alerts.append(alert)
