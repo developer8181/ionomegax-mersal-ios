@@ -9,6 +9,8 @@ The product brand is **Ionomegax** · **Mersal Guard** (مرسال — حماي�
 | Layer | Role |
 | --- | --- |
 | Mersal Command Center | Central API, policy engine, Arabic/English console |
+| Mersal Global Security Fabric | Vuln scan, threat intel, SOAR, daily scheduler (`xig/fabric/`) |
+| Mersal Neural Cortex | AI learning, anomaly detection, prediction (`xig/ai/`) |
 | Mersal Policy Brain | Risk scoring and DLP decisions (`xig/core.py`) |
 | Mersal Data Vault | SQLite persistence (`xig/storage.py`) |
 | Mersal Endpoint Agent | OS sensors, heartbeat daemon, enforcement (`agent.py`, `xig/agent_runtime.py`) |

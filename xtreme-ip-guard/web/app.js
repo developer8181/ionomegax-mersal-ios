@@ -1,7 +1,7 @@
 const I18N = {
   ar: {
-    brandName: "Ionomegax Mersal Guard",
-    brandSubtitle: "مركز قيادة ميرسال",
+    brandName: "Mersal Global Fabric",
+    brandSubtitle: "مركز قيادة الفرعون الرقمي",
     navOverview: "نظرة عامة",
     navEndpoints: "نقاط النهاية",
     navAgents: "الوكلاء",
@@ -12,9 +12,15 @@ const I18N = {
     navAudit: "التدقيق",
     liveLabel: "منصة حية",
     liveHint: "Linux · Windows · macOS",
-    heroEyebrow: "Ionomegax — حماية مؤسسية",
-    heroTitle: "Mersal Guard",
-    heroBody: "منصة متكاملة لحماية نقاط النهاية ومنع تسرب البيانات مع وكلاء حقيقيين.",
+    heroEyebrow: "Ionomegax · Extreme Technology — القاهرة",
+    heroTitle: "ميرسال",
+    heroSuffix: "العالمية",
+    heroBody: "أول منصة أمن سيبراني موحّدة بعقل مصري مستقبلي — ذكاء اصطناعي · فحص ثغرات يومي · تهديدات · SOAR.",
+    topbarTitle: "غرفة العمليات — القاهرة",
+    badgeAI: "Neural Cortex",
+    badgeVuln: "فحص يومي",
+    badgeSoar: "SOAR",
+    fabricSub: "نسيج الأمن العالمي — فحص · تهديدات · استجابة",
     chip: "مباشر",
     statEventsLabel: "أحداث مسجلة",
     endpointsTitle: "الأجهزة المدارة",
@@ -60,8 +66,8 @@ const I18N = {
     fabricDone: "اكتملت الدورة",
   },
   en: {
-    brandName: "Ionomegax Mersal Guard",
-    brandSubtitle: "Mersal Command Center",
+    brandName: "Mersal Global Fabric",
+    brandSubtitle: "Pharaoh Digital Command",
     navOverview: "Overview",
     navEndpoints: "Endpoints",
     navAgents: "Agents",
@@ -72,9 +78,15 @@ const I18N = {
     navAudit: "Audit",
     liveLabel: "Live platform",
     liveHint: "Linux · Windows · macOS",
-    heroEyebrow: "Ionomegax — enterprise defense",
-    heroTitle: "Mersal Guard",
-    heroBody: "Integrated endpoint protection with real OS agents.",
+    heroEyebrow: "Ionomegax · Extreme Technology — Cairo",
+    heroTitle: "Mersal",
+    heroSuffix: "Global",
+    heroBody: "Unified cyber defense with Egyptian-futuristic command — AI · vulns · threats · SOAR.",
+    topbarTitle: "Operations Room — Cairo",
+    badgeAI: "Neural Cortex",
+    badgeVuln: "Daily scan",
+    badgeSoar: "SOAR",
+    fabricSub: "Global security fabric — scan · intel · response",
     chip: "LIVE",
     statEventsLabel: "tracked events",
     endpointsTitle: "Managed endpoints",
@@ -225,11 +237,33 @@ window.restoreEndpoint = async (endpointId) => {
   refresh();
 };
 
+function updateThreatBadge(critical) {
+  const el = document.getElementById("threatBadge");
+  if (!el) return;
+  if (critical > 2) {
+    el.textContent = "DEFCON 1";
+    el.style.borderColor = "rgba(239,68,68,0.6)";
+  } else if (critical > 0) {
+    el.textContent = "DEFCON 2";
+  } else {
+    el.textContent = "DEFCON 3";
+    el.style.borderColor = "rgba(20,184,166,0.5)";
+  }
+}
+
+function updateHeroPosture(posture) {
+  const el = document.getElementById("heroPosture");
+  if (!el || !posture?.score) return;
+  el.textContent = `${t("postureScore")}: ${posture.score}/100 · ${posture.grade}`;
+}
+
 function renderFabric(fabric, vulns, soarRuns, posture) {
-  const p = posture.score ? posture : fabric.posture || {};
+  const p = posture.score !== undefined ? posture : fabric.posture || {};
   document.getElementById("fabricPosture").innerHTML = `
-    <div class="posture-grade grade-${(p.grade || "C").toLowerCase()}">${p.grade || "-"}</div>
-    <div><span>${t("postureScore")}</span><strong>${p.score ?? 0}/100</strong></div>`;
+    <div class="posture-grade grade-${(p.grade || "c").toLowerCase()}">${p.grade || "-"}</div>
+    <div><span>${t("postureScore")}</span><strong style="font-family:Orbitron,monospace;font-size:1.5rem">${p.score ?? 0}/100</strong></div>`;
+  updateHeroPosture(p);
+  updateThreatBadge(Number((fabric.vulnerabilities || {}).critical_open || 0));
 
   const findings = vulns.length ? vulns : [];
   const vulnEl = document.getElementById("vulnTable");
@@ -276,7 +310,7 @@ function renderCards(totals) {
     [t("cardCritical"), totals.critical_vulns ?? 0],
   ];
   document.getElementById("cards").innerHTML = cards
-    .map(([label, value]) => `<div class="card"><span>${label}</span><strong>${value}</strong></div>`)
+    .map(([label, value]) => `<div class="card glass"><span>${label}</span><strong>${value}</strong></div>`)
     .join("");
   document.getElementById("statEvents").textContent = totals.events;
 }
@@ -503,5 +537,42 @@ document.querySelectorAll(".lang-toggle button").forEach((btn) => {
   btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
 });
 
-loadAuthStatus().then(() => applyLanguage("ar"));
+function startClock() {
+  const tick = () => {
+    const now = new Date();
+    const el = document.getElementById("liveClock");
+    if (el) el.textContent = now.toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-GB");
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+function scrollToView(name) {
+  const el = document.getElementById(name);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.querySelectorAll("#mainNav a").forEach((link) => {
+    link.classList.toggle("active", link.dataset.nav === name);
+  });
+}
+
+function initFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get("view");
+  const urlLang = params.get("lang");
+  if (urlLang === "en" || urlLang === "ar") lang = urlLang;
+  loadAuthStatus().then(() => {
+    applyLanguage(lang);
+    startClock();
+    if (view) setTimeout(() => scrollToView(view), 600);
+  });
+}
+
+document.querySelectorAll("#mainNav a").forEach((link) => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    scrollToView(link.dataset.nav);
+  });
+});
+
+initFromUrl();
 setInterval(refresh, 15000);
