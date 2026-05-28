@@ -105,6 +105,34 @@ class IntegrationHub:
             from ..platform_ops.enterprise_readiness import enterprise_adoption_report
 
             return enterprise_adoption_report(self.db)
+        if integration_id == "oidc":
+            provider = OidcProvider(self.db)
+            return {"ok": provider.configured(), "configured": provider.configured(), "strict_jwt": _oidc_strict()}
+        if integration_id == "scim":
+            return {
+                "ok": bool(os.environ.get("MERSAL_SCIM_TOKEN", "").strip()),
+                "token_env": bool(os.environ.get("MERSAL_SCIM_TOKEN", "").strip()),
+                "users": len(self.db.list_rbac_users()),
+            }
+        if integration_id == "siem":
+            forwarders = self.db.list_siem_forwarders(enabled_only=True)
+            raw = self.db.get_platform_setting("siem_forward_cursor", "{}")
+            try:
+                cursor = json.loads(raw)
+            except json.JSONDecodeError:
+                cursor = {}
+            return {
+                "ok": bool(forwarders) or bool(cursor),
+                "forwarders": len(forwarders),
+                "cursor_keys": list(cursor.keys())[:10],
+            }
+        if integration_id == "ldap":
+            url = os.environ.get("MERSAL_LDAP_URL", "").strip()
+            return {"ok": bool(url), "configured": bool(url)}
+        if integration_id == "global_alternative":
+            from ..platform_ops.global_alternative import GlobalAlternativeController
+
+            return GlobalAlternativeController(self.db).summary()
         return {"error": f"unknown integration: {integration_id}"}
 
 

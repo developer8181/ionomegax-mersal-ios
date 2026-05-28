@@ -103,6 +103,19 @@ class RequestHandler(BaseHTTPRequestHandler):
             from .platform_ops.unified_platform import UnifiedPlatformController
 
             return self._send_json(UnifiedPlatformController(self.database, self.fabric).full_dashboard())
+        if path == "/api/platform/global-alternative/matrix":
+            from .platform_ops.global_alternative import parity_matrix
+
+            return self._send_json({"matrix": parity_matrix(), "count": len(parity_matrix())})
+        if path == "/api/platform/global-alternative" and self._authorized():
+            from .platform_ops.global_alternative import (
+                GlobalAlternativeController,
+                recommended_production_env,
+            )
+
+            body = GlobalAlternativeController(self.database, self.fabric).summary()
+            body["recommended_env"] = recommended_production_env()
+            return self._send_json(body)
         if path == "/api/platform/reliability" and self._authorized():
             from .platform_ops.reliability_engine import ReliabilityEngine
 
@@ -271,6 +284,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
         if path == "/api/alerts/stream":
+            from .security.access import auth_required, resolve_access
+
+            if auth_required():
+                token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "")
+                ctx = resolve_access(
+                    self.database,
+                    token_header=token,
+                    tenant_header=self.headers.get("X-Mersal-Tenant"),
+                    actor_header=self.headers.get("X-Mersal-Actor"),
+                )
+                if not ctx.authenticated:
+                    return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
             return self._handle_alert_stream()
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
@@ -316,8 +341,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.database.record_audit(self._actor(), "update.publish", target=meta.get("manifest_id", ""))
             return self._send_json(meta, status=HTTPStatus.CREATED)
         if path == "/api/platform/complete-cycle":
-            if not self.fabric:
-                return self._send_json({"error": "fabric unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
             if not self._authorized():
                 return
             from .platform_ops.unified_platform import UnifiedPlatformController
@@ -325,6 +348,22 @@ class RequestHandler(BaseHTTPRequestHandler):
             result = UnifiedPlatformController(self.database, self.fabric).run_complete_cycle()
             self.database.record_audit(
                 self._actor(), "platform.complete_cycle", details={"keys": list(result.keys())}
+            )
+            return self._send_json(result)
+        if path == "/api/platform/global-alternative/activate":
+            if not self._authorized():
+                return
+            from .platform_ops.global_alternative import GlobalAlternativeController
+
+            tenant = self.headers.get("X-Mersal-Tenant", "default")
+            result = GlobalAlternativeController(self.database, self.fabric).activate(
+                tenant_id=tenant.strip() or "default"
+            )
+            self.database.record_audit(
+                self._actor(),
+                "global_alternative.activate",
+                target=tenant,
+                details={"parity_index": result["summary"]["parity_index"]},
             )
             return self._send_json(result)
         if path == "/api/platform/reliability/scan":
@@ -848,8 +887,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
         self.end_headers()
+        import os
+
+        iterations = int(os.environ.get("MERSAL_SSE_ITERATIONS", "30"))
         last_id = 0
-        for _ in range(15):
+        for _ in range(max(iterations, 5)):
             alerts = self.database.recent_alerts_for_stream(since_id=last_id, limit=10)
             for alert in alerts:
                 last_id = max(last_id, int(alert.get("alert_id", 0)))

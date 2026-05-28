@@ -12,6 +12,7 @@ from ..integrations.integration_hub import IntegrationHub
 from ..platform_ops.backup import BackupManager
 from ..platform_ops.enterprise_readiness import enterprise_adoption_report
 from ..platform_ops.health import PlatformHealth
+from ..compliance.evidence_pack import ComplianceEvidencePack
 from ..platform_ops.standalone import StandaloneController
 
 if TYPE_CHECKING:
@@ -30,9 +31,13 @@ class UnifiedPlatformController:
         health = PlatformHealth(self.db).full_status()
         hub = IntegrationHub(self.db).full_matrix()
         adoption = enterprise_adoption_report(self.db)
+        from .global_alternative import _parity_index, _parity_tier, parity_matrix
         from .reliability_engine import ReliabilityEngine
 
         reliability = ReliabilityEngine(self.db).full_report()
+        matrix = parity_matrix()
+        parity_idx = _parity_index(matrix)
+        parity_tier = _parity_tier(parity_idx)
         modules = {
             "siem": {
                 "alerts_open": len(self.db.list_siem_alerts(limit=500, status="open")),
@@ -51,6 +56,13 @@ class UnifiedPlatformController:
             "platform": "Extreme Cyber Security Unified Platform",
             "version": __version__,
             "integration_complete": adoption.get("ready_for_large_institution", False),
+            "global_alternative_ready": (
+                parity_idx >= 75
+                and adoption.get("ready_for_large_institution", False)
+                and reliability.get("dependable_for_operations", False)
+            ),
+            "parity_index": parity_idx,
+            "parity_tier": parity_tier,
             "dependable_operations": reliability.get("dependable_for_operations", False),
             "trust_score": reliability.get("trust_score"),
             "sla_tier": reliability.get("sla_tier"),
@@ -61,6 +73,16 @@ class UnifiedPlatformController:
             "integration_hub": hub,
             "enterprise_adoption": adoption,
             "modules": modules,
+            "global_alternative": {
+                "parity_index": parity_idx,
+                "parity_tier": parity_tier,
+                "ready_as_global_alternative": (
+                    parity_idx >= 75
+                    and adoption.get("ready_for_large_institution", False)
+                    and reliability.get("dependable_for_operations", False)
+                ),
+                "matrix_api": "/api/platform/global-alternative/matrix",
+            },
             "capabilities": [
                 "siem",
                 "xdr",
@@ -78,6 +100,7 @@ class UnifiedPlatformController:
                 "signed_updates",
                 "postgres_ha",
                 "autonomous_soc",
+                "global_alternative_mode",
             ],
         }
 
@@ -98,6 +121,11 @@ class UnifiedPlatformController:
         results["reliability"] = rel.full_report()
         results["stale_agent_alerts"] = rel.raise_stale_agent_alerts()
         results["posture"] = self.db.latest_security_posture()
+        pack = ComplianceEvidencePack(self.db).build()
+        results["evidence_pack"] = {
+            "integrity_sha256": pack["integrity_sha256"],
+            "generated_at": pack["generated_at"],
+        }
         self.db.touch_platform_heartbeat(
             "unified_platform",
             status="ok",

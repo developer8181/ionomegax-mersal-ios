@@ -27,6 +27,9 @@ def enterprise_adoption_report(database: "Database") -> dict[str, Any]:
     pg = postgres_cluster_health()
     backup = BackupManager(database).health()
     startup_errors = organization_startup_errors()
+    from .reliability_engine import ReliabilityEngine
+
+    reliability = ReliabilityEngine(database).full_report()
 
     criteria = [
         _criterion("production_mode", is_production(), 10, required=True),
@@ -39,6 +42,12 @@ def enterprise_adoption_report(database: "Database") -> dict[str, Any]:
         _criterion("siem_export", len(database.list_siem_forwarders(enabled_only=True)) >= 1, 10, required=False),
         _criterion("integration_fabric", len(hub.get("modules_linked", [])) >= 6, 5, required=False),
         _criterion("dedicated_update_key", bool(os.environ.get("MERSAL_UPDATE_SIGNING_KEY", "").strip()), 10, required=False),
+        _criterion(
+            "reliability_trust",
+            reliability.get("dependable_for_operations", False),
+            10,
+            required=False,
+        ),
     ]
 
     score = sum(c["points"] for c in criteria if c["ok"])
@@ -51,7 +60,15 @@ def enterprise_adoption_report(database: "Database") -> dict[str, Any]:
         "score": score,
         "max_score": max_score,
         "percent": round(100 * score / max_score, 1) if max_score else 0,
-        "ready_for_large_institution": tier in {"production", "regulated"} and len(startup_errors) == 0,
+        "ready_for_large_institution": (
+            tier in {"production", "regulated"}
+            and len(startup_errors) == 0
+            and reliability.get("dependable_for_operations", False)
+        ),
+        "reliability": {
+            "trust_score": reliability.get("trust_score"),
+            "sla_tier": reliability.get("sla_tier"),
+        },
         "enterprise_strict": enterprise_strict(),
         "startup_errors": startup_errors,
         "criteria": criteria,

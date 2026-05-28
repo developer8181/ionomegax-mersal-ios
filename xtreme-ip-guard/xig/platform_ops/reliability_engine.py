@@ -12,7 +12,7 @@ from .. import __version__
 from ..config import enterprise_strict, is_enterprise, is_production, tls_enabled
 from ..db.adapter import uses_postgres
 from ..platform_ops.backup import BackupManager
-from ..platform_ops.enterprise_readiness import enterprise_adoption_report
+from ..integrations.integration_hub import IntegrationHub
 from ..platform_ops.postgres_health import postgres_cluster_health
 
 if TYPE_CHECKING:
@@ -30,7 +30,10 @@ class ReliabilityEngine:
         backup = BackupManager(self.db).health()
         pg = postgres_cluster_health()
         audit = self.db.verify_audit_chain()
-        adoption = enterprise_adoption_report(self.db)
+        sched = self.db.scheduler_summary()
+        sched_ok = _scheduler_recent(sched)
+        siem_ok = _siem_forward_recent(self.db)
+        hub = IntegrationHub(self.db).full_matrix()
 
         checks = [
             _check("audit_chain", audit.get("valid", False), "Tamper-evident audit log"),
@@ -39,6 +42,14 @@ class ReliabilityEngine:
             _check("no_stale_agents", len(stale) == 0, f"All agents seen within {stale_seconds}s"),
             _check("tls_when_strict", tls_enabled() or not enterprise_strict(), "TLS for strict enterprise"),
             _check("production_mode", is_production(), "MERSAL_PRODUCTION=1"),
+            _check("scheduler_active", sched_ok, "Security scheduler ran within 48h"),
+            _check(
+                "enterprise_profile",
+                is_enterprise() and is_production(),
+                "Enterprise + production profile",
+            ),
+            _check("integration_fabric", len(hub.get("modules_linked", [])) >= 6, "Integration fabric modules"),
+            _check("siem_export_ready", siem_ok, "SIEM forwarders or recent export cursor"),
         ]
 
         passed = sum(1 for c in checks if c["ok"])
@@ -61,8 +72,6 @@ class ReliabilityEngine:
             "backup": backup,
             "postgres": pg,
             "audit_chain": audit,
-            "adoption_tier": adoption.get("tier"),
-            "adoption_percent": adoption.get("percent"),
             "enterprise_mode": is_enterprise(),
             "dependable_for_operations": trust_score >= 75 and audit.get("valid", False),
         }
@@ -100,3 +109,38 @@ class ReliabilityEngine:
 
 def _check(name: str, ok: bool, detail: str) -> dict[str, Any]:
     return {"name": name, "ok": ok, "detail": detail}
+
+
+def _scheduler_recent(summary: dict[str, Any]) -> bool:
+    from datetime import datetime, timezone
+
+    jobs = summary.get("recent_jobs") or []
+    if not jobs:
+        return True
+    latest = jobs[0].get("created_at")
+    if not latest:
+        return False
+    try:
+        if isinstance(latest, str):
+            ts = datetime.fromisoformat(latest.replace("Z", "+00:00"))
+        else:
+            ts = latest
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - ts).total_seconds()
+        return age < 172800
+    except (TypeError, ValueError):
+        return False
+
+
+def _siem_forward_recent(database: "Database") -> bool:
+    if not database.list_siem_forwarders(enabled_only=False):
+        return True
+    if database.list_siem_forwarders(enabled_only=True):
+        return True
+    raw = database.get_platform_setting("siem_forward_cursor", "{}")
+    try:
+        cursor = json.loads(raw)
+    except json.JSONDecodeError:
+        return False
+    return bool(cursor)

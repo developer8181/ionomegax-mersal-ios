@@ -19,6 +19,7 @@ Designed and developed by **Eng. Mahmoud Rasem Bayari**. **All rights reserved Â
 | Install | `cd xtreme-ip-guard && make enterprise-install` |
 | Docs | `xtreme-ip-guard/docs/PLATFORM_MASTER_AR.md` |
 | Professional profile (AR / EN + screenshots) | `xtreme-ip-guard/docs/PROFESSIONAL_PROFILE_AR.md` Â· `PROFESSIONAL_PROFILE_EN.md` |
+| Global alternative (integrated vs world vendors) | `xtreme-ip-guard/docs/GLOBAL_ALTERNATIVE_PLATFORM_AR.md` |
 
 ## Quick start
 

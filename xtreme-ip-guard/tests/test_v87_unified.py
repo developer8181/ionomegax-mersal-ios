@@ -35,7 +35,7 @@ class V87UnifiedTests(unittest.TestCase):
     def test_full_dashboard(self) -> None:
         ctrl = UnifiedPlatformController(self.db)
         dash = ctrl.full_dashboard()
-        self.assertEqual(dash["version"], "1.0.0")
+        self.assertEqual(dash["version"], "1.1.0")
         self.assertIn("capabilities", dash)
         self.assertGreater(len(dash["capabilities"]), 10)
 

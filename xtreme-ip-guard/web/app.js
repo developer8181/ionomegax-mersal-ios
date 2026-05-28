@@ -94,8 +94,12 @@ const I18N = {
     navIntegrations: "التكامل الكامل",
     integrationsTitle: "المنصة المتكاملة الكاملة",
     integrationsSub: "اعتماد مؤسسي · SIEM · XDR · SOAR · EDR · SSO",
+    globalAltBtn: "تفعيل البديل العالمي",
+    reliabilityScanBtn: "فحص الموثوقية",
+    evidencePackBtn: "حزمة الأدلة",
     bootstrapBtn: "تهيئة مؤسسية",
     completeCycleBtn: "دورة SOC كاملة",
+    parityTitle: "مؤشر التكافؤ العالمي",
     adoptionTitle: "اعتماد المؤسسة",
     integrationHubTitle: "نسيج التكامل",
     capabilitiesTitle: "القدرات",
@@ -207,8 +211,12 @@ const I18N = {
     navIntegrations: "Full integration",
     integrationsTitle: "Complete unified platform",
     integrationsSub: "Enterprise adoption · SIEM · XDR · SOAR · EDR · SSO",
+    globalAltBtn: "Activate global alternative",
+    reliabilityScanBtn: "Reliability scan",
+    evidencePackBtn: "Evidence pack",
     bootstrapBtn: "Enterprise bootstrap",
     completeCycleBtn: "Full SOC cycle",
+    parityTitle: "Global parity index",
     adoptionTitle: "Institution adoption",
     integrationHubTitle: "Integration fabric",
     capabilitiesTitle: "Capabilities",
@@ -772,6 +780,24 @@ function renderUnified(unified, enterprise) {
   if (caps && unified.capabilities) {
     caps.innerHTML = unified.capabilities.map((c) => `<span class="badge">${c}</span>`).join("");
   }
+  const parityEl = document.getElementById("paritySummary");
+  const relPanel = document.getElementById("reliabilityChecks");
+  const ga = unified.global_alternative || {};
+  if (parityEl) {
+    const idx = unified.parity_index ?? ga.parity_index ?? "—";
+    const tier = unified.parity_tier ?? ga.parity_tier ?? "—";
+    const ready = unified.global_alternative_ready ?? ga.ready_as_global_alternative;
+    parityEl.textContent = `${t("parityTitle")}: ${idx}% · ${tier}${ready ? " ✓" : ""}`;
+  }
+  const checks = unified.reliability?.checks || [];
+  if (relPanel && checks.length) {
+    relPanel.innerHTML = checks
+      .map(
+        (c) =>
+          `<div class="readiness-item ${c.ok ? "pass" : "fail"}"><span>${c.name}</span><small>${c.ok ? "✓" : "—"}</small></div>`
+      )
+      .join("");
+  }
 }
 
 async function loadReadinessPublic() {
@@ -876,6 +902,31 @@ document.getElementById("bootstrapBtn")?.addEventListener("click", async () => {
   await apiPost("/api/platform/bootstrap-enterprise", {});
   document.getElementById("authStatus").textContent = t("fabricDone");
   refresh();
+});
+
+document.getElementById("globalAlternativeBtn")?.addEventListener("click", async () => {
+  const result = await apiPost("/api/platform/global-alternative/activate", {});
+  const idx = result.summary?.parity_index ?? "—";
+  document.getElementById("authStatus").textContent = `${t("fabricDone")} · ${idx}%`;
+  refresh();
+});
+
+document.getElementById("reliabilityScanBtn")?.addEventListener("click", async () => {
+  await apiPost("/api/platform/reliability/scan", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
+
+document.getElementById("evidencePackBtn")?.addEventListener("click", async () => {
+  const pack = await api("/api/compliance/evidence-pack");
+  const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ecs-evidence-${pack.integrity_sha256?.slice(0, 8) || "pack"}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById("authStatus").textContent = t("fabricDone");
 });
 
 document.getElementById("vulnScanBtn").addEventListener("click", async () => {

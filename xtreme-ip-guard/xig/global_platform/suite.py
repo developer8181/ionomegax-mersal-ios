@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .. import __version__
 from ..compliance.extended import ExtendedComplianceEngine
 from ..rbac import RbacEngine
 from ..reporting import ReportExporter
@@ -40,7 +41,7 @@ class MersalGlobalPlatform:
         results["taxii"] = self.taxii.sync()
         results["webhooks_ping"] = self.webhooks.dispatch(
             "platform.cycle",
-            {"status": "completed", "version": "6.0.0"},
+            {"status": "completed", "version": __version__},
         )
         return results
 
@@ -60,9 +61,9 @@ class MersalGlobalPlatform:
 
     def dashboard(self) -> dict[str, Any]:
         return {
-            "platform": "Mersal Global Security Platform",
-            "version": "6.0.0",
-            "tier": "world-class unified SOC",
+            "platform": "Extreme Cyber Security Global Platform",
+            "version": __version__,
+            "tier": "global_alternative_integrated",
             "tenants": self.tenants.dashboard(),
             "rbac": self.rbac.dashboard(),
             "reporting": self.reports.dashboard(),

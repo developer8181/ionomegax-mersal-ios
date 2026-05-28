@@ -18,10 +18,14 @@ def build_info() -> dict[str, object]:
 
     root = Path(__file__).resolve().parents[1]
     commit = _git_revision(root)
+    from .platform_ops.global_alternative import PLATFORM_LINEAGE
+
     return {
         "product": "Extreme Cyber Security Platform",
         "platform": "mersal-guard",
         "version": __version__,
+        "platform_lineage": PLATFORM_LINEAGE,
+        "global_alternative_api": "/api/platform/global-alternative",
         "git_commit": commit,
         "built_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "python": platform.python_version(),

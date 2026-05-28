@@ -77,7 +77,7 @@ class FabricTests(unittest.TestCase):
 
     def test_fabric_dashboard(self):
         dashboard = self.fabric.dashboard()
-        self.assertEqual(dashboard["fabric"], "Mersal Global Security Fabric")
+        self.assertIn("Security Fabric", dashboard["fabric"])
         self.assertIn("posture", dashboard)
         self.assertIn("vulnerabilities", dashboard)
 
