@@ -66,6 +66,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "admin_username": admin_username(),
                 }
             )
+        if path == "/api/platform/summary":
+            from .platform_ops.public_summary import public_platform_summary
+
+            return self._send_json(public_platform_summary())
         if path == "/api/system/about":
             return self._send_json(system_about(version=self._version()))
         if path == "/api/system/readiness":

@@ -1,5 +1,5 @@
 # Ionomegax Mersal Guard — integrated build
-.PHONY: test verify run production-env docker-build build-all clean
+.PHONY: test verify run production-env enterprise-install docker-build build-all clean
 
 PYTHON ?= python3
 ROOT := $(CURDIR)
@@ -16,6 +16,10 @@ run:
 production-env:
 	bash scripts/provision.sh mersal-guard.production.env
 	@echo "Edit mersal-guard.production.env then: source mersal-guard.production.env && make run"
+
+enterprise-install:
+	bash scripts/mersal-complete-install.sh mersal-guard.env
+	@echo "Edit mersal-guard.env secrets, then: source mersal-guard.env && make run"
 
 docker-build:
 	docker compose -f deploy/docker-compose.yml build

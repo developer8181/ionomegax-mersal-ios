@@ -6,12 +6,17 @@
   <strong>Powered by Extreme Technology Company</strong>
 </p>
 
-**Mersal v8.3** is an **independent advanced cybersecurity platform** — PostgreSQL HA, SAML, SCIM, signed updates, **agent eBPF EDR** — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
+**Mersal v8.8** is a **complete unified cybersecurity platform** for banks, government, and large enterprises — **unified control plane**, PostgreSQL HA (PgBouncer), SAML/OIDC/SCIM, signed agent updates, eBPF EDR, autonomous SOC cycle, DR backup/restore, enterprise adoption scorecard — plus **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC**, **multi-tenant RBAC**, and **Neural Cortex AI**, with an Arabic/English **Command Center** and agents for Linux, Windows, macOS, and **Mersal OS 8.7**.
 
 Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 
 | Resource | Link |
 |----------|------|
+| **Master guide (AR)** | [docs/PLATFORM_MASTER_AR.md](docs/PLATFORM_MASTER_AR.md) |
+| v8.7 Complete platform (AR) | [docs/MERSAL_v8_7_COMPLETE_PLATFORM_AR.md](docs/MERSAL_v8_7_COMPLETE_PLATFORM_AR.md) |
+| v8.6 Enterprise HA (AR) | [docs/MERSAL_v8_6_ENTERPRISE_HA_AR.md](docs/MERSAL_v8_6_ENTERPRISE_HA_AR.md) |
+| v8.5 Reliability (AR) | [docs/MERSAL_v8_5_ENTERPRISE_RELIABILITY_AR.md](docs/MERSAL_v8_5_ENTERPRISE_RELIABILITY_AR.md) |
+| v8.4 Integration (AR) | [docs/MERSAL_v8_4_GLOBAL_INTEGRATION_AR.md](docs/MERSAL_v8_4_GLOBAL_INTEGRATION_AR.md) |
 | v8.2 Complete (AR) | [docs/MERSAL_v8_2_COMPLETE_AR.md](docs/MERSAL_v8_2_COMPLETE_AR.md) |
 | v8 Standalone (AR) | [docs/MERSAL_v8_STANDALONE_AR.md](docs/MERSAL_v8_STANDALONE_AR.md) |
 | Professional (AR) | [docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md](docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md) |
@@ -58,8 +63,13 @@ python3 app.py
 # or: python3 -m xig
 ```
 
+Public summary: `GET /api/platform/summary`  
 Readiness (no auth): `GET /api/system/readiness`  
+Enterprise adoption: `GET /api/system/enterprise-readiness`  
+Unified dashboard (auth): `GET /api/platform/unified`  
 Build metadata: `GET /api/system/build`
+
+**Enterprise install:** `make enterprise-install`
 
 See [docs/PRODUCTION_TRIAL_AR.md](docs/PRODUCTION_TRIAL_AR.md) and [docs/BUILD_INTEGRATED_AR.md](docs/BUILD_INTEGRATED_AR.md).
 
