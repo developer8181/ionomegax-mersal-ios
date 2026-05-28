@@ -1,6 +1,14 @@
 # Mersal OS
 
+**[الوثائق العربية الكاملة · لقطات · تنزيل ISO](docs/README_AR.md)**
+
 **Mersal OS** is a secure enterprise Linux distribution by **Ionomegax**, powered by **Extreme Technology Company**.
+
+## Download ISO (GitHub Release)
+
+**[Releases — mersal-os-20260528-amd64.iso (~339 MB)](https://github.com/developer8181/ionomegax-mersal-ios/releases)**
+
+Login: `mersal` / `mersal` · Console: http://127.0.0.1:8090/console/
 
 It unifies:
 

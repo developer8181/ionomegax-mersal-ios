@@ -5,6 +5,7 @@ build/debootstrap-work/
 build/build.log
 build/debootstrap.log
 build/docker-build.log
+wget-log*
 __pycache__/
 *.pyc
 .pytest_cache/
