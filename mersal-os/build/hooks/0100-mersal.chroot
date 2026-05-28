@@ -2,7 +2,8 @@
 set -e
 # Mersal OS chroot hook — enable services and permissions
 
-chmod +x /usr/local/bin/mersal-status /usr/local/bin/mersal-welcome /usr/local/bin/mersal-update 2>/dev/null || true
+chmod +x /usr/local/bin/mersal-status /usr/local/bin/mersal-welcome /usr/local/bin/mersal-update \
+  /usr/local/bin/mersal-install-to-disk.sh 2>/dev/null || true
 chmod +x /opt/mersal-os/update-channel/server.py 2>/dev/null || true
 
 mkdir -p /var/lib/mersal-guard /var/lib/mersal-guard/agent-state

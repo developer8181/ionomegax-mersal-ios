@@ -65,6 +65,13 @@ const I18N = {
     cardVulns: "ثغرات مفتوحة",
     cardCritical: "حرجة",
     fabricDone: "اكتملت الدورة",
+    readinessTitle: "جاهزية الإنتاج",
+    readinessSub: "فحوصات حقيقية للمنصة المتكاملة",
+    readinessReady: "جاهز للتجربة",
+    readinessNotReady: "يتطلب إعداداً",
+    threatIntelTitle: "تهديدات و CISA KEV",
+    kevLabel: "مؤشرات KEV",
+    indicatorsLabel: "إجمالي المؤشرات",
     copyrightShort: "© 2009–2026 إكستريم تكنولوجي · المهندس محمود راسم بياري · رام الله، فلسطين",
   },
   en: {
@@ -133,6 +140,13 @@ const I18N = {
     cardVulns: "Open vulns",
     cardCritical: "Critical",
     fabricDone: "Cycle completed",
+    readinessTitle: "Production readiness",
+    readinessSub: "Real platform checks — not cosmetic UI",
+    readinessReady: "Trial ready",
+    readinessNotReady: "Needs setup",
+    threatIntelTitle: "Threat intel & CISA KEV",
+    kevLabel: "KEV indicators",
+    indicatorsLabel: "Total indicators",
     copyrightShort: "© 2009–2026 Extreme Technology · Eng. Mahmoud Rasem Bayari · Ramallah, Palestine",
   },
 };
@@ -264,6 +278,40 @@ function updateHeroPosture(posture) {
   el.textContent = `${t("postureScore")}: ${posture.score}/100 · ${posture.grade}`;
 }
 
+function renderReadiness(report, build) {
+  const pill = document.getElementById("readinessPill");
+  const grid = document.getElementById("readinessGrid");
+  const line = document.getElementById("buildLine");
+  if (!pill || !grid) return;
+  const ready = Boolean(report?.ready_for_trial);
+  pill.textContent = ready ? t("readinessReady") : t("readinessNotReady");
+  pill.className = `readiness-pill ${ready ? "ok" : "warn"}`;
+  const checks = report?.checks || [];
+  grid.innerHTML = checks
+    .map(
+      (c) => `<div class="readiness-item ${c.ok ? "pass" : "fail"}">
+        <span>${c.name}</span>
+        <small>${c.detail}</small>
+      </div>`
+    )
+    .join("");
+  if (line && build) {
+    line.textContent = `v${build.version} · ${build.git_commit} · ${build.built_at}`;
+  }
+}
+
+function renderThreatIntel(summary) {
+  const el = document.getElementById("threatIntelSummary");
+  if (!el || !summary) return;
+  const sources = (summary.by_source || [])
+    .map((s) => `<span class="ai-chip">${s.source}: ${s.count}</span>`)
+    .join("");
+  el.innerHTML = `
+    <div class="ai-stat"><span>${t("indicatorsLabel")}</span><strong>${summary.total_indicators || 0}</strong></div>
+    <div class="ai-stat"><span>${t("kevLabel")}</span><strong>${summary.cisa_kev_count || 0}</strong></div>
+    <div class="threat-chips">${sources}</div>`;
+}
+
 function renderFabric(fabric, vulns, soarRuns, posture) {
   const p = posture.score !== undefined ? posture : fabric.posture || {};
   document.getElementById("fabricPosture").innerHTML = `
@@ -280,7 +328,7 @@ function renderFabric(fabric, vulns, soarRuns, posture) {
       .slice(0, 12)
       .map(
         (row) => `<tr>
-          <td>${row.cve_id}</td>
+          <td>${row.cve_id}${String(row.title || "").includes("KEV") ? ' <span class="kev-tag">KEV</span>' : ""}</td>
           <td>${row.endpoint_id}</td>
           <td>${row.severity}</td>
           <td>${row.title}</td>
@@ -475,10 +523,25 @@ function renderPolicies(rows) {
     .join("")}</tbody></table>`;
 }
 
-async function refresh() {
-  if (authState.auth_required && !token()) return;
+async function loadReadinessPublic() {
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture] =
+    const [readiness, build] = await Promise.all([
+      fetch("/api/system/readiness").then((r) => r.json()),
+      fetch("/api/system/build").then((r) => r.json()),
+    ]);
+    renderReadiness(readiness, build);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function refresh() {
+  if (authState.auth_required && !token()) {
+    loadReadinessPublic();
+    return;
+  }
+  try {
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel] =
       await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
@@ -492,9 +555,16 @@ async function refresh() {
       api("/api/vuln/findings"),
       api("/api/soar/runs"),
       api("/api/posture"),
+      api("/api/threat/intel"),
     ]);
+    const [readiness, build] = await Promise.all([
+      fetch("/api/system/readiness").then((r) => r.json()),
+      fetch("/api/system/build").then((r) => r.json()),
+    ]);
+    renderReadiness(readiness, build);
     renderCards(dashboard.totals);
     renderFabric(fabric, vulns, soarRuns, posture);
+    renderThreatIntel(threatIntel);
     renderEndpoints(endpoints);
     renderAgents(agents);
     renderEvents(events);

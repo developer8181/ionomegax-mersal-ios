@@ -33,7 +33,7 @@ class MersalSecurityFabric:
         posture = self.db.latest_security_posture()
         return {
             "fabric": "Mersal Global Security Fabric",
-            "version": "3.0",
+            "version": "3.1",
             "modules": [
                 "neural_cortex",
                 "vulnerability_management",

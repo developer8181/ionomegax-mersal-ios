@@ -29,6 +29,7 @@ from .core import EndpointEvent, PolicyRule
 from .ai import MersalAICortex
 from .fabric import MersalSecurityFabric
 from .config import allow_demo_seed, should_bootstrap_on_start, tls_enabled
+from .build_meta import build_info
 from .readiness import production_readiness, tool_versions
 from .storage import Database
 
@@ -61,8 +62,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(system_about(version=self._version()))
         if path == "/api/system/readiness":
             return self._send_json(production_readiness(self.database))
+        if path == "/api/system/build":
+            return self._send_json(build_info())
         if path == "/api/system/tools":
             return self._send_json(tool_versions())
+        if path == "/api/threat/intel" and self._authorized():
+            return self._send_json(self.database.threat_intel_summary())
         if not self._authorized():
             return
         if path == "/api/health":
@@ -337,7 +342,7 @@ def run(host: str | None = None, port: int | None = None) -> None:
 
     print(f"{BRAND['full_name']} v{RequestHandler._version()} running at {scheme}://{bind_host}:{bind_port}")
     print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
-    print("Mersal Global Security Fabric v3.0: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
+    print(f"Mersal Global Security Fabric v{RequestHandler._version()}: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
     if is_production():
         print("Production mode (MERSAL_PRODUCTION=1). Readiness: /api/system/readiness")
     if auth_required():

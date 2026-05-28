@@ -1,6 +1,6 @@
 # Ionomegax Mersal Global Security Fabric
 
-**Mersal Guard v2.0** is an integrated endpoint protection platform with **AI Cortex**, **daily vulnerability scanning**, **STIX threat feeds**, **SOAR playbooks**, and a **security posture score**. It is not a JSON-only API: it ships a full **Mersal Command Center** web console, a continuous **Mersal Endpoint Agent** for Linux, Windows, and macOS, and **local policy enforcement** on managed hosts.
+**Mersal Guard v3.1** is an integrated endpoint protection platform with **AI Cortex**, **CISA KEV threat feeds**, **EDR-lite process intel**, **daily vulnerability scanning**, **SOAR playbooks**, and a **security posture score**. It is not a JSON-only API: it ships a full **Mersal Command Center** web console, a continuous **Mersal Endpoint Agent** for Linux, Windows, and macOS, and **local policy enforcement** on managed hosts.
 
 The product brand is **Ionomegax** · **Mersal Guard** (مرسال — حماية نقاط النهاية).
 
@@ -19,6 +19,28 @@ Designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems E
 | Mersal Data Vault | SQLite persistence (`xig/storage.py`) |
 | Mersal Endpoint Agent | OS sensors, heartbeat daemon, enforcement (`agent.py`, `xig/agent_runtime.py`) |
 | OS adapters | Linux (procfs/sysfs), Windows (PowerShell/WMI), macOS (diskutil) |
+
+## Integrated build (recommended)
+
+```bash
+cd xtreme-ip-guard
+make build-all    # unit tests + smoke verify + optional Docker
+make verify       # tests + HTTP smoke only
+```
+
+Production trial:
+
+```bash
+make production-env
+source mersal-guard.production.env
+python3 app.py
+# or: python3 -m xig
+```
+
+Readiness (no auth): `GET /api/system/readiness`  
+Build metadata: `GET /api/system/build`
+
+See [docs/PRODUCTION_TRIAL_AR.md](docs/PRODUCTION_TRIAL_AR.md) and [docs/BUILD_INTEGRATED_AR.md](docs/BUILD_INTEGRATED_AR.md).
 
 ## Quick start
 
@@ -41,6 +63,12 @@ http://127.0.0.1:8090/console/
 ./scripts/provision.sh mersal-guard.env
 source mersal-guard.env
 python3 app.py
+```
+
+Or full production install with TLS:
+
+```bash
+sudo bash scripts/install-production.sh
 ```
 
 This enables API token auth for agents and admin login for the Command Center.
@@ -93,6 +121,9 @@ chmod +x scripts/install-linux.sh
 | `POST` | `/api/auth/login` | Admin session token |
 | `GET` | `/api/audit` | Administrative audit trail |
 | `GET` | `/api/brand` | Product branding metadata |
+| `GET` | `/api/system/readiness` | Production readiness report |
+| `GET` | `/api/system/build` | Build version and git metadata |
+| `GET` | `/api/threat/intel` | Threat intel + CISA KEV summary |
 | `GET` | `/api/dashboard` | Console metrics |
 | `GET` | `/api/endpoints/{id}/directives` | Policies + isolation for agents |
 | `POST` | `/api/agents/heartbeat` | Agent registration |

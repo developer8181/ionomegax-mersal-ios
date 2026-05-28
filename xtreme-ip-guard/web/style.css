@@ -755,6 +755,44 @@ html[dir="ltr"] .shell { direction: ltr; }
   .globe-visual { display: none; }
 }
 
+.readiness-section .readiness-pill {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.readiness-pill.ok { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+.readiness-pill.warn { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+.readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+.readiness-item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  background: rgba(8, 15, 28, 0.5);
+}
+.readiness-item.pass { border-color: rgba(16, 185, 129, 0.35); }
+.readiness-item.fail { border-color: rgba(239, 68, 68, 0.35); }
+.readiness-item span { display: block; font-weight: 600; font-size: 0.8rem; }
+.readiness-item small { color: var(--muted); font-size: 0.72rem; }
+.build-line { margin-top: 0.75rem; font-size: 0.72rem; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+.kev-tag {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  margin-inline-start: 0.25rem;
+}
+.threat-intel-panel { margin-top: 1rem; }
+.threat-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+
 @media (max-width: 640px) {
   .topbar { flex-direction: column; align-items: stretch; }
   .shell { padding: 0.5rem; }

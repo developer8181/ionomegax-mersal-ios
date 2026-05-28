@@ -7,10 +7,11 @@ Type=simple
 User=mersal
 Group=mersal
 WorkingDirectory=/opt/mersal-guard
+EnvironmentFile=-/etc/mersal-guard/mersal-production.env
 Environment=MERSAL_HOST=0.0.0.0
 Environment=MERSAL_PORT=8090
 Environment=MERSAL_DB=/var/lib/mersal-guard/mersal-guard.sqlite3
-ExecStart=/usr/bin/python3 /opt/mersal-guard/app.py
+ExecStart=/usr/bin/python3 -m xig
 Restart=on-failure
 RestartSec=5
 

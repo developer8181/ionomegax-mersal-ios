@@ -14,9 +14,16 @@ export MERSAL_DB=/var/lib/mersal-guard/mersal-guard.sqlite3
 export MERSAL_API_TOKEN=${API_TOKEN}
 export MERSAL_ADMIN_USER=admin
 export MERSAL_ADMIN_PASSWORD=${ADMIN_PASS}
+# Production trial (integrated build):
+# export MERSAL_PRODUCTION=1
+# export MERSAL_BOOTSTRAP=1
+# export MERSAL_KEV_FEED_URL=https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
 # Optional TLS:
-# export MERSAL_TLS_CERT=/etc/mersal-guard/tls/fullchain.pem
-# export MERSAL_TLS_KEY=/etc/mersal-guard/tls/privkey.pem
+# export MERSAL_TLS_CERT=/etc/mersal-guard/tls/server.crt
+# export MERSAL_TLS_KEY=/etc/mersal-guard/tls/server.key
+# Optional agent mTLS:
+# export MERSAL_AGENT_CA=/etc/mersal-guard/tls/ca.crt
+# export MERSAL_AGENT_MTLS=1
 EOF
 
 chmod 600 "${ENV_FILE}"

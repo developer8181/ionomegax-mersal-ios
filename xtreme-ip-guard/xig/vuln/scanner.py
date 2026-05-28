@@ -11,6 +11,7 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 from .cve_catalog import LEGACY_OS_MARKERS, MISCONFIG_CHECKS, PORT_CVE_RULES
+from .kev_correlation import apply_kev_priority, load_kev_cves
 from .nmap_probe import nmap_available, scan_host_ports
 
 if TYPE_CHECKING:
@@ -50,16 +51,24 @@ class VulnerabilityScanner:
 
         recorded: list[dict[str, Any]] = []
         os_name = str(endpoint.get("os_name", "")).lower()
+        kev_cves = load_kev_cves(self.db)
 
         for rule in PORT_CVE_RULES:
             if rule["port"] in open_ports:
+                cve_id = str(rule["cve_id"])
+                title, severity, _ = apply_kev_priority(
+                    cve_id=cve_id,
+                    title=str(rule["title"]),
+                    severity=float(rule["cvss"]),
+                    kev_cves=kev_cves,
+                )
                 recorded.append(
                     self.db.record_vuln_finding(
                         scan_id=scan_id,
                         endpoint_id=endpoint_id,
-                        cve_id=str(rule["cve_id"]),
-                        title=str(rule["title"]),
-                        severity=float(rule["cvss"]),
+                        cve_id=cve_id,
+                        title=title,
+                        severity=severity,
                         port=int(rule["port"]),
                         service=str(rule["service"]),
                         remediation=str(rule["remediation"]),

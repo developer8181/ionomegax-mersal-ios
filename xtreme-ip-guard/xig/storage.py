@@ -653,6 +653,34 @@ class Database:
             rows = db.execute("SELECT * FROM threat_intel_cache ORDER BY severity DESC, indicator")
             return [self._decode_threat_intel(row) for row in rows]
 
+    def threat_intel_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            total = db.execute("SELECT COUNT(*) FROM threat_intel_cache").fetchone()[0]
+            kev = db.execute(
+                "SELECT COUNT(*) FROM threat_intel_cache WHERE source = 'cisa-kev'"
+            ).fetchone()[0]
+            by_source = [
+                dict(row)
+                for row in db.execute(
+                    """
+                    SELECT source, COUNT(*) AS count
+                    FROM threat_intel_cache
+                    GROUP BY source
+                    ORDER BY count DESC
+                    """
+                )
+            ]
+            recent = db.execute(
+                "SELECT * FROM threat_feed_sync ORDER BY sync_id DESC LIMIT 5"
+            ).fetchall()
+        return {
+            "total_indicators": total,
+            "cisa_kev_count": kev,
+            "by_source": by_source,
+            "recent_syncs": [dict(row) for row in recent],
+            "top_indicators": self.list_threat_intel()[:15],
+        }
+
     def seed_threat_intel(self, indicators: list[dict[str, Any]]) -> int:
         inserted = 0
         with self.connect() as db:
