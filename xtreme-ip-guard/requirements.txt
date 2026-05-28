@@ -7,6 +7,9 @@ ldap3>=2.9.1
 # Native YARA hunting (optional; regex engine used if missing)
 yara-python>=4.5.0
 
+# libbpf (optional — agent uses libbpf.so when MERSAL_LIBBPF=1 and library installed)
+# Debian: sudo apt install libbpf1 libbpf-dev
+
 # PostgreSQL HA backend (optional; SQLite default)
 psycopg[binary]>=3.2.0
 

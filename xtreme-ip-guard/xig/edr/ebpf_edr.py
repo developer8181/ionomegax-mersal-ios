@@ -29,8 +29,10 @@ def collect_agent_ebpf_edr(*, include_detections: bool = True) -> dict[str, Any]
     """Full eBPF EDR payload for agent heartbeat (Linux only)."""
     if os.name != "posix" or not Path("/proc").is_dir():
         return {"available": False, "reason": "not_linux"}
+    from .libbpf_loader import collect_libbpf_status, libbpf_available
     from .ebpf_probe import collect_ebpf_snapshot, ebpf_available
 
+    libbpf_status = collect_libbpf_status() if libbpf_available() else {"available": False}
     snapshot = collect_ebpf_snapshot()
     if not snapshot.get("available"):
         return snapshot
@@ -42,6 +44,7 @@ def collect_agent_ebpf_edr(*, include_detections: bool = True) -> dict[str, Any]
     result: dict[str, Any] = {
         "available": True,
         "engine": "mersal-ebpf-edr",
+        "libbpf": libbpf_status,
         "program_count": snapshot.get("program_count", len(programs)),
         "map_count": len(maps_info) if isinstance(maps_info, list) else 0,
         "link_count": len(links_info) if isinstance(links_info, list) else 0,
