@@ -9,6 +9,7 @@ import json
 import mimetypes
 import os
 import ssl
+import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -27,6 +28,8 @@ from .credits import system_about
 from .core import EndpointEvent, PolicyRule
 from .ai import MersalAICortex
 from .fabric import MersalSecurityFabric
+from .config import allow_demo_seed, should_bootstrap_on_start, tls_enabled
+from .readiness import production_readiness, tool_versions
 from .storage import Database
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +59,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             )
         if path == "/api/system/about":
             return self._send_json(system_about(version=self._version()))
+        if path == "/api/system/readiness":
+            return self._send_json(production_readiness(self.database))
+        if path == "/api/system/tools":
+            return self._send_json(tool_versions())
         if not self._authorized():
             return
         if path == "/api/health":
@@ -188,7 +195,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if not self.fabric:
                     return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
                 result = self.fabric.feeds.sync_all(
-                    remote_url=os.environ.get("MERSAL_STIX_FEED_URL", "").strip()
+                    remote_url=os.environ.get("MERSAL_STIX_FEED_URL", "").strip(),
+                    kev_url=os.environ.get(
+                        "MERSAL_KEV_FEED_URL",
+                        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+                    ).strip(),
                 )
                 self.database.record_audit(actor, "threat.sync", details=result)
                 return self._send_json(result)
@@ -271,12 +282,35 @@ class RequestHandler(BaseHTTPRequestHandler):
         return __version__
 
 
+def _initialize_database(database: Database) -> None:
+    if allow_demo_seed():
+        database.seed_demo()
+        return
+    if should_bootstrap_on_start() and len(database.list_policies()) == 0:
+
+        def _run_bootstrap() -> None:
+            from .bootstrap import bootstrap_organization
+
+            try:
+                summary = bootstrap_organization(database)
+                print(
+                    f"[mersal] production bootstrap complete: "
+                    f"{summary.get('policies_installed', 0)} policies, "
+                    f"feeds={summary.get('threat_feeds', {})}"
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"[mersal] production bootstrap error: {exc}")
+
+        threading.Thread(target=_run_bootstrap, name="mersal-bootstrap", daemon=True).start()
+        print("[mersal] production bootstrap started in background")
+
+
 def run(host: str | None = None, port: int | None = None) -> None:
     bind_host = host or os.environ.get("MERSAL_HOST", "0.0.0.0")
     bind_port = port or int(os.environ.get("MERSAL_PORT", "8090"))
     database = Database(os.environ.get("MERSAL_DB", os.environ.get("XIG_DB", DEFAULT_DB)))
     database.init_schema()
-    database.seed_demo()
+    _initialize_database(database)
     fabric = MersalSecurityFabric(database)
     fabric.scheduler.start()
 
@@ -284,18 +318,28 @@ def run(host: str | None = None, port: int | None = None) -> None:
         RequestHandler(*args, database=database, fabric=fabric, **kwargs)
 
     server = ThreadingHTTPServer((bind_host, bind_port), handler)
-    cert = os.environ.get("MERSAL_TLS_CERT", "").strip()
-    key = os.environ.get("MERSAL_TLS_KEY", "").strip()
     scheme = "http"
-    if cert and key and Path(cert).is_file() and Path(key).is_file():
+    if tls_enabled():
+        cert = os.environ.get("MERSAL_TLS_CERT", "").strip()
+        key = os.environ.get("MERSAL_TLS_KEY", "").strip()
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
+        from .config import agent_ca_path, agent_mtls_required
+
+        ca = agent_ca_path()
+        if agent_mtls_required() and ca:
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(cafile=str(ca))
         server.socket = context.wrap_socket(server.socket, server_side=True)
         scheme = "https"
 
-    print(f"{BRAND['full_name']} running at {scheme}://{bind_host}:{bind_port}")
+    from .config import is_production
+
+    print(f"{BRAND['full_name']} v{RequestHandler._version()} running at {scheme}://{bind_host}:{bind_port}")
     print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
-    print("Mersal Global Security Fabric: daily scheduler active (vuln + threat feeds + AI + posture).")
+    print("Mersal Global Security Fabric v3.0: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
+    if is_production():
+        print("Production mode (MERSAL_PRODUCTION=1). Readiness: /api/system/readiness")
     if auth_required():
         print("Authentication enabled (API token and/or admin password).")
     if scheme == "https":

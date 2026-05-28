@@ -11,6 +11,7 @@ import urllib.request
 from typing import TYPE_CHECKING, Any
 
 from ..ai.threat_intel import DEFAULT_IOCS
+from ..vuln.kev_feed import fetch_kev_indicators
 from .stix import parse_stix_bundle
 
 if TYPE_CHECKING:
@@ -53,11 +54,20 @@ class ThreatFeedSync:
     def __init__(self, database: "Database") -> None:
         self.db = database
 
-    def sync_all(self, *, remote_url: str = "") -> dict[str, Any]:
+    def sync_all(self, *, remote_url: str = "", kev_url: str = "") -> dict[str, Any]:
         added = 0
+        feeds = ["mersal-builtin", "mersal-global-stix"]
         added += self.db.seed_threat_intel(DEFAULT_IOCS)
         stix_indicators = parse_stix_bundle(MERSAL_GLOBAL_STIX, source="mersal-global-stix")
         added += self.db.seed_threat_intel(stix_indicators)
+
+        kev = kev_url or _default_kev_url()
+        if kev:
+            kev_indicators = fetch_kev_indicators(kev)
+            if kev_indicators:
+                added += self.db.seed_threat_intel(kev_indicators)
+                feeds.append("cisa-kev")
+                self.db.record_threat_feed_sync("cisa-kev", len(kev_indicators))
 
         if remote_url:
             try:
@@ -72,8 +82,17 @@ class ThreatFeedSync:
 
         total = len(self.db.list_threat_intel())
         self.db.record_threat_feed_sync("mersal-global", added)
-        return self._result(added, total_indicators=total)
+        return self._result(added, feeds=feeds, total_indicators=total)
 
     @staticmethod
-    def _result(added: int, **extra: Any) -> dict[str, Any]:
-        return {"indicators_added": added, "feeds": ["mersal-builtin", "mersal-global-stix"], **extra}
+    def _result(added: int, *, feeds: list[str] | None = None, **extra: Any) -> dict[str, Any]:
+        return {"indicators_added": added, "feeds": feeds or ["mersal-builtin", "mersal-global-stix"], **extra}
+
+
+def _default_kev_url() -> str:
+    import os
+
+    return os.environ.get(
+        "MERSAL_KEV_FEED_URL",
+        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    ).strip()

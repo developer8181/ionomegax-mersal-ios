@@ -14,6 +14,7 @@ from typing import Any
 
 from .base import PlatformProfile, SensorEvent, _safe_username, register_platform
 from .vuln_probe import collect_vuln_probe
+from ..edr.process_intel import collect_running_processes, suspicious_process_events
 
 
 def build_linux_profile() -> PlatformProfile:
@@ -22,11 +23,14 @@ def build_linux_profile() -> PlatformProfile:
         "apparmor": _file_exists("/sys/kernel/security/apparmor"),
         "disk_encryption": _detect_luks(),
     }
+    processes = collect_running_processes(limit=25)
     sensors = {
         "mounts": _read_mounts(),
         "removable": _removable_devices(),
         "listening_ports": _listening_ports_sample(),
         "vuln_probe": collect_vuln_probe(security),
+        "processes": processes,
+        "process_count": len(processes),
     }
     return PlatformProfile(
         platform_id="linux",
@@ -46,6 +50,7 @@ def build_linux_profile() -> PlatformProfile:
             "process_sample",
             "local_enforcement",
             "vulnerability_probe",
+            "edr_process_intel",
         ),
         security_features=security,
         sensors=sensors,
@@ -80,6 +85,8 @@ def collect_linux_sensors() -> list[SensorEvent]:
                     metadata=mount,
                 )
             )
+    processes = collect_running_processes(limit=30)
+    events.extend(suspicious_process_events(processes))
     return events
 
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -132,6 +133,16 @@ class MersalAgent:
             headers["X-Mersal-Token"] = self.config.api_token
         return headers
 
+    def _ssl_context(self) -> ssl.SSLContext | None:
+        cert = os.environ.get("MERSAL_AGENT_CERT", "").strip()
+        key = os.environ.get("MERSAL_AGENT_KEY", "").strip()
+        ca = os.environ.get("MERSAL_AGENT_CA", "").strip()
+        if not cert or not key:
+            return None
+        ctx = ssl.create_default_context(cafile=ca or None)
+        ctx.load_cert_chain(cert, key)
+        return ctx
+
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         request = urllib.request.Request(
             f"{self.config.server}{path}",
@@ -139,7 +150,7 @@ class MersalAgent:
             headers=self._headers(),
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=15, context=self._ssl_context()) as response:  # noqa: S310
             return json.loads(response.read().decode("utf-8"))
 
     def _get(self, path: str) -> dict[str, Any]:
@@ -149,7 +160,7 @@ class MersalAgent:
             method="GET",
         )
         try:
-            with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+            with urllib.request.urlopen(request, timeout=15, context=self._ssl_context()) as response:  # noqa: S310
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError:
             return {}

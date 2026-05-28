@@ -11,6 +11,7 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 from .cve_catalog import LEGACY_OS_MARKERS, MISCONFIG_CHECKS, PORT_CVE_RULES
+from .nmap_probe import nmap_available, scan_host_ports
 
 if TYPE_CHECKING:
     from ..storage import Database
@@ -44,8 +45,8 @@ class VulnerabilityScanner:
             ports = sensors.get("listening_ports") or vuln_probe.get("open_ports") or []
 
         open_ports = self._normalize_ports(ports)
-        if not open_ports and endpoint_id in {"endpoint-demo-001", endpoint_id}:
-            open_ports = self._probe_local_ports()
+        if not open_ports:
+            open_ports = self._discover_ports(endpoint)
 
         recorded: list[dict[str, Any]] = []
         os_name = str(endpoint.get("os_name", "")).lower()
@@ -118,6 +119,16 @@ class VulnerabilityScanner:
             )
 
         return recorded
+
+    def _discover_ports(self, endpoint: dict[str, Any]) -> set[int]:
+        hostname = str(endpoint.get("hostname", "")).strip()
+        if nmap_available() and hostname:
+            result = scan_host_ports(hostname)
+            if result.get("ports"):
+                return set(result["ports"])
+        if hostname in {"", "localhost"} or hostname == socket.gethostname():
+            return self._probe_local_ports()
+        return set()
 
     @staticmethod
     def _normalize_ports(ports: Any) -> set[int]:

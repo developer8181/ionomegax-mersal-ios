@@ -63,8 +63,12 @@ class SecurityScheduler:
         return results
 
     def _run_threat_feeds(self) -> dict[str, Any]:
-        url = os.environ.get("MERSAL_STIX_FEED_URL", "").strip()
-        return ThreatFeedSync(self.db).sync_all(remote_url=url)
+        stix_url = os.environ.get("MERSAL_STIX_FEED_URL", "").strip()
+        kev_url = os.environ.get(
+            "MERSAL_KEV_FEED_URL",
+            "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        ).strip()
+        return ThreatFeedSync(self.db).sync_all(remote_url=stix_url, kev_url=kev_url)
 
     def _run_vuln_scan(self) -> dict[str, Any]:
         scanner = VulnerabilityScanner(self.db)
