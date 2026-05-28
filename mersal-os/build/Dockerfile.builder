@@ -1,6 +1,6 @@
 FROM debian:bookworm
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    live-build debootstrap squashfs-tools xorriso isolinux syslinux-utils \
-    grub-pc-bin grub-efi-amd64-bin mtools dosfstools rsync openssl ca-certificates \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
-WORKDIR /mersal-os
+WORKDIR /repo/mersal-os

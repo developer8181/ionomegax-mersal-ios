@@ -15,18 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install live-build
-        run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            live-build debootstrap squashfs-tools xorriso isolinux syslinux-utils \
-            grub-pc-bin grub-efi-amd64-bin rsync openssl
-
-      - name: Build Mersal OS ISO
+      - name: Build Mersal OS ISO (Debian bookworm container)
         run: |
           cd mersal-os
           chmod +x build/*.sh
-          sudo ./build/build-iso.sh
+          ./build/build-iso-docker.sh
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
