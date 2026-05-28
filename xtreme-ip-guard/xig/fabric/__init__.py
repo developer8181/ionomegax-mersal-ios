@@ -1,7 +1,7 @@
 # Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
 # Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
 # Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
-"""Mersal Global Security Fabric — orchestration layer."""
+"""Extreme Security Fabric — orchestration layer."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class MersalSecurityFabric:
     def dashboard(self) -> dict[str, Any]:
         posture = self.db.latest_security_posture()
         return {
-            "fabric": "Mersal Global Security Fabric",
+            "fabric": "Extreme Security Fabric",
             "version": "6.0",
             "modules": [
                 "neural_cortex",

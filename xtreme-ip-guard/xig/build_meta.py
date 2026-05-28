@@ -19,7 +19,7 @@ def build_info() -> dict[str, object]:
     root = Path(__file__).resolve().parents[1]
     commit = _git_revision(root)
     return {
-        "product": "Mersal Global Security Fabric",
+        "product": "Extreme Cyber Security Platform",
         "platform": "mersal-guard",
         "version": __version__,
         "git_commit": commit,

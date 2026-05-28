@@ -24,7 +24,7 @@ class ComplianceEvidencePack:
         pack = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "tenant_id": tenant_id,
-            "product": "Ionomegax Mersal Global Security Platform",
+            "product": "Extreme Cyber Security Platform",
             "audit_chain": self.db.verify_audit_chain(),
             "compliance_scores": {
                 fw: self.db.latest_compliance_score(fw) for fw in ("NIST-CSF", "ISO27001", "SOC2")

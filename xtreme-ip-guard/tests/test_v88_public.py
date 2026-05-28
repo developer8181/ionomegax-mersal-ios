@@ -8,7 +8,7 @@ from xig.platform_ops.public_summary import public_platform_summary
 class V88PublicTests(unittest.TestCase):
     def test_public_summary(self) -> None:
         summary = public_platform_summary()
-        self.assertEqual(summary["version"], "8.9.0")
+        self.assertEqual(summary["version"], "1.0.0")
         self.assertIn("api", summary)
 
 

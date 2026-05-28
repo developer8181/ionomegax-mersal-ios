@@ -1,7 +1,7 @@
 # Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
 # Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
 # Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
-"""Legal notice and authorship — single source of truth for Mersal platform."""
+"""Legal notice and authorship — Extreme Cyber Security platform."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ COPYRIGHT_YEARS = "2009–2026"
 
 CREDITS_AR = {
     "title": "معلومات عن النظام",
-    "product_line": "منصة Mersal Global Security Fabric · Mersal OS",
+    "product_line": "منصة Extreme Cyber Security · Extreme Security Fabric",
     "authorship": (
         "تم تصميم وبرمجة هذا النظام بواسطة المهندس محمود راسم بياري، "
         "مهندس أنظمة الحماية — رام الله، فلسطين."
@@ -26,7 +26,7 @@ CREDITS_AR = {
 
 CREDITS_EN = {
     "title": "About the System",
-    "product_line": "Mersal Global Security Fabric · Mersal OS",
+    "product_line": "Extreme Cyber Security Platform · Extreme Security Fabric",
     "authorship": (
         "Designed and developed by Eng. Mahmoud Rasem Bayari, "
         "Cybersecurity Systems Engineer — Ramallah, Palestine."
@@ -51,10 +51,10 @@ SOURCE_HEADER = f"""\
 def system_about(*, version: str = "2.0.0") -> dict:
     """Payload for /api/system/about and Command Center modal."""
     return {
-        "product": "Mersal XDR Enterprise Security Suite",
-        "operating_system": "Mersal OS",
+        "product": "Extreme Cyber Security Platform",
+        "operating_system": "Extreme Cyber Security OS",
         "version": version,
-        "vendor": "Ionomegax",
+        "vendor": "Extreme Technology Company",
         "powered_by": "Extreme Technology Company",
         "location": "Ramallah, Palestine",
         "engineer": {
