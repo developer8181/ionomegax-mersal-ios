@@ -6,7 +6,7 @@
 
 ## Download ISO (GitHub Release)
 
-**[Releases — mersal-os-20260528-amd64.iso (~339 MB)](https://github.com/developer8181/ionomegax-mersal-ios/releases)**
+**[Releases — Mersal OS v5.0.0 ISO (~233 MB)](https://github.com/developer8181/ionomegax-mersal-ios/releases/tag/v5.0.0-mersal-os)**
 
 Login: `mersal` / `mersal` · Console: http://127.0.0.1:8090/console/
 

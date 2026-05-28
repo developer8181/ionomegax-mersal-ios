@@ -1,4 +1,11 @@
-# تنزيل Mersal OS ISO
+# تنزيل Mersal OS ISO v5.0.0
+
+**أحدث إصدار:** [v5.0.0-mersal-os](https://github.com/developer8181/ionomegax-mersal-ios/releases/tag/v5.0.0-mersal-os)  
+الملف: `mersal-os-20260528-amd64.iso` (~233 MB) + `.sha256`
+
+---
+
+# تنزيل Mersal OS ISO (عام)
 
 ## الطريقة 1 — GitHub Actions (موصى بها)
 
