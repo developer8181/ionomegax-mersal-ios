@@ -21,6 +21,7 @@ from .brand import BRAND
 from .enforcement import LocalEnforcer
 from .platform import collect_profile, collect_sensor_events
 from .platform.vuln_probe import collect_vuln_probe
+from .edr.ebpf_edr import collect_agent_ebpf_edr
 
 
 @dataclass
@@ -103,6 +104,10 @@ class MersalAgent:
             "network_flows": sensors.get("network_flows") or [],
             "enforcement": self.enforcer.load().to_dict(),
         }
+        ebpf_edr = collect_agent_ebpf_edr()
+        metadata["ebpf_edr"] = ebpf_edr
+        if ebpf_edr.get("edr_detections"):
+            metadata["edr_detections"] = list(ebpf_edr.get("edr_detections", []))
         payload = {
             "agent_id": self.config.agent_id,
             "agent_type": "endpoint",

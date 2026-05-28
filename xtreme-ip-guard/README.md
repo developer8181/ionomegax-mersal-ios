@@ -6,7 +6,7 @@
   <strong>Powered by Extreme Technology Company</strong>
 </p>
 
-**Mersal v8.2** is an **independent advanced cybersecurity platform** — PostgreSQL HA, SAML, SCIM, signed updates, eBPF — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
+**Mersal v8.3** is an **independent advanced cybersecurity platform** — PostgreSQL HA, SAML, SCIM, signed updates, **agent eBPF EDR** — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
 
 Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 

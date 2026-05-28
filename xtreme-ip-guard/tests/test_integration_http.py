@@ -66,9 +66,9 @@ class IntegrationHttpTests(unittest.TestCase):
 
     def test_public_about_and_build(self):
         about = self._get("/api/system/about")
-        self.assertEqual(about["version"], "8.2.0")
+        self.assertEqual(about["version"], "8.3.0")
         build = self._get("/api/system/build")
-        self.assertEqual(build["version"], "8.2.0")
+        self.assertEqual(build["version"], "8.3.0")
         self.assertIn("components", build)
 
     def test_readiness_without_auth(self):

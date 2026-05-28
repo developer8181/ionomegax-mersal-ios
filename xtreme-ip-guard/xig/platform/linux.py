@@ -14,6 +14,7 @@ from typing import Any
 
 from .base import PlatformProfile, SensorEvent, _safe_username, register_platform
 from .vuln_probe import collect_vuln_probe
+from ..edr.ebpf_edr import collect_agent_ebpf_edr
 from ..edr.network_intel import collect_network_connections, suspicious_flows
 from ..edr.process_intel import collect_running_processes, suspicious_process_events
 
@@ -35,6 +36,7 @@ def build_linux_profile() -> PlatformProfile:
         "process_count": len(processes),
         "network_flows": net_flows,
         "risky_flows": suspicious_flows(net_flows),
+        "ebpf_edr": collect_agent_ebpf_edr(include_detections=False),
     }
     return PlatformProfile(
         platform_id="linux",
@@ -55,6 +57,7 @@ def build_linux_profile() -> PlatformProfile:
             "local_enforcement",
             "vulnerability_probe",
             "edr_process_intel",
+            "ebpf_edr",
         ),
         security_features=security,
         sensors=sensors,
@@ -91,6 +94,19 @@ def collect_linux_sensors() -> list[SensorEvent]:
             )
     processes = collect_running_processes(limit=30)
     events.extend(suspicious_process_events(processes))
+    ebpf = collect_agent_ebpf_edr(include_detections=True)
+    for det in ebpf.get("edr_detections") or []:
+        events.append(
+            SensorEvent(
+                event_type="ebpf_detection",
+                channel="kernel",
+                resource=str(det.get("title", "ebpf")),
+                classification="threat",
+                severity=int(det.get("severity", 55)),
+                behavior_flags=("ebpf", "kernel"),
+                metadata=det,
+            )
+        )
     return events
 
 

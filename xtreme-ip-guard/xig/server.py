@@ -796,7 +796,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         flows = metadata.get("network_flows") or metadata.get("sensors", {}).get("network_flows")
         if isinstance(flows, list) and flows:
             self.database.record_network_flows(endpoint_id, flows)
-        for det in metadata.get("edr_detections") or []:
+        ebpf = metadata.get("ebpf_edr") or {}
+        detections = list(metadata.get("edr_detections") or [])
+        if isinstance(ebpf, dict):
+            detections.extend(ebpf.get("edr_detections") or [])
+        for det in detections:
             if isinstance(det, dict):
                 self.database.record_edr_detection(
                     endpoint_id=endpoint_id,
