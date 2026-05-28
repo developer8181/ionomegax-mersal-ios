@@ -27,7 +27,7 @@
           </div>
         </div>
 
-        <div class="version-pill">v5.0 XDR · 2026</div>
+        <div class="version-pill">v6.0 Global · 2026</div>
 
         <div class="lang-toggle">
           <button type="button" data-lang="ar" class="active">العربية</button>
@@ -46,6 +46,7 @@
         <nav id="mainNav">
           <a href="#readiness" data-nav="readiness"><span class="nav-icon">✓</span><span data-i18n="navReadiness">الجاهزية</span></a>
           <a href="#overview" class="active" data-nav="overview"><span class="nav-icon">◈</span><span data-i18n="navOverview">نظرة عامة</span></a>
+          <a href="#global" data-nav="global"><span class="nav-icon">🌐</span><span data-i18n="navGlobal">المنصة العالمية</span></a>
           <a href="#enterprise" data-nav="enterprise"><span class="nav-icon">◆</span><span data-i18n="navEnterprise">المنصة المؤسسية</span></a>
           <a href="#xdr" data-nav="xdr"><span class="nav-icon">✦</span><span data-i18n="xdrTitle">XDR</span></a>
           <a href="#fabric" data-nav="fabric"><span class="nav-icon">⬡</span><span data-i18n="navFabric">المنصة العالمية</span></a>
@@ -121,6 +122,31 @@
           </div>
           <div class="readiness-grid" id="readinessGrid"></div>
           <p class="build-line" id="buildLine"></p>
+        </section>
+
+        <section id="global" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="globalTitle">Mersal Global Platform</h2>
+              <p class="section-sub" data-i18n="globalSub">تعدد مستأجرين · RBAC · GRC · تقارير · TAXII · بث تنبيهات</p>
+            </div>
+            <button type="button" id="globalCycleBtn" class="btn-primary sm" data-i18n="globalCycle">دورة عالمية</button>
+          </div>
+          <div class="enterprise-grid" id="globalStats"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="tenantsTitle">المستأجرون</h3>
+              <div class="table-wrap" id="tenantsTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="rbacTitle">الأدوار والمستخدمون</h3>
+              <div class="table-wrap" id="rbacTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="globalMatrixTitle">مقارنة عالمية</h3>
+            <div class="table-wrap" id="globalMatrixTable"></div>
+          </article>
         </section>
 
         <section id="enterprise" class="panel-section glass">

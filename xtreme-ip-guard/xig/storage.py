@@ -334,6 +334,10 @@ class Database:
                 );
                 """
             )
+        from .migrations_v6 import apply_v6_migrations
+
+        with self.connect() as db:
+            apply_v6_migrations(db)
 
     def seed_demo(self) -> None:
         demo_policies = [
@@ -596,6 +600,9 @@ class Database:
             from .incidents.manager import IncidentManager
 
             alerts = SiemCorrelator(self).process_event(decoded)
+            from .siem.window_correlator import WindowCorrelator
+
+            alerts.extend(WindowCorrelator(self).process_event(decoded))
             if alerts:
                 IncidentManager(self).sync_from_alerts(alerts)
             if int(decoded.get("risk_score", 0)) >= 50:
@@ -1136,12 +1143,13 @@ class Database:
         endpoint_id: str = "",
         event_ids: list[int] | None = None,
         details: dict[str, Any] | None = None,
+        tenant_id: str = "default",
     ) -> dict[str, Any]:
         with self.connect() as db:
             db.execute(
                 """
-                INSERT INTO siem_alerts (rule_id, title, severity, endpoint_id, event_ids, details)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO siem_alerts (rule_id, title, severity, endpoint_id, event_ids, details, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     rule_id,
@@ -1150,6 +1158,7 @@ class Database:
                     endpoint_id,
                     json.dumps(event_ids or [], sort_keys=True),
                     json.dumps(details or {}, sort_keys=True),
+                    tenant_id,
                 ),
             )
             row = db.execute("SELECT * FROM siem_alerts ORDER BY alert_id DESC LIMIT 1").fetchone()
@@ -1628,3 +1637,194 @@ class Database:
         data = dict(row)
         data["metadata"] = self._decode_json(data["metadata"], {})
         return data
+
+    # --- v6 Global Platform ---
+
+    def ensure_default_tenant(self) -> None:
+        with self.connect() as db:
+            from .migrations_v6 import apply_v6_migrations
+
+            apply_v6_migrations(db)
+
+    def ensure_rbac_seed(self) -> None:
+        import os
+
+        from .rbac.engine import RbacEngine
+
+        self.ensure_default_tenant()
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT COUNT(*) FROM rbac_users WHERE tenant_id = 'default'"
+            ).fetchone()[0]
+            if row:
+                return
+            password = os.environ.get("MERSAL_ADMIN_PASSWORD", "mersal")
+            pwd_hash = RbacEngine(self).hash_password(password)
+            db.execute(
+                """
+                INSERT INTO rbac_users (user_id, tenant_id, username, password_hash, role, display_name)
+                VALUES ('user-admin', 'default', 'admin', ?, 'super_admin', 'SOC Administrator')
+                """,
+                (pwd_hash,),
+            )
+
+    def get_rbac_user(self, username: str, *, tenant_id: str = "default") -> dict[str, Any] | None:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM rbac_users WHERE tenant_id = ? AND username = ?",
+                (tenant_id, username),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def list_rbac_users(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if tenant_id:
+                rows = db.execute("SELECT * FROM rbac_users WHERE tenant_id = ?", (tenant_id,)).fetchall()
+            else:
+                rows = db.execute("SELECT * FROM rbac_users ORDER BY username").fetchall()
+            return [dict(row) for row in rows]
+
+    def create_tenant(
+        self,
+        *,
+        tenant_id: str,
+        name: str,
+        slug: str,
+        plan: str = "enterprise",
+        region: str = "global",
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO tenants (tenant_id, name, slug, plan, region)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (tenant_id, name, slug, plan, region),
+            )
+            row = db.execute("SELECT * FROM tenants WHERE tenant_id = ?", (tenant_id,)).fetchone()
+            return dict(row)
+
+    def list_tenants(self) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("SELECT * FROM tenants ORDER BY name").fetchall()]
+
+    def ensure_window_rules(self, rules: list[dict[str, Any]]) -> int:
+        inserted = 0
+        with self.connect() as db:
+            for rule in rules:
+                cursor = db.execute(
+                    """
+                    INSERT OR IGNORE INTO siem_window_rules (
+                        rule_id, name, window_seconds, threshold, event_type, action_filter, severity, enabled
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        rule["rule_id"],
+                        rule["name"],
+                        int(rule.get("window_seconds", 300)),
+                        int(rule.get("threshold", 5)),
+                        rule.get("event_type", "*"),
+                        rule.get("action_filter", "*"),
+                        int(rule.get("severity", 60)),
+                        int(rule.get("enabled", 1)),
+                    ),
+                )
+                inserted += cursor.rowcount
+        return inserted
+
+    def list_window_rules(self) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("SELECT * FROM siem_window_rules WHERE enabled = 1").fetchall()]
+
+    def count_events_in_window(
+        self,
+        *,
+        endpoint_id: str,
+        window_seconds: int,
+        event_type: str = "*",
+        action_filter: str = "*",
+    ) -> int:
+        with self.connect() as db:
+            query = """
+                SELECT COUNT(*) FROM events
+                WHERE endpoint_id = ?
+                AND datetime(created_at) >= datetime('now', ?)
+            """
+            params: list[Any] = [endpoint_id, f"-{int(window_seconds)} seconds"]
+            if event_type != "*":
+                query += " AND event_type = ?"
+                params.append(event_type)
+            if action_filter != "*":
+                query += " AND action = ?"
+                params.append(action_filter)
+            return int(db.execute(query, params).fetchone()[0])
+
+    def count_log_records(self) -> int:
+        with self.connect() as db:
+            return int(db.execute("SELECT COUNT(*) FROM log_records").fetchone()[0])
+
+    def upsert_threat_indicator(
+        self,
+        *,
+        indicator: str,
+        ioc_type: str = "domain",
+        severity: int = 50,
+        source: str = "mersal",
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO threat_intel_cache (indicator, ioc_type, severity, source, metadata)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(indicator) DO UPDATE SET
+                    severity = excluded.severity,
+                    source = excluded.source,
+                    metadata = excluded.metadata
+                """,
+                (indicator, ioc_type, severity, source, json.dumps(metadata or {}, sort_keys=True)),
+            )
+
+    def list_webhooks(self, *, tenant_id: str = "default", enabled_only: bool = False) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            query = "SELECT * FROM webhooks WHERE tenant_id = ?"
+            if enabled_only:
+                query += " AND enabled = 1"
+            rows = db.execute(query, (tenant_id,)).fetchall()
+            result = []
+            for row in rows:
+                data = dict(row)
+                data["events"] = self._decode_json(data.get("events", "[]"), [])
+                result.append(data)
+            return result
+
+    def create_webhook(
+        self,
+        *,
+        webhook_id: str,
+        tenant_id: str,
+        name: str,
+        url: str,
+        events: list[str],
+        secret: str = "",
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO webhooks (webhook_id, tenant_id, name, url, events, secret, enabled)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+                """,
+                (webhook_id, tenant_id, name, url, json.dumps(events), secret),
+            )
+            row = db.execute("SELECT * FROM webhooks WHERE webhook_id = ?", (webhook_id,)).fetchone()
+            data = dict(row)
+            data["events"] = self._decode_json(data.get("events", "[]"), [])
+            return data
+
+    def recent_alerts_for_stream(self, *, since_id: int = 0, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM siem_alerts WHERE alert_id > ? ORDER BY alert_id ASC LIMIT ?",
+                (since_id, limit),
+            ).fetchall()
+            return [self._decode_siem_alert(row) for row in rows]

@@ -122,8 +122,8 @@ class MersalEnterpriseSuite:
         fabric_dash = self.fabric.dashboard() if self.fabric else {}
         return {
             "suite": "Mersal Enterprise Security Suite",
-            "version": "5.0",
-            "positioning": "XDR platform — EDR + SIEM + IDS + Log Vault + SOAR + VM + GRC",
+            "version": "6.0",
+            "positioning": "Global platform — XDR + SIEM + SOAR + GRC + multi-tenant SOC",
             "modules": {
                 "fabric": fabric_dash,
                 "siem": self.siem.dashboard(),

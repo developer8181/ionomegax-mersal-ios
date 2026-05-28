@@ -1,10 +1,10 @@
 # Ionomegax Mersal XDR Enterprise Platform
 
-**Mersal v5.0** is a unified **XDR-class** cybersecurity platform: **EDR**, **SIEM**, **SOAR**, **Log Vault**, **Suricata IDS**, **vulnerability management**, **NIST-CSF compliance**, and **Neural Cortex AI** — with a bilingual **Mersal Command Center** (Arabic / English) and **Mersal Endpoint Agent** for Linux, Windows, macOS, and Mersal OS.
+**Mersal v6.0** is a unified **global-class** cybersecurity platform (XDR + multi-tenant SOC + RBAC + extended GRC). **Mersal v5.0** core: **EDR**, **SIEM**, **SOAR**, **Log Vault**, **Suricata IDS**, **vulnerability management**, **NIST-CSF compliance**, and **Neural Cortex AI** — with a bilingual **Mersal Command Center** (Arabic / English) and **Mersal Endpoint Agent** for Linux, Windows, macOS, and Mersal OS.
 
 The product brand is **Ionomegax** · **Mersal** (مرسال).
 
-**Documentation:** [Arabic platform guide](docs/MERSAL_PLATFORM_AR.md) · [English](docs/MERSAL_PLATFORM_EN.md) · [Screenshots (20 screens)](docs/screenshots/README.md)
+**Documentation:** [v6 Global AR](docs/MERSAL_GLOBAL_v6_AR.md) · [v6 EN](docs/MERSAL_GLOBAL_v6_EN.md) · [Platform AR](docs/MERSAL_PLATFORM_AR.md) · [Screenshots](docs/screenshots/README.md)
 
 ## Copyright
 

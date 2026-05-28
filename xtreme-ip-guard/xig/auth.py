@@ -51,20 +51,26 @@ def create_session_token(username: str, *, ttl_seconds: int = 86_400) -> str:
     return base64.urlsafe_b64encode(raw).decode()
 
 
-def verify_session_token(token: str | None) -> bool:
+def _decode_session_token(token: str | None) -> dict[str, str] | None:
     if not token:
-        return False
+        return None
     try:
         raw = base64.urlsafe_b64decode(token.encode())
         username, issued_at, ttl_seconds, signature = raw.decode().rsplit(":", 3)
         payload = f"{username}:{issued_at}:{ttl_seconds}"
         expected = hmac.new(_signing_secret().encode(), payload.encode(), hashlib.sha256).hexdigest()
         if not secrets.compare_digest(signature, expected):
-            return False
+            return None
         age = int(time.time()) - int(issued_at)
-        return age <= int(ttl_seconds)
+        if age > int(ttl_seconds):
+            return None
+        return {"username": username, "issued_at": issued_at, "ttl_seconds": ttl_seconds}
     except (ValueError, OSError):
-        return False
+        return None
+
+
+def verify_session_token(token: str | None) -> bool:
+    return _decode_session_token(token) is not None
 
 
 def authorize(header_value: str | None) -> bool:

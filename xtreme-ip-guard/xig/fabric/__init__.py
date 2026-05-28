@@ -32,12 +32,15 @@ class MersalSecurityFabric:
         from ..enterprise import MersalEnterpriseSuite
 
         self.enterprise = MersalEnterpriseSuite(database, fabric=self)
+        from ..global_platform import MersalGlobalPlatform
+
+        self.global_platform = MersalGlobalPlatform(database, self.enterprise)
 
     def dashboard(self) -> dict[str, Any]:
         posture = self.db.latest_security_posture()
         return {
             "fabric": "Mersal Global Security Fabric",
-            "version": "4.0",
+            "version": "6.0",
             "modules": [
                 "neural_cortex",
                 "vulnerability_management",

@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .auth import (
+    _decode_session_token,
     admin_password,
     admin_username,
     auth_required,
@@ -149,6 +150,34 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_suricata_alerts())
         if path == "/api/yara/rules":
             return self._send_json(self.database.list_yara_rules())
+        if path == "/api/global/dashboard" and self.fabric:
+            return self._send_json(self.fabric.global_platform.dashboard())
+        if path == "/api/global/matrix" and self.fabric:
+            return self._send_json(self.fabric.global_platform.comparison_matrix())
+        if path == "/api/tenants":
+            return self._send_json(self.database.list_tenants())
+        if path == "/api/users":
+            return self._send_json(self.database.list_rbac_users())
+        if path == "/api/webhooks":
+            tenant = self.headers.get("X-Mersal-Tenant", "default")
+            return self._send_json(self.database.list_webhooks(tenant_id=tenant))
+        if path.startswith("/api/reports/export"):
+            from urllib.parse import parse_qs
+
+            report_type = parse_qs(urlparse(self.path).query).get("type", ["executive"])[0]
+            from .reporting import ReportExporter
+
+            csv_body = ReportExporter(self.database).export_csv(report_type)
+            body = csv_body.encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="mersal-{report_type}.csv"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if path == "/api/alerts/stream":
+            return self._handle_alert_stream()
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -299,6 +328,48 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.database.record_audit(actor, "xdr.correlate", details=result)
                 return self._send_json(result)
 
+            if path == "/api/global/cycle":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.global_platform.run_global_cycle()
+                self.database.record_audit(actor, "global.cycle", details={"keys": list(result.keys())})
+                return self._send_json(result)
+
+            if path == "/api/tenants":
+                from .tenant import TenantManager
+
+                payload = self._read_json()
+                created = TenantManager(self.database).create(
+                    str(payload["name"]),
+                    slug=str(payload.get("slug", "")),
+                    plan=str(payload.get("plan", "enterprise")),
+                    region=str(payload.get("region", "global")),
+                )
+                self.database.record_audit(actor, "tenant.create", target=created.get("tenant_id"))
+                return self._send_json(created, status=HTTPStatus.CREATED)
+
+            if path == "/api/webhooks":
+                payload = self._read_json()
+                import secrets
+
+                hook = self.database.create_webhook(
+                    webhook_id=f"wh-{secrets.token_hex(6)}",
+                    tenant_id=str(payload.get("tenant_id", "default")),
+                    name=str(payload["name"]),
+                    url=str(payload["url"]),
+                    events=list(payload.get("events", ["soar.playbook"])),
+                    secret=str(payload.get("secret", "")),
+                )
+                self.database.record_audit(actor, "webhook.create", target=hook["webhook_id"])
+                return self._send_json(hook, status=HTTPStatus.CREATED)
+
+            if path == "/api/threat/taxii/sync":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.global_platform.taxii.sync()
+                self.database.record_audit(actor, "taxii.sync", details=result)
+                return self._send_json(result)
+
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -311,13 +382,51 @@ class RequestHandler(BaseHTTPRequestHandler):
             payload = self._read_json()
             username = str(payload.get("username", ""))
             password = str(payload.get("password", ""))
-            if not verify_admin(username, password):
+            tenant_id = str(payload.get("tenant_id", "default"))
+            role = "admin"
+            permissions: list[str] = []
+            from .rbac import RbacEngine
+
+            rbac = RbacEngine(self.database)
+            user = rbac.authenticate(username, password, tenant_id=tenant_id)
+            if user:
+                role = str(user["role"])
+                permissions = rbac.permissions_for_role(role)
+            elif verify_admin(username, password):
+                permissions = rbac.permissions_for_role("super_admin")
+            else:
                 return self._send_json({"error": "invalid credentials"}, status=HTTPStatus.UNAUTHORIZED)
             token = create_session_token(username)
             self.database.record_audit(username, "admin.login", target="command-center")
-            return self._send_json({"token": token, "username": username, "role": "admin"})
+            return self._send_json(
+                {
+                    "token": token,
+                    "username": username,
+                    "role": role,
+                    "tenant_id": tenant_id,
+                    "permissions": permissions,
+                }
+            )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
+    def _handle_alert_stream(self) -> None:
+        import time
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+        last_id = 0
+        for _ in range(15):
+            alerts = self.database.recent_alerts_for_stream(since_id=last_id, limit=10)
+            for alert in alerts:
+                last_id = max(last_id, int(alert.get("alert_id", 0)))
+                chunk = f"data: {json.dumps(alert, ensure_ascii=False)}\n\n".encode("utf-8")
+                self.wfile.write(chunk)
+                self.wfile.flush()
+            time.sleep(2)
 
     def _authorized(self) -> bool:
         token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "")
@@ -422,6 +531,7 @@ def run(host: str | None = None, port: int | None = None) -> None:
     bind_port = port or int(os.environ.get("MERSAL_PORT", "8090"))
     database = Database(os.environ.get("MERSAL_DB", os.environ.get("XIG_DB", DEFAULT_DB)))
     database.init_schema()
+    database.ensure_rbac_seed()
     _initialize_database(database)
     fabric = MersalSecurityFabric(database)
     if os.environ.get("MERSAL_NO_SCHEDULER", "").strip().lower() not in {"1", "true", "yes"}:

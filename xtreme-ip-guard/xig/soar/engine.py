@@ -89,10 +89,21 @@ class SoarEngine:
             except Exception:  # noqa: BLE001 - policy may already exist
                 actions.append(f"policy_exists:{rule_id}")
 
-        return self.db.record_soar_run(
+        run = self.db.record_soar_run(
             playbook_id=playbook_id,
             endpoint_id=endpoint_id,
             trigger_ref=trigger_ref,
             actions=actions,
             status="completed" if actions else "skipped",
         )
+        if actions:
+            try:
+                from .webhooks import WebhookDispatcher
+
+                WebhookDispatcher(self.db).dispatch(
+                    "soar.playbook",
+                    {"playbook_id": playbook_id, "endpoint_id": endpoint_id, "actions": actions},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        return run

@@ -4,6 +4,13 @@ const I18N = {
     brandSubtitle: "مركز القيادة العالمي",
     navReadiness: "الجاهزية",
     navOverview: "نظرة عامة",
+    navGlobal: "المنصة العالمية",
+    globalTitle: "Mersal Global Platform",
+    globalSub: "تعدد مستأجرين · RBAC · ISO/SOC2 · تقارير · TAXII",
+    globalCycle: "دورة عالمية",
+    tenantsTitle: "المستأجرون",
+    rbacTitle: "RBAC",
+    globalMatrixTitle: "مقارنة مع الأنظمة العالمية",
     navEndpoints: "نقاط النهاية",
     navAgents: "الوكلاء",
     navEvents: "الأحداث",
@@ -16,6 +23,8 @@ const I18N = {
     siemTitle: "SIEM — تنبيهات",
     incidentsTitle: "إدارة الحوادث",
     matrixTitle: "مقارنة القدرات",
+    matrixCap: "القدرة",
+    matrixLegacy: "الأنظمة التقليدية",
     xdrTitle: "Mersal XDR",
     xdrSub: "كشف واستجابة عبر كل الطبقات",
     xdrCorrelate: "ارتباط XDR",
@@ -95,6 +104,13 @@ const I18N = {
     brandSubtitle: "Global Command Center",
     navReadiness: "Readiness",
     navOverview: "Overview",
+    navGlobal: "Global Platform",
+    globalTitle: "Mersal Global Platform",
+    globalSub: "Multi-tenant · RBAC · ISO/SOC2 · Reports · TAXII",
+    globalCycle: "Global cycle",
+    tenantsTitle: "Tenants",
+    rbacTitle: "RBAC",
+    globalMatrixTitle: "World-class comparison",
     navEndpoints: "Endpoints",
     navAgents: "Agents",
     navEvents: "Events",
@@ -342,6 +358,44 @@ function renderThreatIntel(summary) {
     <div class="ai-stat"><span>${t("indicatorsLabel")}</span><strong>${summary.total_indicators || 0}</strong></div>
     <div class="ai-stat"><span>${t("kevLabel")}</span><strong>${summary.cisa_kev_count || 0}</strong></div>
     <div class="threat-chips">${sources}</div>`;
+}
+
+function renderGlobal(global, matrix) {
+  const el = document.getElementById("globalStats");
+  if (el && global) {
+    const tenants = global.tenants?.tenants_count ?? 0;
+    const users = (global.rbac?.users || []).length;
+    const frameworks = (global.grc_frameworks || []).join(" · ");
+    el.innerHTML = `
+      <div class="ai-stat"><span>${t("tenantsTitle")}</span><strong>${tenants}</strong></div>
+      <div class="ai-stat"><span>${t("rbacTitle")}</span><strong>${users}</strong></div>
+      <div class="ai-stat"><span>SIEM Win</span><strong>${global.window_siem?.rules ?? 0}</strong></div>
+      <div class="ai-stat"><span>GRC</span><strong>${frameworks}</strong></div>`;
+  }
+  const tenants = global?.tenants?.tenants || [];
+  const tEl = document.getElementById("tenantsTable");
+  if (tEl) {
+    tEl.innerHTML = tenants.length
+      ? `<table><thead><tr><th>ID</th><th>Name</th><th>Plan</th></tr></thead><tbody>${tenants
+          .map((x) => `<tr><td>${x.tenant_id}</td><td>${x.name}</td><td>${x.plan}</td></tr>`)
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+  const users = global?.rbac?.users || [];
+  const rEl = document.getElementById("rbacTable");
+  if (rEl) {
+    rEl.innerHTML = users.length
+      ? `<table><thead><tr><th>User</th><th>Role</th><th>Tenant</th></tr></thead><tbody>${users
+          .map((u) => `<tr><td>${u.username}</td><td>${u.role}</td><td>${u.tenant_id}</td></tr>`)
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+  const gEl = document.getElementById("globalMatrixTable");
+  if (gEl && matrix) {
+    gEl.innerHTML = `<table><thead><tr><th>${t("matrixCap")}</th><th>Mersal</th><th>${t("matrixLegacy")}</th></tr></thead><tbody>${matrix
+      .map((r) => `<tr><td>${r.capability}</td><td>${r.mersal}</td><td>${r.legacy}</td></tr>`)
+      .join("")}</tbody></table>`;
+  }
 }
 
 function renderEnterprise(ent) {
@@ -672,7 +726,7 @@ async function refresh() {
     return;
   }
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel, enterprise, matrix] =
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel, enterprise, matrix, global, globalMatrix] =
       await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
@@ -689,6 +743,8 @@ async function refresh() {
       api("/api/threat/intel"),
       api("/api/enterprise/dashboard"),
       api("/api/enterprise/matrix"),
+      api("/api/global/dashboard"),
+      api("/api/global/matrix"),
     ]);
     const [readiness, build] = await Promise.all([
       fetch("/api/system/readiness").then((r) => r.json()),
@@ -696,6 +752,7 @@ async function refresh() {
     ]);
     renderReadiness(readiness, build);
     renderCards(dashboard.totals);
+    renderGlobal(global, globalMatrix);
     renderEnterprise(enterprise);
     renderXdr(enterprise);
     renderMatrix(matrix);
@@ -720,6 +777,12 @@ document.getElementById("xdrCorrelateBtn").addEventListener("click", async () =>
 
 document.getElementById("enterpriseCycleBtn").addEventListener("click", async () => {
   await apiPost("/api/enterprise/cycle", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
+
+document.getElementById("globalCycleBtn")?.addEventListener("click", async () => {
+  await apiPost("/api/global/cycle", {});
   document.getElementById("authStatus").textContent = t("fabricDone");
   refresh();
 });
