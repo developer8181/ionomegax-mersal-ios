@@ -72,27 +72,38 @@ CREATE TABLE IF NOT EXISTS platform_settings (
 
 
 def apply_v6_migrations(connection: sqlite3.Connection) -> None:
+    from .migrations_v7 import _add_column_if_missing
+
     connection.executescript(V6_STATEMENTS)
     _add_column_if_missing(connection, "endpoints", "tenant_id", "TEXT NOT NULL DEFAULT 'default'")
     _add_column_if_missing(connection, "events", "tenant_id", "TEXT NOT NULL DEFAULT 'default'")
     _add_column_if_missing(connection, "incidents", "tenant_id", "TEXT NOT NULL DEFAULT 'default'")
     _add_column_if_missing(connection, "siem_alerts", "tenant_id", "TEXT NOT NULL DEFAULT 'default'")
-    connection.execute(
-        """
-        INSERT OR IGNORE INTO tenants (tenant_id, name, slug, plan, region)
-        VALUES ('default', 'Default Organization', 'default', 'enterprise', 'global')
-        """
-    )
-    connection.execute(
-        """
-        INSERT OR IGNORE INTO platform_settings (setting_key, value)
-        VALUES ('platform_version', '{"version":"6.0.0","tier":"global"}')
-        """
-    )
-
-
-def _add_column_if_missing(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
-    if any(row[1] == column for row in rows):
-        return
-    connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    if getattr(connection, "_backend", "sqlite") == "postgres":
+        connection.execute(
+            """
+            INSERT INTO tenants (tenant_id, name, slug, plan, region)
+            VALUES ('default', 'Default Organization', 'default', 'enterprise', 'global')
+            ON CONFLICT (tenant_id) DO NOTHING
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO platform_settings (setting_key, value)
+            VALUES ('platform_version', '{"version":"6.0.0","tier":"global"}')
+            ON CONFLICT (setting_key) DO NOTHING
+            """
+        )
+    else:
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO tenants (tenant_id, name, slug, plan, region)
+            VALUES ('default', 'Default Organization', 'default', 'enterprise', 'global')
+            """
+        )
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO platform_settings (setting_key, value)
+            VALUES ('platform_version', '{"version":"6.0.0","tier":"global"}')
+            """
+        )

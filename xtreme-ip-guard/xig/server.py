@@ -103,6 +103,22 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(OidcProvider(self.database).authorization_url())
         if path.startswith("/api/auth/oidc/callback"):
             return self._handle_oidc_callback()
+        if path == "/api/auth/saml/login":
+            from .integrations.saml import SamlProvider
+
+            return self._send_json(SamlProvider(self.database).login_redirect())
+        if path.startswith("/api/scim/v2/Users"):
+            return self._handle_scim_get()
+        if path.startswith("/api/updates/latest"):
+            from urllib.parse import parse_qs
+
+            component = parse_qs(urlparse(self.path).query).get("component", ["agent"])[0]
+            from .platform_ops.updates import UpdateChannel
+
+            manifest = UpdateChannel(self.database).latest_for(component)
+            if manifest and UpdateChannel(self.database).verify_manifest(manifest):
+                return self._send_json(manifest)
+            return self._send_json(manifest or {}, status=HTTPStatus.NOT_FOUND)
         if path == "/api/threat/intel" and self._authorized():
             return self._send_json(self.database.threat_intel_summary())
         if not self._authorized():
@@ -226,6 +242,27 @@ class RequestHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/auth/login":
             return self._handle_login()
+        if path == "/api/auth/saml/acs":
+            return self._handle_saml_acs()
+        if path.startswith("/api/scim/v2/Users"):
+            return self._handle_scim_post()
+        if path == "/api/updates/publish":
+            if not self._authorized():
+                return
+            payload = self._read_json()
+            from .platform_ops.updates import UpdateChannel
+
+            try:
+                meta = UpdateChannel(self.database).publish_manifest(
+                    component=str(payload["component"]),
+                    version=str(payload["version"]),
+                    artifact_url=str(payload["artifact_url"]),
+                    checksum_sha256=str(payload["checksum_sha256"]),
+                )
+            except ValueError as exc:
+                return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            self.database.record_audit(self._actor(), "update.publish", target=meta.get("manifest_id", ""))
+            return self._send_json(meta, status=HTTPStatus.CREATED)
         if path == "/api/platform/autonomous-cycle":
             if not self.fabric:
                 return self._send_json({"error": "fabric unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
@@ -544,6 +581,49 @@ class RequestHandler(BaseHTTPRequestHandler):
             return True
         self._send_json({"error": "agent unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
         return False
+
+    def _handle_saml_acs(self) -> None:
+        from .integrations.saml import SamlProvider
+
+        try:
+            payload = self._read_json()
+            saml_response = str(payload.get("SAMLResponse", ""))
+            if not saml_response:
+                return self._send_json({"error": "SAMLResponse required"}, status=HTTPStatus.BAD_REQUEST)
+            result = SamlProvider(self.database).consume_response(saml_response)
+            if "error" in result:
+                return self._send_json(result, status=HTTPStatus.BAD_REQUEST)
+            self.database.record_audit(result.get("username", "saml"), "saml.login", target="sso")
+            return self._send_json(result)
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
+    def _scim_bearer_ok(self) -> bool:
+        auth = self.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return False
+        from .integrations.scim import ScimProvisioner
+
+        return ScimProvisioner(self.database).verify_bearer(auth.removeprefix("Bearer ").strip())
+
+    def _handle_scim_get(self) -> None:
+        if not self._scim_bearer_ok():
+            return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        from .integrations.scim import ScimProvisioner
+
+        return self._send_json(ScimProvisioner(self.database).list_users())
+
+    def _handle_scim_post(self) -> None:
+        if not self._scim_bearer_ok():
+            return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        from .integrations.scim import ScimProvisioner
+
+        try:
+            payload = self._read_json()
+            created = ScimProvisioner(self.database).create_user(payload)
+            return self._send_json(created, status=HTTPStatus.CREATED)
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
     def _handle_oidc_callback(self) -> None:
         from urllib.parse import parse_qs

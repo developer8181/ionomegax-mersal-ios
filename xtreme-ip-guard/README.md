@@ -6,12 +6,13 @@
   <strong>Powered by Extreme Technology Company</strong>
 </p>
 
-**Mersal v8.0** is an **independent advanced cybersecurity platform** — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
+**Mersal v8.2** is an **independent advanced cybersecurity platform** — PostgreSQL HA, SAML, SCIM, signed updates, eBPF — autonomous SOC cycle, SIEM export, OIDC SSO, deep EDR, HA-ready Docker stack — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
 
 Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 
 | Resource | Link |
 |----------|------|
+| v8.2 Complete (AR) | [docs/MERSAL_v8_2_COMPLETE_AR.md](docs/MERSAL_v8_2_COMPLETE_AR.md) |
 | v8 Standalone (AR) | [docs/MERSAL_v8_STANDALONE_AR.md](docs/MERSAL_v8_STANDALONE_AR.md) |
 | Professional (AR) | [docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md](docs/MERSAL_PROFESSIONAL_CYBERSECURITY_AR.md) |
 | Enterprise v7 (AR) | [docs/MERSAL_ENTERPRISE_v7_BANK_GOV_AR.md](docs/MERSAL_ENTERPRISE_v7_BANK_GOV_AR.md) |

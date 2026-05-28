@@ -2,7 +2,9 @@
 
 """External integrations — SIEM export, OIDC, update channel."""
 
-from .siem_forwarder import SiemForwarder
 from .oidc import OidcProvider
+from .saml import SamlProvider
+from .scim import ScimProvisioner
+from .siem_forwarder import SiemForwarder
 
-__all__ = ["SiemForwarder", "OidcProvider"]
+__all__ = ["SiemForwarder", "OidcProvider", "SamlProvider", "ScimProvisioner"]

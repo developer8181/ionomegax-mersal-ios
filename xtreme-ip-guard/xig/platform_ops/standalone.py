@@ -32,6 +32,13 @@ class StandaloneController:
         from ..integrations.suricata_manager import SuricataManager
 
         results["suricata"] = SuricataManager(self.db, self.fabric).sync_if_available()
+        from ..edr.ebpf_probe import collect_ebpf_snapshot
+
+        results["ebpf"] = collect_ebpf_snapshot()
+        from ..platform_ops.updates import UpdateChannel
+
+        agent_manifest = UpdateChannel(self.db).latest_for("agent")
+        results["updates"] = {"agent": agent_manifest}
         results["posture"] = self.db.latest_security_posture()
         self.db.touch_platform_heartbeat("standalone_controller", status="ok", detail={"cycle": "complete"})
         return results

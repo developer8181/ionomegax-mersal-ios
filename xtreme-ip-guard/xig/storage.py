@@ -1,7 +1,7 @@
 # Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
 # Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
 # Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
-"""SQLite persistence for the Xtreme IP Guard prototype."""
+"""Persistence — SQLite (default) or PostgreSQL (MERSAL_POSTGRES_DSN)."""
 
 from __future__ import annotations
 
@@ -19,15 +19,20 @@ class Database:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
-    def connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path)
-        connection.row_factory = sqlite3.Row
-        return connection
+    def connect(self):
+        from .db.adapter import open_database
+
+        return open_database(self.path)
+
+    def uses_postgres(self) -> bool:
+        from .db.adapter import uses_postgres
+
+        return uses_postgres()
 
     def init_schema(self) -> None:
-        with self.connect() as db:
-            db.executescript(
-                """
+        from .db.adapter import adapt_ddl_for_postgres, uses_postgres
+
+        ddl = """
                 CREATE TABLE IF NOT EXISTS endpoints (
                     endpoint_id TEXT PRIMARY KEY,
                     hostname TEXT NOT NULL,
@@ -333,17 +338,22 @@ class Database:
                     enabled INTEGER NOT NULL DEFAULT 1
                 );
                 """
-            )
+        if uses_postgres():
+            ddl = adapt_ddl_for_postgres(ddl)
+        with self.connect() as db:
+            db.executescript(ddl)
         from .migrations_v6 import apply_v6_migrations
         from .migrations_v7 import apply_v7_migrations
         from .migrations_v7_1 import apply_v7_1_migrations
         from .migrations_v8 import apply_v8_migrations
+        from .migrations_v9 import apply_v9_migrations
 
         with self.connect() as db:
             apply_v6_migrations(db)
             apply_v7_migrations(db)
             apply_v7_1_migrations(db)
             apply_v8_migrations(db)
+            apply_v9_migrations(db)
 
     def seed_demo(self) -> None:
         demo_policies = [
@@ -1987,6 +1997,59 @@ class Database:
                 """,
                 (tenant_id, severity, category, message, source_ip, json.dumps(details or {}, sort_keys=True)),
             )
+
+    def list_saml_providers(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            query = "SELECT * FROM saml_providers"
+            if enabled_only:
+                query += " WHERE enabled = 1"
+            return [dict(row) for row in db.execute(query).fetchall()]
+
+    def verify_scim_token(self, token: str) -> bool:
+        import hashlib
+
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT 1 FROM scim_tokens WHERE token_hash = ? AND enabled = 1",
+                (digest,),
+            ).fetchone()
+            return row is not None
+
+    def save_update_manifest(
+        self,
+        *,
+        manifest_id: str,
+        component: str,
+        version: str,
+        artifact_url: str,
+        checksum_sha256: str,
+        signature: str,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO update_manifests
+                (manifest_id, component, version, artifact_url, checksum_sha256, signature)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (manifest_id, component, version, artifact_url, checksum_sha256, signature),
+            )
+            row = db.execute(
+                "SELECT * FROM update_manifests WHERE manifest_id = ?", (manifest_id,)
+            ).fetchone()
+            return dict(row)
+
+    def latest_update_manifest(self, component: str) -> dict[str, Any] | None:
+        with self.connect() as db:
+            row = db.execute(
+                """
+                SELECT * FROM update_manifests WHERE component = ?
+                ORDER BY published_at DESC LIMIT 1
+                """,
+                (component,),
+            ).fetchone()
+            return dict(row) if row else None
 
     def list_security_events(self, *, limit: int = 50, tenant_id: str | None = None) -> list[dict[str, Any]]:
         with self.connect() as db:
