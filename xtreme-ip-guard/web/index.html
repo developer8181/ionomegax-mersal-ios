@@ -34,6 +34,7 @@
           <a href="#agents" data-i18n="navAgents">الوكلاء</a>
           <a href="#events" data-i18n="navEvents">الأحداث</a>
           <a href="#policies" data-i18n="navPolicies">السياسات</a>
+          <a href="#ai" data-i18n="navAI">الذكاء الاصطناعي</a>
           <a href="#audit" data-i18n="navAudit">التدقيق</a>
         </nav>
         <div class="sidebar-card">
@@ -76,6 +77,28 @@
             <div class="table-wrap" id="auditTable"></div>
           </article>
         </section>
+        <section id="ai" class="ai-section">
+          <div class="section-head">
+            <h2 data-i18n="aiTitle">Mersal Neural Cortex</h2>
+            <button type="button" id="aiTrainBtn" class="secondary" data-i18n="aiTrain">تدريب من السجل</button>
+          </div>
+          <p class="ai-tagline" data-i18n="aiBody">تعلم سلوكي، كشف شذوذ، تنبؤ بالمخاطر، وقرارات دفاعية ذاتية.</p>
+          <div class="ai-capabilities" id="aiCapabilities"></div>
+          <div class="grid-two">
+            <article>
+              <h3 data-i18n="aiInsightsTitle">رؤى الذكاء الاصطناعي</h3>
+              <div class="table-wrap" id="aiInsightsTable"></div>
+            </article>
+            <article>
+              <h3 data-i18n="aiPredictionsTitle">تنبؤات المخاطر</h3>
+              <div class="table-wrap" id="aiPredictionsTable"></div>
+            </article>
+          </div>
+          <article>
+            <h3 data-i18n="aiSuggestionsTitle">سياسات مقترحة</h3>
+            <div class="table-wrap" id="aiSuggestionsTable"></div>
+          </article>
+        </section>
         <section id="policies">
           <h2 data-i18n="policiesTitle">سياسات الحماية</h2>
           <form id="policyForm" class="policy-form">
@@ -95,7 +118,7 @@
           <div class="table-wrap" id="policiesTable"></div>
         </section>
         <footer>
-          <span>Ionomegax · Mersal Guard</span>
+          <span>Ionomegax · Mersal Guard · <span data-i18n="poweredBy">مدعوم من Extreme Technology</span></span>
           <span id="platforms"></span>
         </footer>
       </main>

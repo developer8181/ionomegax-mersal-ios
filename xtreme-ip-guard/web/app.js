@@ -7,6 +7,7 @@ const I18N = {
     navAgents: "الوكلاء",
     navEvents: "الأحداث",
     navPolicies: "السياسات",
+    navAI: "الذكاء الاصطناعي",
     navAudit: "التدقيق",
     liveLabel: "منصة حية",
     liveHint: "Linux · Windows · macOS",
@@ -38,6 +39,15 @@ const I18N = {
     isolate: "عزل",
     restore: "استعادة",
     loginFail: "فشل تسجيل الدخول",
+    aiTitle: "Mersal Neural Cortex",
+    aiBody: "تعلم سلوكي، كشف شذوذ، تنبؤ بالمخاطر، وقرارات دفاعية ذاتية.",
+    aiTrain: "تدريب من السجل",
+    aiInsightsTitle: "رؤى الذكاء الاصطناعي",
+    aiPredictionsTitle: "تنبؤات المخاطر",
+    aiSuggestionsTitle: "سياسات مقترحة",
+    aiBaselines: "إشارات أساسية متعلّمة",
+    aiTrained: "تم التدريب",
+    poweredBy: "مدعوم من Extreme Technology",
   },
   en: {
     brandName: "Ionomegax Mersal Guard",
@@ -47,6 +57,7 @@ const I18N = {
     navAgents: "Agents",
     navEvents: "Events",
     navPolicies: "Policies",
+    navAI: "AI Cortex",
     navAudit: "Audit",
     liveLabel: "Live platform",
     liveHint: "Linux · Windows · macOS",
@@ -78,6 +89,15 @@ const I18N = {
     isolate: "Isolate",
     restore: "Restore",
     loginFail: "Login failed",
+    aiTitle: "Mersal Neural Cortex",
+    aiBody: "Behavioral learning, anomaly detection, risk forecasting, autonomous escalation.",
+    aiTrain: "Train from history",
+    aiInsightsTitle: "AI insights",
+    aiPredictionsTitle: "Risk predictions",
+    aiSuggestionsTitle: "Suggested policies",
+    aiBaselines: "Learned baseline signals",
+    aiTrained: "Training complete",
+    poweredBy: "Powered by Extreme Technology",
   },
 };
 
@@ -276,6 +296,63 @@ function renderAudit(rows) {
     .join("")}</tbody></table>`;
 }
 
+function renderAI(dashboard) {
+  const caps = dashboard.capabilities || [];
+  document.getElementById("aiCapabilities").innerHTML = `
+    <div class="ai-stat"><span>${t("aiBaselines")}</span><strong>${dashboard.baseline_signals || 0}</strong></div>
+    ${caps.map((c) => `<span class="ai-chip">${c}</span>`).join("")}`;
+
+  const insights = dashboard.recent_insights || [];
+  const insightsEl = document.getElementById("aiInsightsTable");
+  if (!insights.length) insightsEl.innerHTML = `<p>${t("empty")}</p>`;
+  else {
+    insightsEl.innerHTML = `<table><thead><tr><th>Endpoint</th><th>Type</th><th>Severity</th><th>Summary</th></tr></thead><tbody>${insights
+      .slice(0, 10)
+      .map(
+        (row) => `<tr>
+          <td>${row.endpoint_id}</td>
+          <td>${row.insight_type}</td>
+          <td>${Math.round(row.severity)}</td>
+          <td>${row.summary}</td>
+        </tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+
+  const predictions = dashboard.predictions || [];
+  const predEl = document.getElementById("aiPredictionsTable");
+  if (!predictions.length) predEl.innerHTML = `<p>${t("empty")}</p>`;
+  else {
+    predEl.innerHTML = `<table><thead><tr><th>Endpoint</th><th>Risk</th><th>Breach %</th><th>Time</th></tr></thead><tbody>${predictions
+      .slice(0, 10)
+      .map(
+        (row) => `<tr>
+          <td>${row.endpoint_id}</td>
+          <td>${Math.round(row.predicted_risk)}</td>
+          <td>${(row.breach_probability * 100).toFixed(1)}%</td>
+          <td>${row.created_at}</td>
+        </tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+
+  const suggestions = dashboard.recommended_policies || [];
+  const sugEl = document.getElementById("aiSuggestionsTable");
+  if (!suggestions.length) sugEl.innerHTML = `<p>${t("empty")}</p>`;
+  else {
+    sugEl.innerHTML = `<table><thead><tr><th>Rule</th><th>Action</th><th>Channel</th><th>Reason</th></tr></thead><tbody>${suggestions
+      .map(
+        (row) => `<tr>
+          <td>${row.name}</td>
+          <td>${row.action}</td>
+          <td>${row.channel}</td>
+          <td>${row.reason}</td>
+        </tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+}
+
 function renderPolicies(rows) {
   const el = document.getElementById("policiesTable");
   if (!rows.length) {
@@ -297,7 +374,7 @@ function renderPolicies(rows) {
 async function refresh() {
   if (authState.auth_required && !token()) return;
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand] = await Promise.all([
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard] = await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
       api("/api/agents"),
@@ -305,6 +382,7 @@ async function refresh() {
       api("/api/policies"),
       api("/api/audit"),
       api("/api/brand"),
+      api("/api/ai/dashboard"),
     ]);
     renderCards(dashboard.totals);
     renderEndpoints(endpoints);
@@ -312,11 +390,18 @@ async function refresh() {
     renderEvents(events);
     renderPolicies(policies.filter((p) => p.enabled));
     renderAudit(audit);
+    renderAI(aiDashboard);
     document.getElementById("platforms").textContent = (brand.supported_platforms || []).join(" · ");
   } catch (error) {
     console.error(error);
   }
 }
+
+document.getElementById("aiTrainBtn").addEventListener("click", async () => {
+  const result = await apiPost("/api/ai/train", { limit: 200 });
+  document.getElementById("authStatus").textContent = `${t("aiTrained")}: ${result.trained_samples}`;
+  refresh();
+});
 
 document.getElementById("loginBtn").addEventListener("click", login);
 document.getElementById("logoutBtn").addEventListener("click", logout);

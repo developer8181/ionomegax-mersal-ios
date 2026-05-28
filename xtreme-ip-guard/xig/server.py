@@ -21,6 +21,7 @@ from .auth import (
 )
 from .brand import BRAND
 from .core import EndpointEvent, PolicyRule
+from .ai import MersalAICortex
 from .storage import Database
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +69,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/endpoints/") and path.endswith("/directives"):
             endpoint_id = self._path_part(path, 2)
             return self._send_json(self.database.endpoint_directives(endpoint_id))
+        if path == "/api/ai/dashboard":
+            return self._send_json(MersalAICortex(self.database).dashboard())
+        if path == "/api/ai/insights":
+            return self._send_json(self.database.list_ai_insights())
+        if path == "/api/ai/predictions":
+            return self._send_json(self.database.list_ai_predictions())
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -135,6 +142,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                 endpoint_id = self._path_part(path, 2)
                 result = self.database.set_endpoint_isolation(endpoint_id, False)
                 self.database.record_audit(actor, "endpoint.restore", target=endpoint_id)
+                return self._send_json(result)
+
+            if path == "/api/ai/train":
+                payload = self._read_json()
+                limit = int(payload.get("limit", 100))
+                result = self.database.train_cortex_from_history(limit=limit)
+                self.database.record_audit(actor, "ai.train", details=result)
                 return self._send_json(result)
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")

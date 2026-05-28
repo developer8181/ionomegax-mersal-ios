@@ -7,6 +7,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .ai.baseline import OnlineStats
 from .core import EndpointEvent, PolicyRule, evaluate_event
 
 
@@ -86,6 +87,46 @@ class Database:
                     action TEXT NOT NULL,
                     target TEXT NOT NULL DEFAULT '',
                     details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS ai_baselines (
+                    baseline_key TEXT PRIMARY KEY,
+                    endpoint_id TEXT NOT NULL,
+                    signal_name TEXT NOT NULL DEFAULT 'risk',
+                    sample_count INTEGER NOT NULL DEFAULT 0,
+                    mean_value REAL NOT NULL DEFAULT 0,
+                    m2_value REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS ai_insights (
+                    insight_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    endpoint_id TEXT NOT NULL,
+                    event_id INTEGER,
+                    insight_type TEXT NOT NULL,
+                    severity REAL NOT NULL,
+                    summary TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS ai_predictions (
+                    prediction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    endpoint_id TEXT NOT NULL,
+                    predicted_risk REAL NOT NULL,
+                    breach_probability REAL NOT NULL,
+                    horizon_hours INTEGER NOT NULL DEFAULT 24,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS threat_intel_cache (
+                    indicator TEXT PRIMARY KEY,
+                    ioc_type TEXT NOT NULL DEFAULT 'domain',
+                    severity INTEGER NOT NULL DEFAULT 50,
+                    source TEXT NOT NULL DEFAULT 'mersal-feed',
+                    metadata TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 """
@@ -249,9 +290,32 @@ class Database:
             return self._decode_agent(row)
 
     def ingest_event(self, event: EndpointEvent) -> dict[str, Any]:
+        from .ai import MersalAICortex
+
         policies = [self._policy_from_row(row) for row in self._policy_rows()]
         endpoint = self.get_or_create_endpoint(event.endpoint_id, owner=event.actor)
         decision = evaluate_event(event, policies, endpoint_trust=int(endpoint["trust_score"]))
+        fusion = MersalAICortex(self).analyze_and_fuse(
+            event,
+            decision,
+            endpoint_trust=int(endpoint["trust_score"]),
+        )
+
+        tags = list(decision.tags)
+        if fusion.ai_escalated and "ai-escalated" not in tags:
+            tags.append("ai-escalated")
+        metadata = {
+            **dict(event.metadata),
+            "ai": {
+                "anomaly_score": fusion.anomaly_score,
+                "predicted_risk": fusion.predicted_risk,
+                "breach_probability": fusion.breach_probability,
+                "confidence": fusion.confidence,
+                "ai_escalated": fusion.ai_escalated,
+                "signals": fusion.signals,
+                "ioc_hits": [dict(hit) for hit in fusion.ioc_hits],
+            },
+        }
 
         with self.connect() as db:
             db.execute(
@@ -273,18 +337,39 @@ class Database:
                     event.process,
                     event.severity,
                     json.dumps(list(event.behavior_flags), sort_keys=True),
-                    decision.risk_score,
-                    decision.action,
-                    decision.reason,
+                    fusion.risk_score,
+                    fusion.action,
+                    fusion.reason,
                     decision.matched_rule_id,
-                    json.dumps(list(decision.tags), sort_keys=True),
-                    json.dumps(event.metadata, sort_keys=True),
+                    json.dumps(tags, sort_keys=True),
+                    json.dumps(metadata, sort_keys=True),
                 ),
             )
-            if decision.action == "isolate_endpoint":
+            event_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+            if fusion.action == "isolate_endpoint":
                 db.execute("UPDATE endpoints SET isolated = 1 WHERE endpoint_id = ?", (event.endpoint_id,))
-            row = db.execute("SELECT * FROM events ORDER BY event_id DESC LIMIT 1").fetchone()
-            return self._decode_event(row)
+            row = db.execute("SELECT * FROM events WHERE event_id = ?", (event_id,)).fetchone()
+
+        self.record_ai_insight(
+            endpoint_id=event.endpoint_id,
+            event_id=int(event_id),
+            insight_type="anomaly" if fusion.anomaly_score >= 40 else "prediction",
+            severity=fusion.anomaly_score,
+            summary=fusion.reason,
+            payload={
+                "action": fusion.action,
+                "risk_score": fusion.risk_score,
+                "ai_escalated": fusion.ai_escalated,
+                "signals": fusion.signals,
+            },
+        )
+        self.record_ai_prediction(
+            endpoint_id=event.endpoint_id,
+            predicted_risk=fusion.predicted_risk,
+            breach_probability=fusion.breach_probability,
+            payload=fusion.signals.get("prediction", {}),
+        )
+        return self._decode_event(row)
 
     def create_policy(self, policy: PolicyRule) -> dict[str, Any]:
         with self.connect() as db:
@@ -367,6 +452,181 @@ class Database:
                 row = db.execute("SELECT * FROM endpoints WHERE endpoint_id = ?", (endpoint_id,)).fetchone()
             return self._decode_endpoint(row)
 
+    def get_baseline(self, baseline_key: str) -> OnlineStats:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT sample_count, mean_value, m2_value FROM ai_baselines WHERE baseline_key = ?",
+                (baseline_key,),
+            ).fetchone()
+            if row is None:
+                return OnlineStats()
+            return OnlineStats.from_row(int(row["sample_count"]), float(row["mean_value"]), float(row["m2_value"]))
+
+    def save_baseline(self, baseline_key: str, endpoint_id: str, signal_name: str, stats: OnlineStats) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO ai_baselines (
+                    baseline_key, endpoint_id, signal_name, sample_count, mean_value, m2_value
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(baseline_key) DO UPDATE SET
+                    endpoint_id = excluded.endpoint_id,
+                    signal_name = excluded.signal_name,
+                    sample_count = excluded.sample_count,
+                    mean_value = excluded.mean_value,
+                    m2_value = excluded.m2_value,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (baseline_key, endpoint_id, signal_name, stats.count, stats.mean, stats.m2),
+            )
+
+    def count_baselines(self) -> int:
+        with self.connect() as db:
+            return int(db.execute("SELECT COUNT(*) FROM ai_baselines").fetchone()[0])
+
+    def recent_risks_for_endpoint(self, endpoint_id: str, *, limit: int = 12) -> list[float]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT risk_score FROM events WHERE endpoint_id = ? ORDER BY event_id DESC LIMIT ?",
+                (endpoint_id, limit),
+            )
+            return [float(row["risk_score"]) for row in rows]
+
+    def record_ai_insight(
+        self,
+        *,
+        endpoint_id: str,
+        event_id: int | None,
+        insight_type: str,
+        severity: float,
+        summary: str,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO ai_insights (
+                    endpoint_id, event_id, insight_type, severity, summary, payload
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    endpoint_id,
+                    event_id,
+                    insight_type,
+                    severity,
+                    summary,
+                    json.dumps(payload or {}, sort_keys=True),
+                ),
+            )
+
+    def list_ai_insights(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM ai_insights ORDER BY insight_id DESC LIMIT ?",
+                (limit,),
+            )
+            return [self._decode_ai_insight(row) for row in rows]
+
+    def record_ai_prediction(
+        self,
+        *,
+        endpoint_id: str,
+        predicted_risk: float,
+        breach_probability: float,
+        horizon_hours: int = 24,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO ai_predictions (
+                    endpoint_id, predicted_risk, breach_probability, horizon_hours, payload
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    endpoint_id,
+                    predicted_risk,
+                    breach_probability,
+                    horizon_hours,
+                    json.dumps(payload or {}, sort_keys=True),
+                ),
+            )
+
+    def list_ai_predictions(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM ai_predictions ORDER BY prediction_id DESC LIMIT ?",
+                (limit,),
+            )
+            return [self._decode_ai_prediction(row) for row in rows]
+
+    def list_threat_intel(self) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute("SELECT * FROM threat_intel_cache ORDER BY severity DESC, indicator")
+            return [self._decode_threat_intel(row) for row in rows]
+
+    def seed_threat_intel(self, indicators: list[dict[str, Any]]) -> int:
+        inserted = 0
+        with self.connect() as db:
+            for item in indicators:
+                cursor = db.execute(
+                    """
+                    INSERT OR IGNORE INTO threat_intel_cache (
+                        indicator, ioc_type, severity, source, metadata
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(item.get("indicator", "")),
+                        str(item.get("ioc_type", "domain")),
+                        int(item.get("severity", 50)),
+                        str(item.get("source", "mersal-feed")),
+                        json.dumps({k: v for k, v in item.items() if k not in {"indicator", "ioc_type", "severity", "source"}}, sort_keys=True),
+                    ),
+                )
+                inserted += cursor.rowcount
+        return inserted
+
+    def high_risk_patterns(self, *, limit: int = 5) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                """
+                SELECT channel, classification, COUNT(*) AS hits
+                FROM events
+                WHERE risk_score >= 70
+                GROUP BY channel, classification
+                ORDER BY hits DESC, channel, classification
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            return [dict(row) for row in rows]
+
+    def train_cortex_from_history(self, *, limit: int = 100) -> dict[str, Any]:
+        with self.connect() as db:
+            rows = list(
+                db.execute(
+                    """
+                    SELECT endpoint_id, channel, classification, risk_score
+                    FROM events
+                    ORDER BY event_id DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                )
+            )
+        trained = 0
+        for row in rows:
+            baseline_key = f"{row['endpoint_id']}:{row['channel']}:{row['classification']}"
+            stats = self.get_baseline(baseline_key)
+            stats.update(float(row["risk_score"]))
+            self.save_baseline(baseline_key, row["endpoint_id"], "risk", stats)
+            trained += 1
+        if not self.list_threat_intel():
+            from .ai.threat_intel import DEFAULT_IOCS
+
+            self.seed_threat_intel(DEFAULT_IOCS)
+        return {"trained_samples": trained, "baseline_signals": self.count_baselines()}
+
     def _policy_rows(self) -> list[sqlite3.Row]:
         with self.connect() as db:
             return list(db.execute("SELECT * FROM policies WHERE enabled = 1 ORDER BY rule_id"))
@@ -419,4 +679,19 @@ class Database:
     def _decode_audit(self, row: sqlite3.Row) -> dict[str, Any]:
         data = dict(row)
         data["details"] = self._decode_json(data["details"], {})
+        return data
+
+    def _decode_ai_insight(self, row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["payload"] = self._decode_json(data["payload"], {})
+        return data
+
+    def _decode_ai_prediction(self, row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["payload"] = self._decode_json(data["payload"], {})
+        return data
+
+    def _decode_threat_intel(self, row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["metadata"] = self._decode_json(data["metadata"], {})
         return data
