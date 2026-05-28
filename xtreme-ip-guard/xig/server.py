@@ -16,11 +16,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .auth import (
-    _decode_session_token,
     admin_password,
     admin_username,
     auth_required,
-    authorize,
     create_session_token,
     verify_admin,
 )
@@ -43,6 +41,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, database: Database, fabric: MersalSecurityFabric | None = None, **kwargs):
         self.database = database
         self.fabric = fabric
+        self._access_ctx = None
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:  # noqa: N802
@@ -67,6 +66,15 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(build_info())
         if path == "/api/system/tools":
             return self._send_json(tool_versions())
+        if path == "/api/system/enterprise":
+            from .config import is_enterprise
+
+            return self._send_json(
+                {
+                    "enterprise_mode": is_enterprise(),
+                    "version": self._version(),
+                }
+            )
         if path == "/api/threat/intel" and self._authorized():
             return self._send_json(self.database.threat_intel_summary())
         if not self._authorized():
@@ -78,15 +86,17 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == "/api/dashboard":
             return self._send_json(self.database.dashboard())
         if path == "/api/endpoints":
-            return self._send_json(self.database.list_endpoints())
+            return self._send_json(self.database.list_endpoints(tenant_id=self._tenant_scope()))
         if path == "/api/events":
-            return self._send_json(self.database.list_events())
+            return self._send_json(self.database.list_events(tenant_id=self._tenant_scope()))
         if path == "/api/policies":
-            return self._send_json(self.database.list_policies())
+            return self._send_json(self.database.list_policies(tenant_id=self._tenant_scope()))
         if path == "/api/agents":
-            return self._send_json(self.database.list_agents())
+            return self._send_json(self.database.list_agents(tenant_id=self._tenant_scope()))
         if path == "/api/audit":
-            return self._send_json(self.database.list_audit())
+            return self._send_json(self.database.list_audit(tenant_id=self._tenant_scope()))
+        if path == "/api/audit/verify":
+            return self._send_json(self.database.verify_audit_chain())
         if path.startswith("/api/endpoints/") and path.endswith("/directives"):
             endpoint_id = self._path_part(path, 2)
             return self._send_json(self.database.endpoint_directives(endpoint_id))
@@ -113,9 +123,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == "/api/siem/dashboard" and self.fabric:
             return self._send_json(self.fabric.enterprise.siem.dashboard())
         if path == "/api/siem/alerts":
-            return self._send_json(self.database.list_siem_alerts())
+            return self._send_json(self.database.list_siem_alerts(tenant_id=self._tenant_scope()))
         if path == "/api/incidents":
-            return self._send_json(self.database.list_incidents())
+            return self._send_json(self.database.list_incidents(tenant_id=self._tenant_scope()))
         if path.startswith("/api/incidents/") and path.endswith("/timeline"):
             incident_id = self._path_part(path, 2)
             return self._send_json(self.database.get_incident_timeline(incident_id))
@@ -393,11 +403,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                 role = str(user["role"])
                 permissions = rbac.permissions_for_role(role)
             elif verify_admin(username, password):
-                permissions = rbac.permissions_for_role("super_admin")
+                role = "super_admin"
+                permissions = rbac.permissions_for_role(role)
             else:
-                return self._send_json({"error": "invalid credentials"}, status=HTTPStatus.UNAUTHORIZED)
-            token = create_session_token(username)
-            self.database.record_audit(username, "admin.login", target="command-center")
+                from .ldap_auth import authenticate_ldap
+
+                ldap_user = authenticate_ldap(username, password)
+                if not ldap_user:
+                    return self._send_json({"error": "invalid credentials"}, status=HTTPStatus.UNAUTHORIZED)
+                role = str(ldap_user.get("role", "analyst"))
+                tenant_id = str(ldap_user.get("tenant_id", tenant_id))
+                permissions = rbac.permissions_for_role(role)
+            token = create_session_token(username, role=role, tenant_id=tenant_id)
+            self.database.record_audit(
+                username, "admin.login", target="command-center", tenant_id=tenant_id
+            )
             return self._send_json(
                 {
                     "token": token,
@@ -429,17 +449,50 @@ class RequestHandler(BaseHTTPRequestHandler):
             time.sleep(2)
 
     def _authorized(self) -> bool:
+        from .security.access import permission_for_route, resolve_access
+
+        path = urlparse(self.path).path
         token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "")
-        if authorize(token):
-            return True
-        self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
-        return False
+        ctx = resolve_access(
+            self.database,
+            token_header=token,
+            tenant_header=self.headers.get("X-Mersal-Tenant"),
+            actor_header=self.headers.get("X-Mersal-Actor"),
+        )
+        if not ctx.authenticated:
+            self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+            return False
+        perm = permission_for_route(self.command, path)
+        if not ctx.allows(perm):
+            self._send_json(
+                {"error": "forbidden", "required_permission": perm, "role": ctx.role},
+                status=HTTPStatus.FORBIDDEN,
+            )
+            return False
+        self._access_ctx = ctx
+        return True
+
+    def _tenant_scope(self) -> str | None:
+        ctx = self._access_ctx
+        if not ctx:
+            return None
+        if ctx.role == "super_admin":
+            header = (self.headers.get("X-Mersal-Tenant") or "").strip()
+            return header or None
+        return ctx.tenant_id
 
     def _actor(self) -> str:
+        if self._access_ctx:
+            return self._access_ctx.principal
         auth = self.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             return "api-token"
         return self.headers.get("X-Mersal-Actor", "admin")
+
+    def _audit_tenant(self) -> str:
+        if self._access_ctx:
+            return self._access_ctx.tenant_id
+        return (self.headers.get("X-Mersal-Tenant") or "default").strip() or "default"
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
@@ -527,6 +580,14 @@ def _initialize_database(database: Database) -> None:
 
 
 def run(host: str | None = None, port: int | None = None) -> None:
+    from .security.access import enterprise_startup_errors
+
+    startup_errors = enterprise_startup_errors()
+    if startup_errors:
+        for err in startup_errors:
+            print(f"[mersal] FATAL: {err}")
+        raise SystemExit(1)
+
     bind_host = host or os.environ.get("MERSAL_HOST", "0.0.0.0")
     bind_port = port or int(os.environ.get("MERSAL_PORT", "8090"))
     database = Database(os.environ.get("MERSAL_DB", os.environ.get("XIG_DB", DEFAULT_DB)))
@@ -556,9 +617,11 @@ def run(host: str | None = None, port: int | None = None) -> None:
         server.socket = context.wrap_socket(server.socket, server_side=True)
         scheme = "https"
 
-    from .config import is_production
+    from .config import is_enterprise, is_production
 
     print(f"{BRAND['full_name']} v{RequestHandler._version()} running at {scheme}://{bind_host}:{bind_port}")
+    if is_enterprise():
+        print("Enterprise mode (MERSAL_ENTERPRISE=1): RBAC enforced, audit chain, tenant isolation.")
     print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
     print(f"Mersal Global Security Fabric v{RequestHandler._version()}: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
     if is_production():

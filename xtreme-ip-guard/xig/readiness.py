@@ -9,7 +9,7 @@ import shutil
 from typing import TYPE_CHECKING, Any
 
 from . import __version__
-from .config import allow_demo_seed, is_production, tls_enabled
+from .config import allow_demo_seed, is_enterprise, is_production, ldap_enabled, tls_enabled
 from .vuln.kev_feed import fetch_kev_indicators
 from .vuln.nmap_probe import nmap_available
 
@@ -30,6 +30,16 @@ def production_readiness(database: "Database") -> dict[str, Any]:
         "no toy demo seed unless MERSAL_DEMO_UI=1",
     )
     add("auth_configured", _auth_ok(), "API token or admin password set")
+    if is_enterprise():
+        from .auth import signing_secret_configured
+
+        add("enterprise_mode", True, "MERSAL_ENTERPRISE=1")
+        add("signing_secret", signing_secret_configured(), "MERSAL_SIGNING_SECRET or strong API token")
+        add("rbac_enforced", True, "Route-level RBAC active in server")
+        chain = database.verify_audit_chain()
+        add("audit_chain_valid", chain.get("valid", False), "tamper-evident audit log")
+        add("tls_recommended", tls_enabled(), "HTTPS for Command Center", required=False)
+        add("ldap_optional", ldap_enabled(), "LDAP URL configured", required=False)
     add("policies_present", len(database.list_policies()) >= 1, f"{len(database.list_policies())} policies")
     add("endpoints_registered", len(database.list_endpoints()) >= 1, f"{len(database.list_endpoints())} endpoints")
     add("threat_intel_loaded", len(database.list_threat_intel()) >= 5, "threat intel cache populated")

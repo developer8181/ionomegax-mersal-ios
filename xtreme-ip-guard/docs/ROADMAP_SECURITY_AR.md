@@ -1,5 +1,11 @@
 # خارطة طريق الأمن — Mersal Guard & Mersal OS
 
+## v7.0 Enterprise (بنك / حكومة) — منجز
+
+- [x] RBAC مُطبَّق على API · `MERSAL_ENTERPRISE=1`
+- [x] عزل `tenant_id` · سجل تدقيق hash chain
+- [x] LDAP / libYARA / TLS+mTLS (اختياري عبر `requirements.txt`)
+
 ## المرحلة الحالية (v2.0)
 
 - [x] Mersal Guard — وكلاء، سياسات، عزل، تدقيق

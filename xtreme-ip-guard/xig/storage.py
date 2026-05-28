@@ -335,9 +335,11 @@ class Database:
                 """
             )
         from .migrations_v6 import apply_v6_migrations
+        from .migrations_v7 import apply_v7_migrations
 
         with self.connect() as db:
             apply_v6_migrations(db)
+            apply_v7_migrations(db)
 
     def seed_demo(self) -> None:
         demo_policies = [
@@ -450,21 +452,52 @@ class Database:
                 "top_actions": top_actions,
             }
 
-    def list_endpoints(self) -> list[dict[str, Any]]:
+    def list_endpoints(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
         with self.connect() as db:
-            return [self._decode_endpoint(row) for row in db.execute("SELECT * FROM endpoints ORDER BY hostname")]
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM endpoints WHERE tenant_id = ? ORDER BY hostname",
+                    (tenant_id,),
+                )
+            else:
+                rows = db.execute("SELECT * FROM endpoints ORDER BY hostname")
+            return [self._decode_endpoint(row) for row in rows]
 
-    def list_policies(self) -> list[dict[str, Any]]:
+    def list_policies(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
         with self.connect() as db:
-            return [self._decode_policy(row) for row in db.execute("SELECT * FROM policies ORDER BY rule_id")]
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM policies WHERE tenant_id = ? ORDER BY rule_id",
+                    (tenant_id,),
+                )
+            else:
+                rows = db.execute("SELECT * FROM policies ORDER BY rule_id")
+            return [self._decode_policy(row) for row in rows]
 
-    def list_events(self) -> list[dict[str, Any]]:
+    def list_events(self, *, tenant_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as db:
-            return [self._decode_event(row) for row in db.execute("SELECT * FROM events ORDER BY event_id DESC LIMIT 100")]
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM events WHERE tenant_id = ? ORDER BY event_id DESC LIMIT ?",
+                    (tenant_id, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM events ORDER BY event_id DESC LIMIT ?",
+                    (limit,),
+                )
+            return [self._decode_event(row) for row in rows]
 
-    def list_agents(self) -> list[dict[str, Any]]:
+    def list_agents(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
         with self.connect() as db:
-            return [self._decode_agent(row) for row in db.execute("SELECT * FROM agents ORDER BY hostname")]
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM agents WHERE tenant_id = ? ORDER BY hostname",
+                    (tenant_id,),
+                )
+            else:
+                rows = db.execute("SELECT * FROM agents ORDER BY hostname")
+            return [self._decode_agent(row) for row in rows]
 
     def record_agent_heartbeat(
         self,
@@ -657,23 +690,57 @@ class Database:
         *,
         target: str = "",
         details: dict[str, Any] | None = None,
+        tenant_id: str = "default",
     ) -> dict[str, Any]:
-        payload = json.dumps(details or {}, sort_keys=True)
+        from .audit.chain import AuditChain
+
+        payload = details or {}
         with self.connect() as db:
+            chain = AuditChain(db)
+            prev_hash, record_hash = chain.seal_record(
+                actor=actor,
+                action=action,
+                target=target,
+                details=payload,
+                tenant_id=tenant_id,
+            )
             db.execute(
-                "INSERT INTO audit_log (actor, action, target, details) VALUES (?, ?, ?, ?)",
-                (actor, action, target, payload),
+                """
+                INSERT INTO audit_log (actor, action, target, details, tenant_id, prev_hash, record_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    actor,
+                    action,
+                    target,
+                    json.dumps(payload, sort_keys=True),
+                    tenant_id,
+                    prev_hash,
+                    record_hash,
+                ),
             )
             row = db.execute("SELECT * FROM audit_log ORDER BY audit_id DESC LIMIT 1").fetchone()
             return self._decode_audit(row)
 
-    def list_audit(self, *, limit: int = 50) -> list[dict[str, Any]]:
+    def list_audit(self, *, limit: int = 50, tenant_id: str | None = None) -> list[dict[str, Any]]:
         with self.connect() as db:
-            rows = db.execute(
-                "SELECT * FROM audit_log ORDER BY audit_id DESC LIMIT ?",
-                (limit,),
-            )
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM audit_log WHERE tenant_id = ? ORDER BY audit_id DESC LIMIT ?",
+                    (tenant_id, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM audit_log ORDER BY audit_id DESC LIMIT ?",
+                    (limit,),
+                )
             return [self._decode_audit(row) for row in rows]
+
+    def verify_audit_chain(self, *, limit: int = 500) -> dict[str, Any]:
+        with self.connect() as db:
+            from .audit.chain import AuditChain
+
+            return AuditChain(db).verify_chain(limit=limit)
 
     def endpoint_directives(self, endpoint_id: str) -> dict[str, Any]:
         endpoint = self.get_or_create_endpoint(endpoint_id)
@@ -1164,15 +1231,24 @@ class Database:
             row = db.execute("SELECT * FROM siem_alerts ORDER BY alert_id DESC LIMIT 1").fetchone()
             return self._decode_siem_alert(row)
 
-    def list_siem_alerts(self, *, limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
+    def list_siem_alerts(
+        self, *, limit: int = 50, status: str | None = None, tenant_id: str | None = None
+    ) -> list[dict[str, Any]]:
         with self.connect() as db:
+            query = "SELECT * FROM siem_alerts"
+            params: list[Any] = []
+            clauses: list[str] = []
             if status:
-                rows = db.execute(
-                    "SELECT * FROM siem_alerts WHERE status = ? ORDER BY alert_id DESC LIMIT ?",
-                    (status, limit),
-                )
-            else:
-                rows = db.execute("SELECT * FROM siem_alerts ORDER BY alert_id DESC LIMIT ?", (limit,))
+                clauses.append("status = ?")
+                params.append(status)
+            if tenant_id:
+                clauses.append("tenant_id = ?")
+                params.append(tenant_id)
+            if clauses:
+                query += " WHERE " + " AND ".join(clauses)
+            query += " ORDER BY alert_id DESC LIMIT ?"
+            params.append(limit)
+            rows = db.execute(query, tuple(params))
             return [self._decode_siem_alert(row) for row in rows]
 
     def siem_summary(self) -> dict[str, Any]:
@@ -1224,15 +1300,24 @@ class Database:
                 (incident_id,),
             )
 
-    def list_incidents(self, *, limit: int = 30, status: str | None = None) -> list[dict[str, Any]]:
+    def list_incidents(
+        self, *, limit: int = 30, status: str | None = None, tenant_id: str | None = None
+    ) -> list[dict[str, Any]]:
         with self.connect() as db:
+            query = "SELECT * FROM incidents"
+            params: list[Any] = []
+            clauses: list[str] = []
             if status:
-                rows = db.execute(
-                    "SELECT * FROM incidents WHERE status = ? ORDER BY updated_at DESC LIMIT ?",
-                    (status, limit),
-                )
-            else:
-                rows = db.execute("SELECT * FROM incidents ORDER BY updated_at DESC LIMIT ?", (limit,))
+                clauses.append("status = ?")
+                params.append(status)
+            if tenant_id:
+                clauses.append("tenant_id = ?")
+                params.append(tenant_id)
+            if clauses:
+                query += " WHERE " + " AND ".join(clauses)
+            query += " ORDER BY updated_at DESC LIMIT ?"
+            params.append(limit)
+            rows = db.execute(query, tuple(params))
             return [dict(row) for row in rows]
 
     def get_incident_timeline(self, incident_id: str) -> list[dict[str, Any]]:

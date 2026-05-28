@@ -50,3 +50,20 @@ def agent_ca_path() -> Path | None:
     if path and Path(path).is_file():
         return Path(path)
     return None
+
+
+def is_enterprise() -> bool:
+    """Bank / government hardened profile (requires production + secrets)."""
+    return os.environ.get("MERSAL_ENTERPRISE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def ldap_enabled() -> bool:
+    return bool(os.environ.get("MERSAL_LDAP_URL", "").strip())
+
+
+def encryption_at_rest_enabled() -> bool:
+    return os.environ.get("MERSAL_DB_ENCRYPTION", "").strip().lower() in {"1", "true", "yes"}
+
+
+def postgres_dsn() -> str:
+    return os.environ.get("MERSAL_POSTGRES_DSN", "").strip()
