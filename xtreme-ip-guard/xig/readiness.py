@@ -47,6 +47,30 @@ def production_readiness(database: "Database") -> dict[str, Any]:
     add("nmap_scanner", nmap_available(), "nmap on PATH for network discovery", required=False)
     add("kev_feed_reachable", _kev_reachable(), "CISA KEV catalog fetch", required=False)
 
+    from .db.adapter import uses_postgres
+    from .config import postgres_dsn
+    from .integrations.integration_hub import IntegrationHub
+    from .integrations.oidc import OidcProvider
+    from .integrations.saml import SamlProvider
+
+    hub = IntegrationHub(database).full_matrix()
+    add(
+        "integration_fabric",
+        len(hub.get("modules_linked", [])) >= 6,
+        f"{len(hub.get('modules_linked', []))} linked security modules",
+        required=False,
+    )
+    add("postgres_configured", bool(postgres_dsn()), "MERSAL_POSTGRES_DSN set", required=False)
+    add("postgres_active", uses_postgres(), "PostgreSQL backend in use", required=False)
+    add("oidc_sso", OidcProvider(database).configured(), "OIDC SSO configured", required=False)
+    add("saml_sso", SamlProvider(database).configured(), "SAML SSO configured", required=False)
+    add(
+        "siem_export_ready",
+        len(database.list_siem_forwarders(enabled_only=True)) >= 1,
+        "SIEM forwarder configured",
+        required=False,
+    )
+
     required_checks = [c for c in checks if c["required"]]
     passed = sum(1 for c in required_checks if c["ok"])
     ready = passed == len(required_checks) and is_production()

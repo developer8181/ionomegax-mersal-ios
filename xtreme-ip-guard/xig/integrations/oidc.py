@@ -66,7 +66,22 @@ class OidcProvider:
         except (urllib.error.URLError, json.JSONDecodeError, OSError) as exc:
             return {"error": str(exc)}
         id_token = tokens.get("id_token", "")
-        username = self._username_from_id_token(id_token) or f"oidc-{secrets.token_hex(4)}"
+        claims: dict[str, Any] = {}
+        if id_token:
+            from .oidc_jwt import verify_id_token
+
+            ok, claims, err = verify_id_token(
+                id_token,
+                issuer=str(client["issuer_url"]),
+                client_id=str(client["client_id"]),
+            )
+            if not ok and os.environ.get("MERSAL_OIDC_STRICT", "1").strip().lower() not in {"0", "false"}:
+                return {"error": f"oidc id_token invalid: {err}"}
+        username = (
+            str(claims.get("preferred_username") or claims.get("email") or claims.get("sub") or "")
+            or self._username_from_id_token(id_token)
+            or f"oidc-{secrets.token_hex(4)}"
+        )
         role = str(client.get("default_role", "analyst"))
         tenant_id = str(client.get("tenant_id", "default"))
         from ..auth import create_session_token

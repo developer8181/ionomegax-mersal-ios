@@ -103,9 +103,9 @@ class DbConnection:
 
     @staticmethod
     def _adapt_sql(sql: str) -> str:
-        if not uses_postgres():
-            return sql
-        return sql.replace("?", "%s")
+        from .sql_dialect import adapt_sql
+
+        return adapt_sql(sql)
 
 
 def _split_sql(script: str) -> list[str]:

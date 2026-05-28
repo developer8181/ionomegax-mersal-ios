@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from ..config import postgres_dsn, tls_enabled
 from ..db.adapter import uses_postgres
 from ..edr.ebpf_probe import ebpf_available
+from ..integrations.integration_hub import IntegrationHub
 from ..integrations.oidc import OidcProvider
 from ..integrations.saml import SamlProvider
 from ..readiness import production_readiness, tool_versions
@@ -54,6 +55,7 @@ class PlatformHealth:
             "tools": tool_versions(),
             "siem_forwarders": len(self.db.list_siem_forwarders(enabled_only=True)),
             "audit_chain": self.db.verify_audit_chain(),
+            "integration_hub": IntegrationHub(self.db).full_matrix(),
         }
 
     def _module_ok(self, name: str, *, detail: dict[str, Any] | None = None) -> dict[str, Any]:

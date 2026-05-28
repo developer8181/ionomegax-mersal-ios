@@ -9,6 +9,8 @@ import os
 import secrets
 import urllib.parse
 import xml.etree.ElementTree as ET
+import zlib
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -29,12 +31,32 @@ class SamlProvider:
         if not cfg:
             return {"error": "saml not configured"}
         state = secrets.token_urlsafe(16)
+        request_xml = self._build_authn_request(cfg)
+        deflated = zlib.compressobj(wbits=-15)
+        payload = deflated.compress(request_xml.encode("utf-8")) + deflated.flush()
+        encoded_request = base64.b64encode(payload).decode()
         params = {
-            "SAMLRequest": base64.b64encode(b"PLACEHOLDER_REQUEST").decode(),
+            "SAMLRequest": encoded_request,
             "RelayState": state,
         }
         url = f"{cfg['sso_url']}?{urllib.parse.urlencode(params)}"
-        return {"redirect_url": url, "state": state, "note": "Configure IdP metadata; use POST ACS for production"}
+        return {"redirect_url": url, "state": state, "binding": "HTTP-Redirect"}
+
+    def _build_authn_request(self, cfg: dict[str, Any]) -> str:
+        issue_instant = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        request_id = f"_{secrets.token_hex(12)}"
+        entity_id = str(cfg.get("entity_id", "mersal-sp"))
+        acs = os.environ.get("MERSAL_SAML_ACS_URL", "http://127.0.0.1:8090/api/auth/saml/acs").strip()
+        return (
+            f'<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" '
+            f'xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" '
+            f'ID="{request_id}" Version="2.0" IssueInstant="{issue_instant}" '
+            f'Destination="{cfg["sso_url"]}" AssertionConsumerServiceURL="{acs}" '
+            f'ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST">'
+            f'<saml:Issuer>{entity_id}</saml:Issuer>'
+            f'<samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" '
+            f'AllowCreate="true"/></samlp:AuthnRequest>'
+        )
 
     def consume_response(self, saml_response_b64: str) -> dict[str, Any]:
         try:

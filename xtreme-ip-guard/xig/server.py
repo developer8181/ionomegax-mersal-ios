@@ -87,6 +87,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             from .platform_ops.health import PlatformHealth
 
             return self._send_json(PlatformHealth(self.database).full_status())
+        if path == "/api/platform/integrations" and self._authorized():
+            from .integrations.integration_hub import IntegrationHub
+
+            return self._send_json(IntegrationHub(self.database).full_matrix())
         if path == "/api/platform/backups" and self._authorized():
             from .platform_ops.backup import BackupManager
 
@@ -109,6 +113,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(SamlProvider(self.database).login_redirect())
         if path.startswith("/api/scim/v2/Users"):
             return self._handle_scim_get()
+        if path.startswith("/api/scim/v2/Users/"):
+            return self._handle_scim_get_user()
         if path.startswith("/api/updates/latest"):
             from urllib.parse import parse_qs
 
@@ -236,6 +242,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._handle_alert_stream()
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
+    def do_PUT(self) -> None:  # noqa: N802
+        if not self._gate_request():
+            return
+        if urlparse(self.path).path.startswith("/api/scim/v2/Users/"):
+            return self._handle_scim_patch()
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        if not self._gate_request():
+            return
+        if urlparse(self.path).path.startswith("/api/scim/v2/Users/"):
+            return self._handle_scim_delete()
+
     def do_POST(self) -> None:  # noqa: N802
         if not self._gate_request():
             return
@@ -244,6 +262,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._handle_login()
         if path == "/api/auth/saml/acs":
             return self._handle_saml_acs()
+        if path.startswith("/api/scim/v2/Users") and not path.rstrip("/").endswith("/Users"):
+            return self._handle_scim_patch()
         if path.startswith("/api/scim/v2/Users"):
             return self._handle_scim_post()
         if path == "/api/updates/publish":
@@ -606,12 +626,62 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         return ScimProvisioner(self.database).verify_bearer(auth.removeprefix("Bearer ").strip())
 
+    def _scim_user_id(self) -> str | None:
+        parts = urlparse(self.path).path.rstrip("/").split("/")
+        if len(parts) >= 5 and parts[-2] == "Users":
+            return parts[-1]
+        return None
+
     def _handle_scim_get(self) -> None:
         if not self._scim_bearer_ok():
             return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
         from .integrations.scim import ScimProvisioner
 
         return self._send_json(ScimProvisioner(self.database).list_users())
+
+    def _handle_scim_get_user(self) -> None:
+        if not self._scim_bearer_ok():
+            return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        user_id = self._scim_user_id()
+        if not user_id:
+            return self._send_json({"error": "user id required"}, status=HTTPStatus.BAD_REQUEST)
+        from .integrations.scim import ScimProvisioner
+
+        user = ScimProvisioner(self.database).get_user(user_id)
+        if not user:
+            return self._send_json({"error": "not found"}, status=HTTPStatus.NOT_FOUND)
+        return self._send_json(user)
+
+    def _handle_scim_patch(self) -> None:
+        if not self._scim_bearer_ok():
+            return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        user_id = self._scim_user_id()
+        if not user_id:
+            return self._send_json({"error": "user id required"}, status=HTTPStatus.BAD_REQUEST)
+        from .integrations.scim import ScimProvisioner
+
+        try:
+            payload = self._read_json()
+            updated = ScimProvisioner(self.database).patch_user(user_id, payload)
+            if not updated:
+                return self._send_json({"error": "not found"}, status=HTTPStatus.NOT_FOUND)
+            return self._send_json(updated)
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
+    def _handle_scim_delete(self) -> None:
+        if not self._scim_bearer_ok():
+            return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        user_id = self._scim_user_id()
+        if not user_id:
+            return self._send_json({"error": "user id required"}, status=HTTPStatus.BAD_REQUEST)
+        from .integrations.scim import ScimProvisioner
+
+        if ScimProvisioner(self.database).delete_user(user_id):
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
+        return self._send_json({"error": "not found"}, status=HTTPStatus.NOT_FOUND)
 
     def _handle_scim_post(self) -> None:
         if not self._scim_bearer_ok():

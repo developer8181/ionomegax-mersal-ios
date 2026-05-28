@@ -587,34 +587,51 @@ class Database:
         }
 
         with self.connect() as db:
-            db.execute(
-                """
-                INSERT INTO events (
-                    endpoint_id, actor, event_type, channel, resource, classification,
-                    destination, process, severity, behavior_flags, risk_score, action,
-                    reason, matched_rule_id, tags, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    event.endpoint_id,
-                    event.actor,
-                    event.event_type,
-                    event.channel,
-                    event.resource,
-                    event.classification,
-                    event.destination,
-                    event.process,
-                    event.severity,
-                    json.dumps(list(event.behavior_flags), sort_keys=True),
-                    fusion.risk_score,
-                    fusion.action,
-                    fusion.reason,
-                    decision.matched_rule_id,
-                    json.dumps(tags, sort_keys=True),
-                    json.dumps(metadata, sort_keys=True),
-                ),
+            insert_params = (
+                event.endpoint_id,
+                event.actor,
+                event.event_type,
+                event.channel,
+                event.resource,
+                event.classification,
+                event.destination,
+                event.process,
+                event.severity,
+                json.dumps(list(event.behavior_flags), sort_keys=True),
+                fusion.risk_score,
+                fusion.action,
+                fusion.reason,
+                decision.matched_rule_id,
+                json.dumps(tags, sort_keys=True),
+                json.dumps(metadata, sort_keys=True),
             )
-            event_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+            from .db.adapter import uses_postgres
+
+            if uses_postgres():
+                row = db.execute(
+                    """
+                    INSERT INTO events (
+                        endpoint_id, actor, event_type, channel, resource, classification,
+                        destination, process, severity, behavior_flags, risk_score, action,
+                        reason, matched_rule_id, tags, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING event_id
+                    """,
+                    insert_params,
+                ).fetchone()
+                event_id = row[0]
+            else:
+                db.execute(
+                    """
+                    INSERT INTO events (
+                        endpoint_id, actor, event_type, channel, resource, classification,
+                        destination, process, severity, behavior_flags, risk_score, action,
+                        reason, matched_rule_id, tags, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    insert_params,
+                )
+                event_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
             if fusion.action == "isolate_endpoint":
                 db.execute("UPDATE endpoints SET isolated = 1 WHERE endpoint_id = ?", (event.endpoint_id,))
             row = db.execute("SELECT * FROM events WHERE event_id = ?", (event_id,)).fetchone()
@@ -1811,6 +1828,56 @@ class Database:
             data.pop("password_hash", None)
             return data
 
+    def update_rbac_user(
+        self,
+        user_id: str,
+        *,
+        role: str | None = None,
+        display_name: str | None = None,
+        enabled: bool | None = None,
+        tenant_id: str = "default",
+    ) -> dict[str, Any] | None:
+        fields: list[str] = []
+        params: list[Any] = []
+        if role is not None:
+            fields.append("role = ?")
+            params.append(role)
+        if display_name is not None:
+            fields.append("display_name = ?")
+            params.append(display_name)
+        if enabled is not None:
+            fields.append("enabled = ?")
+            params.append(1 if enabled else 0)
+        if not fields:
+            return self.get_rbac_user_by_id(user_id, tenant_id=tenant_id)
+        params.extend([user_id, tenant_id])
+        with self.connect() as db:
+            db.execute(
+                f"UPDATE rbac_users SET {', '.join(fields)} WHERE user_id = ? AND tenant_id = ?",
+                params,
+            )
+        return self.get_rbac_user_by_id(user_id, tenant_id=tenant_id)
+
+    def get_rbac_user_by_id(self, user_id: str, *, tenant_id: str = "default") -> dict[str, Any] | None:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM rbac_users WHERE user_id = ? AND tenant_id = ?",
+                (user_id, tenant_id),
+            ).fetchone()
+            if not row:
+                return None
+            data = dict(row)
+            data.pop("password_hash", None)
+            return data
+
+    def delete_rbac_user(self, user_id: str, *, tenant_id: str = "default") -> bool:
+        with self.connect() as db:
+            cur = db.execute(
+                "DELETE FROM rbac_users WHERE user_id = ? AND tenant_id = ?",
+                (user_id, tenant_id),
+            )
+            return cur.rowcount > 0
+
     def create_tenant(
         self,
         *,
@@ -1871,19 +1938,15 @@ class Database:
         event_type: str = "*",
         action_filter: str = "*",
     ) -> int:
+        from .db.sql_dialect import events_window_count_sql
+
+        query, params = events_window_count_sql(
+            endpoint_id=endpoint_id,
+            window_seconds=window_seconds,
+            event_type=event_type,
+            action_filter=action_filter,
+        )
         with self.connect() as db:
-            query = """
-                SELECT COUNT(*) FROM events
-                WHERE endpoint_id = ?
-                AND datetime(created_at) >= datetime('now', ?)
-            """
-            params: list[Any] = [endpoint_id, f"-{int(window_seconds)} seconds"]
-            if event_type != "*":
-                query += " AND event_type = ?"
-                params.append(event_type)
-            if action_filter != "*":
-                query += " AND action = ?"
-                params.append(action_filter)
             return int(db.execute(query, params).fetchone()[0])
 
     def count_log_records(self) -> int:
@@ -2124,6 +2187,27 @@ class Database:
                 (limit,),
             )
             return [dict(row) for row in rows]
+
+    def get_platform_setting(self, setting_key: str, default: str = "") -> str:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT value FROM platform_settings WHERE setting_key = ?",
+                (setting_key,),
+            ).fetchone()
+            if not row:
+                return default
+            return str(dict(row).get("value", default))
+
+    def set_platform_setting(self, setting_key: str, value: str) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO platform_settings (setting_key, value)
+                VALUES (?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET value = excluded.value
+                """,
+                (setting_key, value),
+            )
 
     def touch_platform_heartbeat(
         self, component: str, *, status: str = "ok", detail: dict[str, Any] | None = None

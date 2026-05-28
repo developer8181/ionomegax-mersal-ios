@@ -73,6 +73,42 @@ class ScimProvisioner:
             "temporaryPassword": password,
         }
 
+    def get_user(self, user_id: str, *, tenant_id: str = "default") -> dict[str, Any] | None:
+        user = self.db.get_rbac_user_by_id(user_id, tenant_id=tenant_id)
+        if not user:
+            return None
+        return self._scim_resource(user)
+
+    def patch_user(
+        self, user_id: str, payload: dict[str, Any], *, tenant_id: str = "default"
+    ) -> dict[str, Any] | None:
+        active = payload.get("active")
+        roles = payload.get("roles") or []
+        role = None
+        if roles and isinstance(roles[0], dict):
+            role = str(roles[0].get("value", "")) or None
+        updated = self.db.update_rbac_user(
+            user_id,
+            tenant_id=tenant_id,
+            role=role,
+            display_name=str(payload.get("displayName", "")) or None,
+            enabled=bool(active) if active is not None else None,
+        )
+        return self._scim_resource(updated) if updated else None
+
+    def delete_user(self, user_id: str, *, tenant_id: str = "default") -> bool:
+        return self.db.delete_rbac_user(user_id, tenant_id=tenant_id)
+
+    @staticmethod
+    def _scim_resource(user: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "id": user.get("user_id"),
+            "userName": user.get("username"),
+            "active": bool(user.get("enabled", 1)),
+            "roles": [{"value": user.get("role")}],
+        }
+
     @staticmethod
     def hash_token(token: str) -> str:
         return hashlib.sha256(token.encode()).hexdigest()

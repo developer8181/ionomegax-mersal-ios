@@ -23,6 +23,11 @@ class StandaloneController:
         results: dict[str, Any] = {}
         results["enterprise"] = self.fabric.enterprise.run_enterprise_cycle()
         results["global"] = self.fabric.global_platform.run_global_cycle()
+        from ..xdr.engine import XdrEngine
+        from ..xdr.soar_bridge import XdrSoarBridge
+
+        results["xdr"] = XdrEngine(self.db).run_correlation()
+        results["xdr_soar"] = XdrSoarBridge(self.db, self.fabric.soar).execute_for_findings()
         from ..integrations.siem_forwarder import SiemForwarder
 
         results["siem_export"] = SiemForwarder(self.db).forward_batch()

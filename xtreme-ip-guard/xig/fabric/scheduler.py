@@ -75,7 +75,7 @@ class SecurityScheduler:
         results: dict[str, Any] = {}
         jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture"]
         if self.fabric and os.environ.get("MERSAL_AUTONOMOUS", "1").strip().lower() not in {"0", "false"}:
-            jobs.append("siem_forward")
+            jobs.extend(["siem_forward", "autonomous_cycle"])
         for job in jobs:
             try:
                 results[job] = self.run_job(job)
