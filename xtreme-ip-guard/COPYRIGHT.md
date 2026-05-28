@@ -2,7 +2,7 @@
 
 ## English
 
-Designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems Engineer — **Ramallah, Palestine**.
+**Extreme Cyber Security Platform** — designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems Engineer — **Ramallah, Palestine**.
 
 Founder of **Extreme Technology Company**, Ramallah, Palestine.
 

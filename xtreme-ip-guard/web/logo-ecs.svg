@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 72" role="img" aria-label="Extreme Cyber Security">
+  <defs>
+    <linearGradient id="ecs-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00e5bf"/>
+      <stop offset="50%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#ff6b2c"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#ecs-g)" d="M36 8 56 14v22c0 14-10 24-20 28S8 50 8 36V14l20-6z" opacity="0.95"/>
+  <path fill="none" stroke="#00e5bf" stroke-width="2" d="M22 28h28M22 36h20"/>
+  <text x="72" y="32" font-family="Inter,Segoe UI,sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Extreme</text>
+  <text x="72" y="56" font-family="Inter,Segoe UI,sans-serif" font-size="18" font-weight="600" fill="#00e5bf">Cyber Security</text>
+  <text x="72" y="68" font-family="Inter,Segoe UI,sans-serif" font-size="9" fill="#94a3b8">Extreme Technology Company · Ramallah</text>
+</svg>

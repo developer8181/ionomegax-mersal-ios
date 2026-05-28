@@ -48,7 +48,7 @@ class UnifiedPlatformController:
             "agents": len(self.db.list_agents()),
         }
         return {
-            "platform": "Mersal Complete Unified Security Platform",
+            "platform": "Extreme Cyber Security Unified Platform",
             "version": __version__,
             "integration_complete": adoption.get("ready_for_large_institution", False),
             "dependable_operations": reliability.get("dependable_for_operations", False),

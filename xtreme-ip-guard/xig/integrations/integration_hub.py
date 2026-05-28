@@ -39,7 +39,7 @@ class IntegrationHub:
         manifest = UpdateChannel(self.db).latest_for("agent")
         updates_ok = bool(manifest and UpdateChannel(self.db).verify_manifest(manifest))
         return {
-            "platform": "Mersal Enterprise Integration Fabric",
+            "platform": "Extreme Cyber Security Integration Fabric",
             "tier": "enterprise-reliability",
             "enterprise_strict": enterprise_strict(),
             "identity": {

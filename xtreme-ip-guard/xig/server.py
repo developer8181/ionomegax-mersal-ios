@@ -1,7 +1,7 @@
 # Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
 # Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
 # Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
-"""Ionomegax Mersal Guard — HTTP API and Command Center."""
+"""Extreme Cyber Security — HTTP API and Command Center."""
 
 from __future__ import annotations
 
@@ -1045,7 +1045,7 @@ def run(host: str | None = None, port: int | None = None) -> None:
     if is_enterprise():
         print("Enterprise mode (MERSAL_ENTERPRISE=1): RBAC enforced, audit chain, tenant isolation.")
     print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
-    print(f"Mersal Global Security Fabric v{RequestHandler._version()}: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
+    print(f"Extreme Security Fabric v{RequestHandler._version()}: vuln + CISA KEV + EDR-lite + SOAR + AI + posture.")
     if is_production():
         print("Production mode (MERSAL_PRODUCTION=1). Readiness: /api/system/readiness")
     if auth_required():

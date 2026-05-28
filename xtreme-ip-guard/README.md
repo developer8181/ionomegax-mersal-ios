@@ -1,14 +1,14 @@
-# Ionomegax Mersal Global Security Platform
+# Extreme Cyber Security Platform
 
 <p align="center">
-  <img src="web/logo-unified.svg" alt="Mersal by Extreme Technology" height="72" />
+  <img src="web/logo-ecs.svg" alt="Extreme Cyber Security" height="80" />
   <br />
-  <strong>Powered by Extreme Technology Company</strong>
+  <strong>Extreme Technology Company · Ramallah, Palestine</strong>
 </p>
 
-**Mersal v8.9** is a **complete unified cybersecurity platform** with **advanced operational reliability** (trust score, SLA tier, stale-agent detection, compliance evidence packs) for banks, government, and large enterprises — **unified control plane**, PostgreSQL HA (PgBouncer), SAML/OIDC/SCIM, signed agent updates, eBPF EDR, autonomous SOC cycle, DR backup/restore, enterprise adoption scorecard — plus **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC**, **multi-tenant RBAC**, and **Neural Cortex AI**, with an Arabic/English **Command Center** and agents for Linux, Windows, macOS, and **Mersal OS 8.7**.
+**Extreme Cyber Security (ECS) v1.0** — complete unified enterprise cyber defense: XDR, SIEM, SOAR, EDR, eBPF, PostgreSQL HA, SSO, DR, reliability engine, and a new **dark Command Center** UI.
 
-Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
+Designed by **Eng. Mahmoud Rasem Bayari**. **All rights reserved © 2009–2026**. (Product evolution of the Ionomegax Mersal engineering lineage.)
 
 | Resource | Link |
 |----------|------|

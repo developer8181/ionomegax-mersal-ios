@@ -11,7 +11,7 @@ from ..db.adapter import uses_postgres
 
 def public_platform_summary() -> dict[str, object]:
     return {
-        "product": "Ionomegax Mersal Global Security Platform",
+        "product": "Extreme Cyber Security Platform",
         "version": __version__,
         "production_mode": is_production(),
         "enterprise_mode": is_enterprise(),
