@@ -16,7 +16,7 @@ from xig.auth import (
 
 class AuthTests(unittest.TestCase):
     def test_open_when_no_secrets(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
+        with mock.patch.dict(os.environ, {"MERSAL_DEV_MODE": "1"}, clear=True):
             self.assertFalse(auth_required())
             self.assertTrue(authorize(None))
 

@@ -36,14 +36,18 @@ class ComplianceEngine:
         posture = self.db.latest_security_posture()
         vulns = self.db.vuln_summary()
 
+        from ..auth import auth_required, signing_secret_configured
+        from ..config import is_dev_mode, tls_enabled
+
+        audit_chain = self.db.verify_audit_chain()
         checks = {
             "ID.AM-1": len(endpoints) >= 1,
-            "PR.AC-1": any(p.get("enabled") for p in policies),
-            "PR.DS-1": self._encryption_coverage(endpoints),
+            "PR.AC-1": auth_required() and signing_secret_configured() and not is_dev_mode(),
+            "PR.DS-1": self._encryption_coverage(endpoints) or tls_enabled(),
             "DE.AE-1": self.db.count_baselines() >= 1,
             "DE.CM-1": siem.get("enabled_rules", 0) >= 3,
-            "RS.AN-1": siem.get("open_alerts", 0) >= 0,
-            "RS.MI-1": edr >= 0 or int(posture.get("score", 0)) > 0,
+            "RS.AN-1": len(self.db.list_audit(limit=5)) >= 1 and audit_chain.get("valid", False),
+            "RS.MI-1": any(p.get("action") in {"block", "quarantine", "isolate_endpoint"} for p in policies),
             "RC.RP-1": vulns.get("last_scan") is not None,
         }
         passed = sum(1 for ok in checks.values() if ok)

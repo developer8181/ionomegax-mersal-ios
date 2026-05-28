@@ -177,10 +177,19 @@ def enterprise_startup_errors() -> list[str]:
         return errors
     if not is_production():
         errors.append("MERSAL_ENTERPRISE=1 requires MERSAL_PRODUCTION=1")
-    from ..auth import signing_secret_configured
+    return errors
 
+
+def organization_startup_errors() -> list[str]:
+    """Validation for any organization deployment (companies, NGOs, government)."""
+    from ..auth import signing_secret_configured
+    from ..config import is_dev_mode
+
+    errors = list(enterprise_startup_errors())
+    if is_dev_mode():
+        return errors
     if not signing_secret_configured():
-        errors.append("Set MERSAL_SIGNING_SECRET (32+ chars) or MERSAL_API_TOKEN in enterprise mode")
+        errors.append("Set MERSAL_SIGNING_SECRET (32+ chars) or a strong MERSAL_API_TOKEN")
     if not (configured_token() or admin_password()):
-        errors.append("Configure MERSAL_API_TOKEN and/or MERSAL_ADMIN_PASSWORD")
+        errors.append("Configure MERSAL_API_TOKEN and/or MERSAL_ADMIN_PASSWORD before exposing the API")
     return errors

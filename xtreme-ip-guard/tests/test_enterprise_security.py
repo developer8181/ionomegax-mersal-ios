@@ -24,7 +24,7 @@ class EnterpriseSecurityTests(unittest.TestCase):
             "MERSAL_BOOTSTRAP": "0",
             "MERSAL_NO_SCHEDULER": "1",
             "MERSAL_SIGNING_SECRET": "x" * 48,
-            "MERSAL_API_TOKEN": "enterprise-test-token-32chars-min",
+            "MERSAL_API_TOKEN": "enterprise-test-token-32chars-minimum-len",
             "MERSAL_ADMIN_PASSWORD": "AdminPass123!",
             "MERSAL_PORT": "18091",
         }

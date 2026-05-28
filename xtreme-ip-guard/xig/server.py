@@ -44,7 +44,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._access_ctx = None
         super().__init__(*args, **kwargs)
 
+    def end_headers(self) -> None:
+        from .security.http_hardening import apply_security_headers
+
+        apply_security_headers(self.send_header, path=urlparse(self.path).path)
+        super().end_headers()
+
     def do_GET(self) -> None:  # noqa: N802
+        if not self._gate_request():
+            return
         path = urlparse(self.path).path
         if path in {"/", "/console", "/console/"}:
             return self._serve_file(WEB_ROOT / "index.html")
@@ -97,6 +105,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_audit(tenant_id=self._tenant_scope()))
         if path == "/api/audit/verify":
             return self._send_json(self.database.verify_audit_chain())
+        if path == "/api/security/events":
+            return self._send_json(self.database.list_security_events(tenant_id=self._tenant_scope()))
         if path.startswith("/api/endpoints/") and path.endswith("/directives"):
             endpoint_id = self._path_part(path, 2)
             return self._send_json(self.database.endpoint_directives(endpoint_id))
@@ -191,10 +201,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
+        if not self._gate_request():
+            return
         path = urlparse(self.path).path
         if path == "/api/auth/login":
             return self._handle_login()
-        if not self._authorized():
+        if path in {"/api/agents/heartbeat", "/api/events"}:
+            if not self._authorize_agent(path):
+                return
+        elif not self._authorized():
             return
         actor = self._actor()
         try:
@@ -380,12 +395,94 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.database.record_audit(actor, "taxii.sync", details=result)
                 return self._send_json(result)
 
+            if path == "/api/agents/register-key":
+                payload = self._read_json()
+                agent_id = str(payload["agent_id"])
+                from .security.agent_auth import generate_agent_key, hash_agent_key
+
+                plain = generate_agent_key()
+                self.database.set_agent_key_hash(
+                    agent_id,
+                    hash_agent_key(plain),
+                    tenant_id=str(payload.get("tenant_id", self._audit_tenant())),
+                )
+                self.database.record_audit(
+                    actor, "agent.key.register", target=agent_id, tenant_id=self._audit_tenant()
+                )
+                return self._send_json(
+                    {"agent_id": agent_id, "api_key": plain, "note": "Store key once; it is not shown again."},
+                    status=HTTPStatus.CREATED,
+                )
+
+            if path == "/api/users" and self._access_ctx and self._access_ctx.role in {"super_admin", "soc_admin"}:
+                payload = self._read_json()
+                from .rbac import RbacEngine
+                from .security.password_policy import validate_password
+
+                rbac = RbacEngine(self.database)
+                ok, msg = validate_password(str(payload.get("password", "")), username=str(payload.get("username", "")))
+                if not ok:
+                    return self._send_json({"error": msg}, status=HTTPStatus.BAD_REQUEST)
+                user = self.database.create_rbac_user(
+                    username=str(payload["username"]),
+                    password_hash=rbac.hash_password(str(payload["password"])),
+                    role=str(payload.get("role", "analyst")),
+                    tenant_id=str(payload.get("tenant_id", self._audit_tenant())),
+                    display_name=str(payload.get("display_name", "")),
+                )
+                self.database.record_audit(actor, "user.create", target=user.get("user_id", ""), tenant_id=self._audit_tenant())
+                return self._send_json(user, status=HTTPStatus.CREATED)
+
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
     def log_message(self, format: str, *args: object) -> None:
         return
+
+    def _gate_request(self) -> bool:
+        from .security.http_hardening import admin_ip_allowed, check_rate_limit, client_ip
+
+        path = urlparse(self.path).path
+        ip = client_ip({k: v for k, v in self.headers.items()}, self.client_address)
+        if not check_rate_limit(path=path, client_key=ip):
+            self.database.record_security_event(
+                category="rate_limit",
+                message=f"Rate limit exceeded for {path}",
+                severity="high",
+                source_ip=ip,
+            )
+            self._send_json({"error": "rate limit exceeded"}, status=HTTPStatus.TOO_MANY_REQUESTS)
+            return False
+        if path == "/api/auth/login" and not admin_ip_allowed(ip):
+            self.database.record_security_event(
+                category="auth",
+                message="Login blocked by IP allowlist",
+                severity="high",
+                source_ip=ip,
+            )
+            self._send_json({"error": "forbidden"}, status=HTTPStatus.FORBIDDEN)
+            return False
+        return True
+
+    def _authorize_agent(self, path: str) -> bool:
+        from .security.agent_auth import authorize_agent_request
+
+        token = self.headers.get("X-Mersal-Token") or self.headers.get("Authorization", "")
+        if token.startswith("Bearer "):
+            token = token.removeprefix("Bearer ").strip()
+        agent_id = self.headers.get("X-Mersal-Agent-Id", "").strip()
+        agent_key = self.headers.get("X-Mersal-Agent-Key", "").strip()
+        if authorize_agent_request(
+            self.database,
+            agent_id=agent_id,
+            agent_key_header=agent_key or None,
+            bearer_token=token or None,
+        ):
+            self._access_ctx = None
+            return True
+        self._send_json({"error": "agent unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+        return False
 
     def _handle_login(self) -> None:
         try:
@@ -495,9 +592,17 @@ class RequestHandler(BaseHTTPRequestHandler):
         return (self.headers.get("X-Mersal-Tenant") or "default").strip() or "default"
 
     def _read_json(self) -> dict:
+        cached = getattr(self, "_cached_json_body", None)
+        if cached is not None:
+            self._cached_json_body = None
+            return cached
+        from .security.http_hardening import max_body_bytes
+
         length = int(self.headers.get("Content-Length", "0"))
         if length == 0:
             return {}
+        if length > max_body_bytes():
+            raise ValueError("request body too large")
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
     def _send_json(self, data: object, status: HTTPStatus = HTTPStatus.OK) -> None:
@@ -580,9 +685,9 @@ def _initialize_database(database: Database) -> None:
 
 
 def run(host: str | None = None, port: int | None = None) -> None:
-    from .security.access import enterprise_startup_errors
+    from .security.access import organization_startup_errors
 
-    startup_errors = enterprise_startup_errors()
+    startup_errors = organization_startup_errors()
     if startup_errors:
         for err in startup_errors:
             print(f"[mersal] FATAL: {err}")

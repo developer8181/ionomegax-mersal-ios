@@ -336,10 +336,12 @@ class Database:
             )
         from .migrations_v6 import apply_v6_migrations
         from .migrations_v7 import apply_v7_migrations
+        from .migrations_v7_1 import apply_v7_1_migrations
 
         with self.connect() as db:
             apply_v6_migrations(db)
             apply_v7_migrations(db)
+            apply_v7_1_migrations(db)
 
     def seed_demo(self) -> None:
         demo_policies = [
@@ -1769,6 +1771,34 @@ class Database:
                 rows = db.execute("SELECT * FROM rbac_users ORDER BY username").fetchall()
             return [dict(row) for row in rows]
 
+    def create_rbac_user(
+        self,
+        *,
+        username: str,
+        password_hash: str,
+        role: str,
+        tenant_id: str = "default",
+        display_name: str = "",
+    ) -> dict[str, Any]:
+        import secrets
+
+        user_id = f"user-{secrets.token_hex(6)}"
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO rbac_users (user_id, tenant_id, username, password_hash, role, display_name)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, tenant_id, username, password_hash, role, display_name or username),
+            )
+            row = db.execute(
+                "SELECT * FROM rbac_users WHERE tenant_id = ? AND username = ?",
+                (tenant_id, username),
+            ).fetchone()
+            data = dict(row)
+            data.pop("password_hash", None)
+            return data
+
     def create_tenant(
         self,
         *,
@@ -1913,3 +1943,59 @@ class Database:
                 (since_id, limit),
             ).fetchall()
             return [self._decode_siem_alert(row) for row in rows]
+
+    def set_agent_key_hash(self, agent_id: str, key_hash: str, *, tenant_id: str = "default") -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO agent_api_keys (agent_id, tenant_id, key_hash, enabled)
+                VALUES (?, ?, ?, 1)
+                ON CONFLICT(agent_id) DO UPDATE SET
+                    key_hash = excluded.key_hash,
+                    tenant_id = excluded.tenant_id,
+                    enabled = 1,
+                    rotated_at = CURRENT_TIMESTAMP
+                """,
+                (agent_id, tenant_id, key_hash),
+            )
+
+    def get_agent_key_hash(self, agent_id: str) -> str | None:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT key_hash FROM agent_api_keys WHERE agent_id = ? AND enabled = 1",
+                (agent_id,),
+            ).fetchone()
+            return str(row[0]) if row else None
+
+    def record_security_event(
+        self,
+        *,
+        category: str,
+        message: str,
+        severity: str = "medium",
+        source_ip: str = "",
+        tenant_id: str = "default",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO security_events (tenant_id, severity, category, message, source_ip, details)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (tenant_id, severity, category, message, source_ip, json.dumps(details or {}, sort_keys=True)),
+            )
+
+    def list_security_events(self, *, limit: int = 50, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT * FROM security_events WHERE tenant_id = ? ORDER BY event_id DESC LIMIT ?",
+                    (tenant_id, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM security_events ORDER BY event_id DESC LIMIT ?",
+                    (limit,),
+                )
+            return [dict(row) for row in rows]

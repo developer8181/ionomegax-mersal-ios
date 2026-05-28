@@ -6,7 +6,7 @@
   <strong>Powered by Extreme Technology Company</strong>
 </p>
 
-**Mersal v7.0 Enterprise** is a unified cybersecurity platform (bank/government profile available) — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
+**Mersal v7.1** is a **professional cybersecurity platform** for companies, NGOs, and government — mandatory auth, RBAC, agent keys, rate limits, audit chain — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
 
 Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 

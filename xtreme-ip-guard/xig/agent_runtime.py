@@ -32,6 +32,7 @@ class AgentConfig:
     site: str
     interval_seconds: int
     api_token: str
+    agent_api_key: str
     state_dir: str
 
     @classmethod
@@ -47,6 +48,7 @@ class AgentConfig:
             site=str(payload.get("site", "HQ")),
             interval_seconds=int(payload.get("interval_seconds", 30)),
             api_token=str(payload.get("api_token", os.environ.get("MERSAL_API_TOKEN", ""))),
+            agent_api_key=str(payload.get("agent_api_key", os.environ.get("MERSAL_AGENT_API_KEY", ""))),
             state_dir=str(payload.get("state_dir", str(Path.home() / ".mersal-guard"))),
         )
 
@@ -132,8 +134,11 @@ class MersalAgent:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json", "User-Agent": f"MersalAgent/{__version__}"}
-        if self.config.api_token:
-            headers["X-Mersal-Token"] = self.config.api_token
+        key = self.config.agent_api_key or self.config.api_token
+        if key:
+            headers["X-Mersal-Token"] = key
+            headers["X-Mersal-Agent-Key"] = key
+        headers["X-Mersal-Agent-Id"] = self.config.agent_id
         return headers
 
     def _ssl_context(self) -> ssl.SSLContext | None:

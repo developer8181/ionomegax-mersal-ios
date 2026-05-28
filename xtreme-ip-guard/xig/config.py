@@ -67,3 +67,21 @@ def encryption_at_rest_enabled() -> bool:
 
 def postgres_dsn() -> str:
     return os.environ.get("MERSAL_POSTGRES_DSN", "").strip()
+
+
+def is_dev_mode() -> bool:
+    """Local lab only — disables mandatory auth when no secrets configured."""
+    return os.environ.get("MERSAL_DEV_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def require_agent_keys() -> bool:
+    """Each endpoint agent must use its own API key (recommended for all organizations)."""
+    if is_dev_mode():
+        return False
+    if is_enterprise() or is_production():
+        return os.environ.get("MERSAL_REQUIRE_AGENT_KEYS", "1").strip().lower() not in {
+            "0",
+            "false",
+            "no",
+        }
+    return os.environ.get("MERSAL_REQUIRE_AGENT_KEYS", "").strip().lower() in {"1", "true", "yes"}

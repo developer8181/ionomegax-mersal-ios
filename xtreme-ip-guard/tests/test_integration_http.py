@@ -18,7 +18,8 @@ class IntegrationHttpTests(unittest.TestCase):
         cls.db_path = Path(cls.tmpdir.name) / "integration.sqlite3"
         os.environ["MERSAL_DB"] = str(cls.db_path)
         os.environ["MERSAL_PRODUCTION"] = "1"
-        os.environ["MERSAL_API_TOKEN"] = "integration-test-token"
+        os.environ["MERSAL_API_TOKEN"] = "integration-test-token-32chars-minimum"
+        os.environ["MERSAL_SIGNING_SECRET"] = "x" * 48
         os.environ["MERSAL_BOOTSTRAP"] = "0"
         os.environ["MERSAL_PORT"] = "18090"
         os.environ["MERSAL_HOST"] = "127.0.0.1"
@@ -65,9 +66,9 @@ class IntegrationHttpTests(unittest.TestCase):
 
     def test_public_about_and_build(self):
         about = self._get("/api/system/about")
-        self.assertEqual(about["version"], "7.0.0")
+        self.assertEqual(about["version"], "7.1.0")
         build = self._get("/api/system/build")
-        self.assertEqual(build["version"], "7.0.0")
+        self.assertEqual(build["version"], "7.1.0")
         self.assertIn("components", build)
 
     def test_readiness_without_auth(self):

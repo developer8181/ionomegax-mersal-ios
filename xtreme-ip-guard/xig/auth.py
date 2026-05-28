@@ -13,7 +13,7 @@ import secrets
 import time
 from typing import Any
 
-from .config import is_enterprise, is_production
+from .config import is_dev_mode, is_enterprise, is_production
 
 
 def configured_token() -> str:
@@ -36,9 +36,10 @@ def signing_secret_configured() -> bool:
 
 
 def auth_required() -> bool:
-    if is_enterprise() or is_production():
-        return True
-    return bool(configured_token() or admin_password())
+    """Professional default: API is never open on the public internet unless DEV_MODE."""
+    if is_dev_mode():
+        return bool(configured_token() or admin_password())
+    return True
 
 
 def verify_admin(username: str, password: str) -> bool:
@@ -61,8 +62,8 @@ def _signing_secret() -> str:
     pwd = admin_password()
     if pwd:
         return hashlib.sha256(pwd.encode()).hexdigest()
-    if is_enterprise() or is_production():
-        raise RuntimeError("MERSAL_SIGNING_SECRET or MERSAL_API_TOKEN required in production/enterprise mode")
+    if is_enterprise() or is_production() or not is_dev_mode():
+        raise RuntimeError("MERSAL_SIGNING_SECRET or MERSAL_API_TOKEN required — set MERSAL_DEV_MODE=1 for local lab only")
     return "mersal-dev-insecure-only-for-local-lab"
 
 
