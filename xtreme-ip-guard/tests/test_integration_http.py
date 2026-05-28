@@ -22,6 +22,8 @@ class IntegrationHttpTests(unittest.TestCase):
         os.environ["MERSAL_BOOTSTRAP"] = "0"
         os.environ["MERSAL_PORT"] = "18090"
         os.environ["MERSAL_HOST"] = "127.0.0.1"
+        os.environ["MERSAL_NO_SCHEDULER"] = "1"
+        os.environ["MERSAL_KEV_FEED_URL"] = ""
 
         from xig.server import run
 
@@ -63,9 +65,9 @@ class IntegrationHttpTests(unittest.TestCase):
 
     def test_public_about_and_build(self):
         about = self._get("/api/system/about")
-        self.assertEqual(about["version"], "3.1.0")
+        self.assertEqual(about["version"], "4.0.0")
         build = self._get("/api/system/build")
-        self.assertEqual(build["version"], "3.1.0")
+        self.assertEqual(build["version"], "4.0.0")
         self.assertIn("components", build)
 
     def test_readiness_without_auth(self):
@@ -79,6 +81,13 @@ class IntegrationHttpTests(unittest.TestCase):
         self.assertIn("totals", dash)
         threat = self._get("/api/threat/intel", token=token)
         self.assertIn("total_indicators", threat)
+
+    def test_enterprise_dashboard(self):
+        token = os.environ["MERSAL_API_TOKEN"]
+        dash = self._get("/api/enterprise/dashboard", token=token)
+        self.assertEqual(dash["suite"], "Mersal Enterprise Security Suite")
+        matrix = self._get("/api/enterprise/matrix", token=token)
+        self.assertGreaterEqual(len(matrix), 3)
 
     def test_agent_heartbeat_and_event(self):
         token = os.environ["MERSAL_API_TOKEN"]

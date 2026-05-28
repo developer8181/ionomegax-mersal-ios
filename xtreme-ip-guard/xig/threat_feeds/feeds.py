@@ -61,7 +61,7 @@ class ThreatFeedSync:
         stix_indicators = parse_stix_bundle(MERSAL_GLOBAL_STIX, source="mersal-global-stix")
         added += self.db.seed_threat_intel(stix_indicators)
 
-        kev = kev_url or _default_kev_url()
+        kev = _resolve_kev_url(kev_url)
         if kev:
             kev_indicators = fetch_kev_indicators(kev)
             if kev_indicators:
@@ -89,10 +89,12 @@ class ThreatFeedSync:
         return {"indicators_added": added, "feeds": feeds or ["mersal-builtin", "mersal-global-stix"], **extra}
 
 
-def _default_kev_url() -> str:
+def _resolve_kev_url(kev_url: str) -> str:
     import os
 
-    return os.environ.get(
-        "MERSAL_KEV_FEED_URL",
-        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
-    ).strip()
+    if kev_url is not None:
+        return kev_url.strip()
+    explicit = os.environ.get("MERSAL_KEV_FEED_URL")
+    if explicit is not None:
+        return explicit.strip()
+    return "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"

@@ -14,6 +14,7 @@ from typing import Any
 
 from .base import PlatformProfile, SensorEvent, _safe_username, register_platform
 from .vuln_probe import collect_vuln_probe
+from ..edr.network_intel import collect_network_connections, suspicious_flows
 from ..edr.process_intel import collect_running_processes, suspicious_process_events
 
 
@@ -24,6 +25,7 @@ def build_linux_profile() -> PlatformProfile:
         "disk_encryption": _detect_luks(),
     }
     processes = collect_running_processes(limit=25)
+    net_flows = collect_network_connections(limit=20)
     sensors = {
         "mounts": _read_mounts(),
         "removable": _removable_devices(),
@@ -31,6 +33,8 @@ def build_linux_profile() -> PlatformProfile:
         "vuln_probe": collect_vuln_probe(security),
         "processes": processes,
         "process_count": len(processes),
+        "network_flows": net_flows,
+        "risky_flows": suspicious_flows(net_flows),
     }
     return PlatformProfile(
         platform_id="linux",

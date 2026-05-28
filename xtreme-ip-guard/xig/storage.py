@@ -198,6 +198,88 @@ class Database:
                     details TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS siem_rules (
+                    rule_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    condition_json TEXT NOT NULL DEFAULT '{}',
+                    severity INTEGER NOT NULL DEFAULT 50,
+                    enabled INTEGER NOT NULL DEFAULT 1
+                );
+
+                CREATE TABLE IF NOT EXISTS siem_alerts (
+                    alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rule_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    severity INTEGER NOT NULL,
+                    endpoint_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    event_ids TEXT NOT NULL DEFAULT '[]',
+                    details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS incidents (
+                    incident_id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    severity TEXT NOT NULL DEFAULT 'medium',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    assignee TEXT NOT NULL DEFAULT 'soc-team',
+                    endpoint_id TEXT NOT NULL DEFAULT '',
+                    summary TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS incident_timeline (
+                    entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    incident_id TEXT NOT NULL,
+                    entry_type TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS compliance_controls (
+                    control_id TEXT PRIMARY KEY,
+                    framework TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    category TEXT NOT NULL DEFAULT '',
+                    weight INTEGER NOT NULL DEFAULT 1
+                );
+
+                CREATE TABLE IF NOT EXISTS compliance_scores (
+                    score_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    framework TEXT NOT NULL,
+                    score INTEGER NOT NULL,
+                    passed INTEGER NOT NULL,
+                    total INTEGER NOT NULL,
+                    breakdown TEXT NOT NULL DEFAULT '{}',
+                    computed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS edr_detections (
+                    detection_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    endpoint_id TEXT NOT NULL,
+                    detection_type TEXT NOT NULL,
+                    severity INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    details TEXT NOT NULL DEFAULT '{}',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS network_flows (
+                    flow_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    endpoint_id TEXT NOT NULL,
+                    protocol TEXT NOT NULL DEFAULT 'tcp',
+                    local_addr TEXT NOT NULL,
+                    remote_addr TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT '',
+                    risk INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
                 """
             )
 
@@ -457,6 +539,15 @@ class Database:
         from .soar import SoarEngine
 
         SoarEngine(self).on_event_ingested(decoded)
+        try:
+            from .siem.correlator import SiemCorrelator
+            from .incidents.manager import IncidentManager
+
+            alerts = SiemCorrelator(self).process_event(decoded)
+            if alerts:
+                IncidentManager(self).sync_from_alerts(alerts)
+        except Exception:  # noqa: BLE001 — enterprise modules must not break ingest
+            pass
         return decoded
 
     def create_policy(self, policy: PolicyRule) -> dict[str, Any]:
@@ -952,6 +1043,285 @@ class Database:
             reason=row["reason"],
             enabled=bool(row["enabled"]),
         )
+
+    def ensure_siem_rules(self, rules: list[dict[str, Any]]) -> int:
+        inserted = 0
+        with self.connect() as db:
+            for rule in rules:
+                cursor = db.execute(
+                    """
+                    INSERT OR IGNORE INTO siem_rules (
+                        rule_id, name, description, condition_json, severity, enabled
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(rule["rule_id"]),
+                        str(rule["name"]),
+                        str(rule.get("description", "")),
+                        json.dumps(rule.get("condition", {}), sort_keys=True),
+                        int(rule.get("severity", 50)),
+                        int(rule.get("enabled", True)),
+                    ),
+                )
+                inserted += cursor.rowcount
+        return inserted
+
+    def create_siem_alert(
+        self,
+        *,
+        rule_id: str,
+        title: str,
+        severity: int,
+        endpoint_id: str = "",
+        event_ids: list[int] | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO siem_alerts (rule_id, title, severity, endpoint_id, event_ids, details)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    rule_id,
+                    title,
+                    severity,
+                    endpoint_id,
+                    json.dumps(event_ids or [], sort_keys=True),
+                    json.dumps(details or {}, sort_keys=True),
+                ),
+            )
+            row = db.execute("SELECT * FROM siem_alerts ORDER BY alert_id DESC LIMIT 1").fetchone()
+            return self._decode_siem_alert(row)
+
+    def list_siem_alerts(self, *, limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if status:
+                rows = db.execute(
+                    "SELECT * FROM siem_alerts WHERE status = ? ORDER BY alert_id DESC LIMIT ?",
+                    (status, limit),
+                )
+            else:
+                rows = db.execute("SELECT * FROM siem_alerts ORDER BY alert_id DESC LIMIT ?", (limit,))
+            return [self._decode_siem_alert(row) for row in rows]
+
+    def siem_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            open_alerts = db.execute(
+                "SELECT COUNT(*) FROM siem_alerts WHERE status = 'open'"
+            ).fetchone()[0]
+            critical = db.execute(
+                "SELECT COUNT(*) FROM siem_alerts WHERE status = 'open' AND severity >= 80"
+            ).fetchone()[0]
+            rules = db.execute("SELECT COUNT(*) FROM siem_rules WHERE enabled = 1").fetchone()[0]
+        return {"open_alerts": open_alerts, "critical_alerts": critical, "enabled_rules": rules}
+
+    def create_incident(
+        self,
+        *,
+        incident_id: str,
+        title: str,
+        severity: str = "medium",
+        endpoint_id: str = "",
+        summary: str = "",
+        assignee: str = "soc-team",
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT OR IGNORE INTO incidents (
+                    incident_id, title, severity, status, assignee, endpoint_id, summary
+                ) VALUES (?, ?, ?, 'open', ?, ?, ?)
+                """,
+                (incident_id, title, severity, assignee, endpoint_id, summary),
+            )
+            row = db.execute("SELECT * FROM incidents WHERE incident_id = ?", (incident_id,)).fetchone()
+            return dict(row)
+
+    def add_incident_timeline(
+        self, *, incident_id: str, entry_type: str, message: str, payload: dict[str, Any] | None = None
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO incident_timeline (incident_id, entry_type, message, payload)
+                VALUES (?, ?, ?, ?)
+                """,
+                (incident_id, entry_type, message, json.dumps(payload or {}, sort_keys=True)),
+            )
+            db.execute(
+                "UPDATE incidents SET updated_at = CURRENT_TIMESTAMP WHERE incident_id = ?",
+                (incident_id,),
+            )
+
+    def list_incidents(self, *, limit: int = 30, status: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if status:
+                rows = db.execute(
+                    "SELECT * FROM incidents WHERE status = ? ORDER BY updated_at DESC LIMIT ?",
+                    (status, limit),
+                )
+            else:
+                rows = db.execute("SELECT * FROM incidents ORDER BY updated_at DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+
+    def get_incident_timeline(self, incident_id: str) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM incident_timeline WHERE incident_id = ? ORDER BY entry_id",
+                (incident_id,),
+            )
+            return [self._decode_timeline(row) for row in rows]
+
+    def update_incident_status(self, incident_id: str, status: str) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                "UPDATE incidents SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE incident_id = ?",
+                (status, incident_id),
+            )
+            row = db.execute("SELECT * FROM incidents WHERE incident_id = ?", (incident_id,)).fetchone()
+            return dict(row)
+
+    def ensure_compliance_controls(self, controls: list[dict[str, Any]]) -> int:
+        inserted = 0
+        with self.connect() as db:
+            for ctrl in controls:
+                cursor = db.execute(
+                    """
+                    INSERT OR IGNORE INTO compliance_controls (
+                        control_id, framework, name, category, weight
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(ctrl["control_id"]),
+                        str(ctrl["framework"]),
+                        str(ctrl["name"]),
+                        str(ctrl.get("category", "")),
+                        int(ctrl.get("weight", 1)),
+                    ),
+                )
+                inserted += cursor.rowcount
+        return inserted
+
+    def save_compliance_score(
+        self, *, framework: str, score: int, passed: int, total: int, breakdown: dict[str, Any]
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO compliance_scores (framework, score, passed, total, breakdown)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (framework, score, passed, total, json.dumps(breakdown, sort_keys=True)),
+            )
+            row = db.execute("SELECT * FROM compliance_scores ORDER BY score_id DESC LIMIT 1").fetchone()
+            data = dict(row)
+            data["breakdown"] = self._decode_json(data["breakdown"], {})
+            return data
+
+    def latest_compliance_score(self, framework: str = "NIST-CSF") -> dict[str, Any] | None:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM compliance_scores WHERE framework = ? ORDER BY score_id DESC LIMIT 1",
+                (framework,),
+            ).fetchone()
+            if not row:
+                return None
+            data = dict(row)
+            data["breakdown"] = self._decode_json(data["breakdown"], {})
+            return data
+
+    def record_edr_detection(
+        self,
+        *,
+        endpoint_id: str,
+        detection_type: str,
+        severity: int,
+        title: str,
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO edr_detections (endpoint_id, detection_type, severity, title, details)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    endpoint_id,
+                    detection_type,
+                    severity,
+                    title,
+                    json.dumps(details or {}, sort_keys=True),
+                ),
+            )
+            row = db.execute("SELECT * FROM edr_detections ORDER BY detection_id DESC LIMIT 1").fetchone()
+            return self._decode_edr_detection(row)
+
+    def list_edr_detections(self, *, limit: int = 40, status: str = "open") -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM edr_detections WHERE status = ? ORDER BY detection_id DESC LIMIT ?",
+                (status, limit),
+            )
+            return [self._decode_edr_detection(row) for row in rows]
+
+    def record_network_flows(self, endpoint_id: str, flows: list[dict[str, Any]]) -> int:
+        count = 0
+        with self.connect() as db:
+            for flow in flows[:100]:
+                db.execute(
+                    """
+                    INSERT INTO network_flows (
+                        endpoint_id, protocol, local_addr, remote_addr, state, risk
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        endpoint_id,
+                        str(flow.get("protocol", "tcp")),
+                        str(flow.get("local_addr", "")),
+                        str(flow.get("remote_addr", "")),
+                        str(flow.get("state", "")),
+                        int(flow.get("risk", 0)),
+                    ),
+                )
+                count += 1
+        return count
+
+    def list_network_flows(self, *, endpoint_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if endpoint_id:
+                rows = db.execute(
+                    """
+                    SELECT * FROM network_flows WHERE endpoint_id = ?
+                    ORDER BY flow_id DESC LIMIT ?
+                    """,
+                    (endpoint_id, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM network_flows ORDER BY flow_id DESC LIMIT ?",
+                    (limit,),
+                )
+            return [dict(row) for row in rows]
+
+    @staticmethod
+    def _decode_siem_alert(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["event_ids"] = Database._decode_json(data["event_ids"], [])
+        data["details"] = Database._decode_json(data["details"], {})
+        return data
+
+    @staticmethod
+    def _decode_timeline(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["payload"] = Database._decode_json(data["payload"], {})
+        return data
+
+    @staticmethod
+    def _decode_edr_detection(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["details"] = Database._decode_json(data["details"], {})
+        return data
 
     @staticmethod
     def _decode_json(value: str, fallback: Any) -> Any:

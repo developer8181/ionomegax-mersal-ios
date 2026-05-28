@@ -1,6 +1,7 @@
 # Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
 # Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
 # Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,6 +17,7 @@ from xig.storage import Database
 class FabricTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.TemporaryDirectory()
+        os.environ["MERSAL_KEV_FEED_URL"] = ""
         self.db = Database(Path(self.tmpdir.name) / "fabric.sqlite3")
         self.db.init_schema()
         self.db.seed_demo()

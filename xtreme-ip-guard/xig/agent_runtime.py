@@ -86,25 +86,28 @@ class MersalAgent:
                 )
 
     def send_heartbeat(self) -> dict[str, Any]:
+        sensors = self.profile.sensors
+        metadata = {
+            "endpoint_id": self.config.endpoint_id,
+            "owner": self.config.owner,
+            "site": self.config.site,
+            "brand": BRAND["full_name"],
+            "platform_id": self.profile.platform_id,
+            "capabilities": list(self.profile.capabilities),
+            "security_features": self.profile.security_features,
+            "sensors": sensors,
+            "vuln_probe": sensors.get("vuln_probe")
+            or collect_vuln_probe(self.profile.security_features),
+            "network_flows": sensors.get("network_flows") or [],
+            "enforcement": self.enforcer.load().to_dict(),
+        }
         payload = {
             "agent_id": self.config.agent_id,
             "agent_type": "endpoint",
             "hostname": self.profile.hostname,
             "os_name": self.profile.os_name,
             "version": __version__,
-            "metadata": {
-                "endpoint_id": self.config.endpoint_id,
-                "owner": self.config.owner,
-                "site": self.config.site,
-                "brand": BRAND["full_name"],
-                "platform_id": self.profile.platform_id,
-                "capabilities": list(self.profile.capabilities),
-                "security_features": self.profile.security_features,
-                "sensors": self.profile.sensors,
-                "vuln_probe": self.profile.sensors.get("vuln_probe")
-                or collect_vuln_probe(self.profile.security_features),
-                "enforcement": self.enforcer.load().to_dict(),
-            },
+            "metadata": metadata,
         }
         return self._post("/api/agents/heartbeat", payload)
 

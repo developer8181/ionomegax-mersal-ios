@@ -7,7 +7,16 @@ const I18N = {
     navAgents: "الوكلاء",
     navEvents: "الأحداث",
     navPolicies: "السياسات",
+    navEnterprise: "المنصة المؤسسية",
     navFabric: "المنصة العالمية",
+    enterpriseTitle: "Mersal Enterprise Security Suite",
+    enterpriseSub: "بديل EDR + SIEM + SOAR + VM + GRC في منصة واحدة",
+    enterpriseCycle: "دورة مؤسسية",
+    siemTitle: "SIEM — تنبيهات",
+    incidentsTitle: "إدارة الحوادث",
+    matrixTitle: "مقارنة القدرات",
+    complianceLabel: "امتثال NIST",
+    edrLabel: "كشوفات EDR",
     navAI: "الذكاء الاصطناعي",
     navAudit: "التدقيق",
     navAbout: "معلومات عن النظام",
@@ -82,7 +91,16 @@ const I18N = {
     navAgents: "Agents",
     navEvents: "Events",
     navPolicies: "Policies",
+    navEnterprise: "Enterprise Suite",
     navFabric: "Global Fabric",
+    enterpriseTitle: "Mersal Enterprise Security Suite",
+    enterpriseSub: "Unified EDR + SIEM + SOAR + VM + GRC alternative",
+    enterpriseCycle: "Enterprise cycle",
+    siemTitle: "SIEM alerts",
+    incidentsTitle: "Incident response",
+    matrixTitle: "Capability comparison",
+    complianceLabel: "NIST compliance",
+    edrLabel: "EDR detections",
     navAI: "AI Cortex",
     navAudit: "Audit",
     navAbout: "About the System",
@@ -310,6 +328,59 @@ function renderThreatIntel(summary) {
     <div class="ai-stat"><span>${t("indicatorsLabel")}</span><strong>${summary.total_indicators || 0}</strong></div>
     <div class="ai-stat"><span>${t("kevLabel")}</span><strong>${summary.cisa_kev_count || 0}</strong></div>
     <div class="threat-chips">${sources}</div>`;
+}
+
+function renderEnterprise(ent) {
+  const mods = ent?.modules || {};
+  const el = document.getElementById("enterpriseModules");
+  if (!el) return;
+  const siem = mods.siem?.summary || {};
+  const comp = mods.compliance?.latest || {};
+  const edr = mods.edr || {};
+  el.innerHTML = `
+    <div class="ai-stat"><span>SIEM</span><strong>${siem.open_alerts ?? 0} ${t("siemTitle")}</strong></div>
+    <div class="ai-stat"><span>${t("complianceLabel")}</span><strong>${comp.score ?? "—"}%</strong></div>
+    <div class="ai-stat"><span>${t("edrLabel")}</span><strong>${edr.open_detections ?? 0}</strong></div>
+    <div class="ai-stat"><span>IR</span><strong>${mods.incidents?.open_count ?? 0}</strong></div>`;
+
+  const alerts = mods.siem?.recent_alerts || [];
+  const siemEl = document.getElementById("siemTable");
+  if (siemEl) {
+    siemEl.innerHTML = alerts.length
+      ? `<table><thead><tr><th>Rule</th><th>Host</th><th>Sev</th><th>Title</th></tr></thead><tbody>${alerts
+          .map(
+            (a) => `<tr><td>${a.rule_id}</td><td>${a.endpoint_id}</td><td>${a.severity}</td><td>${a.title}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+
+  const incidents = mods.incidents?.incidents || [];
+  const incEl = document.getElementById("incidentsTable");
+  if (incEl) {
+    incEl.innerHTML = incidents.length
+      ? `<table><thead><tr><th>ID</th><th>Sev</th><th>Status</th><th>Title</th></tr></thead><tbody>${incidents
+          .map(
+            (i) =>
+              `<tr><td>${i.incident_id}</td><td>${i.severity}</td><td>${i.status}</td><td>${i.title}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+      : `<p>${t("empty")}</p>`;
+  }
+}
+
+function renderMatrix(rows) {
+  const el = document.getElementById("matrixTable");
+  if (!el) return;
+  if (!rows?.length) {
+    el.innerHTML = `<p>${t("empty")}</p>`;
+    return;
+  }
+  el.innerHTML = `<table><thead><tr><th>Capability</th><th>Mersal</th><th>Legacy stack</th></tr></thead><tbody>${rows
+    .map(
+      (r) => `<tr><td>${r.capability}</td><td>${r.mersal}</td><td>${r.legacy}</td></tr>`
+    )
+    .join("")}</tbody></table>`;
 }
 
 function renderFabric(fabric, vulns, soarRuns, posture) {
@@ -541,7 +612,7 @@ async function refresh() {
     return;
   }
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel] =
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture, threatIntel, enterprise, matrix] =
       await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
@@ -556,6 +627,8 @@ async function refresh() {
       api("/api/soar/runs"),
       api("/api/posture"),
       api("/api/threat/intel"),
+      api("/api/enterprise/dashboard"),
+      api("/api/enterprise/matrix"),
     ]);
     const [readiness, build] = await Promise.all([
       fetch("/api/system/readiness").then((r) => r.json()),
@@ -563,6 +636,8 @@ async function refresh() {
     ]);
     renderReadiness(readiness, build);
     renderCards(dashboard.totals);
+    renderEnterprise(enterprise);
+    renderMatrix(matrix);
     renderFabric(fabric, vulns, soarRuns, posture);
     renderThreatIntel(threatIntel);
     renderEndpoints(endpoints);
@@ -576,6 +651,12 @@ async function refresh() {
     console.error(error);
   }
 }
+
+document.getElementById("enterpriseCycleBtn").addEventListener("click", async () => {
+  await apiPost("/api/enterprise/cycle", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
 
 document.getElementById("dailyRunBtn").addEventListener("click", async () => {
   await apiPost("/api/fabric/daily", {});

@@ -54,7 +54,11 @@ def production_readiness(database: "Database") -> dict[str, Any]:
             "vulnerability_management",
             "threat_intelligence_cisa_kev",
             "soar",
-            "edr_lite",
+            "siem",
+            "edr",
+            "incident_response",
+            "compliance_nist_csf",
+            "network_security",
             "daily_scheduler",
         ],
     }

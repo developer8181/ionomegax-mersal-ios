@@ -105,6 +105,30 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_soar_runs())
         if path == "/api/posture":
             return self._send_json(self.database.latest_security_posture())
+        if path == "/api/enterprise/dashboard" and self.fabric:
+            return self._send_json(self.fabric.enterprise.dashboard())
+        if path == "/api/enterprise/matrix" and self.fabric:
+            return self._send_json(self.fabric.enterprise.comparison_matrix())
+        if path == "/api/siem/dashboard" and self.fabric:
+            return self._send_json(self.fabric.enterprise.siem.dashboard())
+        if path == "/api/siem/alerts":
+            return self._send_json(self.database.list_siem_alerts())
+        if path == "/api/incidents":
+            return self._send_json(self.database.list_incidents())
+        if path.startswith("/api/incidents/") and path.endswith("/timeline"):
+            incident_id = self._path_part(path, 2)
+            return self._send_json(self.database.get_incident_timeline(incident_id))
+        if path == "/api/compliance":
+            comp = self.database.latest_compliance_score()
+            if not comp and self.fabric:
+                comp = self.fabric.enterprise.compliance.assess()
+            return self._send_json(comp or {})
+        if path == "/api/edr/detections":
+            return self._send_json(self.database.list_edr_detections())
+        if path == "/api/network/flows":
+            return self._send_json(self.database.list_network_flows())
+        if path == "/api/network/policy" and self.fabric:
+            return self._send_json(self.fabric.enterprise.firewall.build_policy())
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -117,14 +141,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         try:
             if path == "/api/agents/heartbeat":
                 payload = self._read_json()
+                metadata = dict(payload.get("metadata", {}))
                 agent = self.database.record_agent_heartbeat(
                     agent_id=str(payload["agent_id"]),
                     agent_type=str(payload.get("agent_type", "endpoint")),
                     hostname=str(payload["hostname"]),
                     os_name=str(payload.get("os_name", "")),
                     version=str(payload.get("version", "")),
-                    metadata=dict(payload.get("metadata", {})),
+                    metadata=metadata,
                 )
+                self._ingest_agent_edr_telemetry(metadata)
                 return self._send_json(agent)
 
             if path == "/api/events":
@@ -209,6 +235,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.database.record_audit(actor, "threat.sync", details=result)
                 return self._send_json(result)
 
+            if path == "/api/enterprise/cycle":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.enterprise.run_enterprise_cycle()
+                self.database.record_audit(actor, "enterprise.cycle", details={"keys": list(result.keys())})
+                return self._send_json(result)
+
+            if path.startswith("/api/incidents/") and path.endswith("/close"):
+                incident_id = self._path_part(path, 2)
+                from .incidents import IncidentManager
+
+                result = IncidentManager(self.database).close_incident(incident_id, actor=actor)
+                self.database.record_audit(actor, "incident.close", target=incident_id)
+                return self._send_json(result)
+
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -275,6 +316,23 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _ingest_agent_edr_telemetry(self, metadata: dict) -> None:
+        endpoint_id = str(metadata.get("endpoint_id", ""))
+        if not endpoint_id:
+            return
+        flows = metadata.get("network_flows") or metadata.get("sensors", {}).get("network_flows")
+        if isinstance(flows, list) and flows:
+            self.database.record_network_flows(endpoint_id, flows)
+        for det in metadata.get("edr_detections") or []:
+            if isinstance(det, dict):
+                self.database.record_edr_detection(
+                    endpoint_id=endpoint_id,
+                    detection_type=str(det.get("type", "agent")),
+                    severity=int(det.get("severity", 50)),
+                    title=str(det.get("title", "Agent detection")),
+                    details=det,
+                )
+
     @staticmethod
     def _path_part(path: str, index: int) -> str:
         parts = [part for part in path.split("/") if part]
@@ -317,7 +375,8 @@ def run(host: str | None = None, port: int | None = None) -> None:
     database.init_schema()
     _initialize_database(database)
     fabric = MersalSecurityFabric(database)
-    fabric.scheduler.start()
+    if os.environ.get("MERSAL_NO_SCHEDULER", "").strip().lower() not in {"1", "true", "yes"}:
+        fabric.scheduler.start()
 
     def handler(*args, **kwargs):
         RequestHandler(*args, database=database, fabric=fabric, **kwargs)

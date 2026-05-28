@@ -15,14 +15,22 @@ from ..vuln import VulnerabilityScanner
 from .posture import compute_posture
 
 if TYPE_CHECKING:
+    from ..fabric import MersalSecurityFabric
     from ..soar import SoarEngine
     from ..storage import Database
 
 
 class SecurityScheduler:
-    def __init__(self, database: "Database", *, soar: "SoarEngine | None" = None) -> None:
+    def __init__(
+        self,
+        database: "Database",
+        *,
+        soar: "SoarEngine | None" = None,
+        fabric: "MersalSecurityFabric | None" = None,
+    ) -> None:
         self.db = database
         self.soar = soar
+        self.fabric = fabric
         self.interval = int(os.environ.get("MERSAL_DAILY_INTERVAL_SECONDS", "86400"))
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -49,6 +57,10 @@ class SecurityScheduler:
             return compute_posture(self.db)
         if job_name == "daily_all":
             return self.run_daily_cycle()
+        if job_name == "enterprise_cycle":
+            from ..enterprise import MersalEnterpriseSuite
+
+            return MersalEnterpriseSuite(self.db, fabric=self.fabric).run_enterprise_cycle()
         raise ValueError(f"unknown job: {job_name}")
 
     def run_daily_cycle(self) -> dict[str, Any]:

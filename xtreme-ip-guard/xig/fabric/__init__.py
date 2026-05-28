@@ -15,6 +15,7 @@ from .posture import compute_posture
 from .scheduler import SecurityScheduler
 
 if TYPE_CHECKING:
+    from ..enterprise import MersalEnterpriseSuite
     from ..storage import Database
 
 
@@ -27,18 +28,26 @@ class MersalSecurityFabric:
         self.scanner = VulnerabilityScanner(database)
         self.feeds = ThreatFeedSync(database)
         self.soar = SoarEngine(database)
-        self.scheduler = SecurityScheduler(database, soar=self.soar)
+        self.scheduler = SecurityScheduler(database, soar=self.soar, fabric=self)
+        from ..enterprise import MersalEnterpriseSuite
+
+        self.enterprise = MersalEnterpriseSuite(database, fabric=self)
 
     def dashboard(self) -> dict[str, Any]:
         posture = self.db.latest_security_posture()
         return {
             "fabric": "Mersal Global Security Fabric",
-            "version": "3.1",
+            "version": "4.0",
             "modules": [
                 "neural_cortex",
                 "vulnerability_management",
                 "threat_intelligence",
                 "soar",
+                "siem",
+                "edr",
+                "incident_response",
+                "compliance",
+                "network_security",
                 "daily_scheduler",
             ],
             "posture": posture,

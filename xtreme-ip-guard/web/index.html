@@ -27,7 +27,7 @@
           </div>
         </div>
 
-        <div class="version-pill">v3.1 · 2026</div>
+        <div class="version-pill">v4.0 Enterprise · 2026</div>
 
         <div class="lang-toggle">
           <button type="button" data-lang="ar" class="active">العربية</button>
@@ -45,6 +45,7 @@
 
         <nav id="mainNav">
           <a href="#overview" class="active" data-nav="overview"><span class="nav-icon">◈</span><span data-i18n="navOverview">نظرة عامة</span></a>
+          <a href="#enterprise" data-nav="enterprise"><span class="nav-icon">◆</span><span data-i18n="navEnterprise">المنصة المؤسسية</span></a>
           <a href="#fabric" data-nav="fabric"><span class="nav-icon">⬡</span><span data-i18n="navFabric">المنصة العالمية</span></a>
           <a href="#ai" data-nav="ai"><span class="nav-icon">◎</span><span data-i18n="navAI">الذكاء الاصطناعي</span></a>
           <a href="#endpoints" data-nav="endpoints"><span class="nav-icon">▣</span><span data-i18n="navEndpoints">نقاط النهاية</span></a>
@@ -118,6 +119,31 @@
           </div>
           <div class="readiness-grid" id="readinessGrid"></div>
           <p class="build-line" id="buildLine"></p>
+        </section>
+
+        <section id="enterprise" class="panel-section glass">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="enterpriseTitle">Mersal Enterprise Security Suite</h2>
+              <p class="section-sub" data-i18n="enterpriseSub">بديل متكامل — EDR · SIEM · IR · امتثال · شبكة</p>
+            </div>
+            <button type="button" id="enterpriseCycleBtn" class="btn-primary sm" data-i18n="enterpriseCycle">دورة مؤسسية</button>
+          </div>
+          <div class="enterprise-grid" id="enterpriseModules"></div>
+          <div class="grid-two">
+            <article class="glass-inner">
+              <h3 data-i18n="siemTitle">SIEM — تنبيهات</h3>
+              <div class="table-wrap" id="siemTable"></div>
+            </article>
+            <article class="glass-inner">
+              <h3 data-i18n="incidentsTitle">إدارة الحوادث</h3>
+              <div class="table-wrap" id="incidentsTable"></div>
+            </article>
+          </div>
+          <article class="glass-inner">
+            <h3 data-i18n="matrixTitle">مقارنة مع الأنظمة التقليدية</h3>
+            <div class="table-wrap" id="matrixTable"></div>
+          </article>
         </section>
 
         <section id="fabric" class="panel-section glass">
