@@ -171,6 +171,9 @@ _ROUTE_RULES: list[tuple[str, str, str]] = [
     ("GET", "/api/platform/unified", "platform.read"),
     ("POST", "/api/platform/complete-cycle", "platform.write"),
     ("POST", "/api/platform/bootstrap-enterprise", "platform.write"),
+    ("GET", "/api/platform/reliability", "platform.read"),
+    ("POST", "/api/platform/reliability/scan", "platform.write"),
+    ("GET", "/api/compliance/evidence-pack", "compliance.read"),
 ]
 
 

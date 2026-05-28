@@ -30,6 +30,9 @@ class UnifiedPlatformController:
         health = PlatformHealth(self.db).full_status()
         hub = IntegrationHub(self.db).full_matrix()
         adoption = enterprise_adoption_report(self.db)
+        from .reliability_engine import ReliabilityEngine
+
+        reliability = ReliabilityEngine(self.db).full_report()
         modules = {
             "siem": {
                 "alerts_open": len(self.db.list_siem_alerts(limit=500, status="open")),
@@ -48,8 +51,12 @@ class UnifiedPlatformController:
             "platform": "Mersal Complete Unified Security Platform",
             "version": __version__,
             "integration_complete": adoption.get("ready_for_large_institution", False),
+            "dependable_operations": reliability.get("dependable_for_operations", False),
+            "trust_score": reliability.get("trust_score"),
+            "sla_tier": reliability.get("sla_tier"),
             "tier": adoption.get("tier"),
             "adoption_percent": adoption.get("percent"),
+            "reliability": reliability,
             "health": health,
             "integration_hub": hub,
             "enterprise_adoption": adoption,
@@ -85,6 +92,11 @@ class UnifiedPlatformController:
             sched = SecurityScheduler(self.db, fabric=None)
             results["fabric_daily"] = sched.run_daily_cycle()
         results["backup"] = BackupManager(self.db).create_backup()
+        from .reliability_engine import ReliabilityEngine
+
+        rel = ReliabilityEngine(self.db)
+        results["reliability"] = rel.full_report()
+        results["stale_agent_alerts"] = rel.raise_stale_agent_alerts()
         results["posture"] = self.db.latest_security_posture()
         self.db.touch_platform_heartbeat(
             "unified_platform",

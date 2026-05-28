@@ -72,8 +72,12 @@ def create_session_token(
     *,
     role: str = "analyst",
     tenant_id: str = "default",
-    ttl_seconds: int = 86_400,
+    ttl_seconds: int | None = None,
 ) -> str:
+    if ttl_seconds is None:
+        from .security.session_policy import session_ttl_seconds
+
+        ttl_seconds = session_ttl_seconds()
     issued_at = int(time.time())
     payload = f"{username}|{role}|{tenant_id}|{issued_at}|{ttl_seconds}"
     signature = hmac.new(_signing_secret().encode(), payload.encode(), hashlib.sha256).hexdigest()

@@ -113,7 +113,7 @@ def _oidc_strict() -> bool:
 
 
 def _scheduler_jobs(autonomous: bool) -> list[str]:
-    jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture", "backup"]
+    jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture", "backup", "reliability"]
     if autonomous:
         jobs.extend(["siem_forward", "autonomous_cycle"])
     return jobs

@@ -513,6 +513,25 @@ class Database:
                 rows = db.execute("SELECT * FROM agents ORDER BY hostname")
             return [self._decode_agent(row) for row in rows]
 
+    def list_stale_agents(self, *, threshold_seconds: int = 300, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        from .db.adapter import uses_postgres
+
+        with self.connect() as db:
+            if uses_postgres():
+                query = """
+                    SELECT * FROM agents
+                    WHERE last_seen::timestamptz < NOW() - make_interval(secs => %s)
+                """
+                params: list[Any] = [int(threshold_seconds)]
+            else:
+                query = """
+                    SELECT * FROM agents
+                    WHERE datetime(last_seen) < datetime('now', ?)
+                """
+                params = [f"-{int(threshold_seconds)} seconds"]
+            rows = db.execute(query, params).fetchall()
+            return [self._decode_agent(row) for row in rows]
+
     def record_agent_heartbeat(
         self,
         *,

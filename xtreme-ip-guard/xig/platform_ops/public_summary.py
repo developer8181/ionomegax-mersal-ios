@@ -16,7 +16,9 @@ def public_platform_summary() -> dict[str, object]:
         "production_mode": is_production(),
         "enterprise_mode": is_enterprise(),
         "postgres_backend": uses_postgres(),
-        "integration_tier": "complete-unified",
+        "integration_tier": "complete-unified-advanced",
+        "reliability_api": "/api/platform/reliability",
+        "evidence_pack_api": "/api/compliance/evidence-pack",
         "capabilities_count": 16,
         "console": "/console/",
         "docs": {

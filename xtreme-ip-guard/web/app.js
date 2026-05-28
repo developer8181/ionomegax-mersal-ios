@@ -101,6 +101,8 @@ const I18N = {
     capabilitiesTitle: "القدرات",
     tierLabel: "التصنيف",
     scoreLabel: "الدرجة",
+    trustLabel: "ثقة تشغيلية",
+    slaLabel: "SLA",
     readinessTitle: "جاهزية الإنتاج",
     readinessSub: "فحوصات حقيقية للمنصة المتكاملة",
     readinessReady: "جاهز للتجربة",
@@ -212,6 +214,8 @@ const I18N = {
     capabilitiesTitle: "Capabilities",
     tierLabel: "Tier",
     scoreLabel: "Score",
+    trustLabel: "Ops trust",
+    slaLabel: "SLA",
     readinessTitle: "Production readiness",
     readinessSub: "Real platform checks — not cosmetic UI",
     readinessReady: "Trial ready",
@@ -744,6 +748,8 @@ function renderUnified(unified, enterprise) {
     <div class="stat-card"><span>${t("scoreLabel")}</span><strong>${ent.percent ?? unified.adoption_percent ?? 0}%</strong></div>
     <div class="stat-card"><span>SIEM</span><strong>${unified.modules?.siem?.alerts_open ?? 0}</strong></div>
     <div class="stat-card"><span>XDR</span><strong>${unified.modules?.xdr?.open_findings ?? 0}</strong></div>
+    <div class="stat-card"><span>${t("trustLabel")}</span><strong>${unified.trust_score ?? unified.reliability?.trust_score ?? "—"}</strong></div>
+    <div class="stat-card"><span>${t("slaLabel")}</span><strong>${unified.sla_tier ?? unified.reliability?.sla_tier ?? "—"}</strong></div>
   `;
   if (adoption && ent.criteria) {
     adoption.innerHTML = ent.criteria

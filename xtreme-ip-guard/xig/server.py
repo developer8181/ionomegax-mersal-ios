@@ -103,6 +103,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             from .platform_ops.unified_platform import UnifiedPlatformController
 
             return self._send_json(UnifiedPlatformController(self.database, self.fabric).full_dashboard())
+        if path == "/api/platform/reliability" and self._authorized():
+            from .platform_ops.reliability_engine import ReliabilityEngine
+
+            return self._send_json(ReliabilityEngine(self.database).full_report())
+        if path == "/api/compliance/evidence-pack" and self._authorized():
+            from .compliance.evidence_pack import ComplianceEvidencePack
+
+            tenant = self.headers.get("X-Mersal-Tenant", "default")
+            return self._send_json(
+                ComplianceEvidencePack(self.database).build(tenant_id=tenant.strip() or "default")
+            )
         if path == "/api/platform/backups" and self._authorized():
             from .platform_ops.backup import BackupManager
 
@@ -315,6 +326,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.database.record_audit(
                 self._actor(), "platform.complete_cycle", details={"keys": list(result.keys())}
             )
+            return self._send_json(result)
+        if path == "/api/platform/reliability/scan":
+            if not self._authorized():
+                return
+            from .platform_ops.reliability_engine import ReliabilityEngine
+
+            result = ReliabilityEngine(self.database).raise_stale_agent_alerts()
+            self.database.record_audit(self._actor(), "platform.reliability_scan")
             return self._send_json(result)
         if path == "/api/platform/bootstrap-enterprise":
             if not self._authorized():

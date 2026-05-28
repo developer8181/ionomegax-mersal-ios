@@ -6,7 +6,7 @@
   <strong>Powered by Extreme Technology Company</strong>
 </p>
 
-**Mersal v8.8** is a **complete unified cybersecurity platform** for banks, government, and large enterprises — **unified control plane**, PostgreSQL HA (PgBouncer), SAML/OIDC/SCIM, signed agent updates, eBPF EDR, autonomous SOC cycle, DR backup/restore, enterprise adoption scorecard — plus **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC**, **multi-tenant RBAC**, and **Neural Cortex AI**, with an Arabic/English **Command Center** and agents for Linux, Windows, macOS, and **Mersal OS 8.7**.
+**Mersal v8.9** is a **complete unified cybersecurity platform** with **advanced operational reliability** (trust score, SLA tier, stale-agent detection, compliance evidence packs) for banks, government, and large enterprises — **unified control plane**, PostgreSQL HA (PgBouncer), SAML/OIDC/SCIM, signed agent updates, eBPF EDR, autonomous SOC cycle, DR backup/restore, enterprise adoption scorecard — plus **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC**, **multi-tenant RBAC**, and **Neural Cortex AI**, with an Arabic/English **Command Center** and agents for Linux, Windows, macOS, and **Mersal OS 8.7**.
 
 Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
 
