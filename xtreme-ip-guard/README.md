@@ -4,6 +4,10 @@
 
 The product brand is **Ionomegax** · **Mersal Guard** (مرسال — حماية نقاط النهاية).
 
+## Copyright
+
+Designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems Engineer — Ramallah, Palestine. Founder of **Extreme Technology Company**. **All rights reserved © 2009–2026**. See [COPYRIGHT.md](COPYRIGHT.md) and Command Center → **About the System** / **معلومات عن النظام**.
+
 ## Platform stack
 
 | Layer | Role |

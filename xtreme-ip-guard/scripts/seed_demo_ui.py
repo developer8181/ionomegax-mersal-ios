@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
+# Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
+# Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
 """Populate demo database with rich data for screenshots and demos."""
 
 from __future__ import annotations

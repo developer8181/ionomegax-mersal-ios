@@ -10,6 +10,7 @@ const I18N = {
     navFabric: "المنصة العالمية",
     navAI: "الذكاء الاصطناعي",
     navAudit: "التدقيق",
+    navAbout: "معلومات عن النظام",
     liveLabel: "منصة حية",
     liveHint: "Linux · Windows · macOS",
     heroEyebrow: "Ionomegax · Extreme Technology",
@@ -64,6 +65,7 @@ const I18N = {
     cardVulns: "ثغرات مفتوحة",
     cardCritical: "حرجة",
     fabricDone: "اكتملت الدورة",
+    copyrightShort: "© 2009–2026 إكستريم تكنولوجي · المهندس محمود راسم بياري · رام الله، فلسطين",
   },
   en: {
     brandName: "Mersal Global Fabric",
@@ -76,6 +78,7 @@ const I18N = {
     navFabric: "Global Fabric",
     navAI: "AI Cortex",
     navAudit: "Audit",
+    navAbout: "About the System",
     liveLabel: "Live platform",
     liveHint: "Linux · Windows · macOS",
     heroEyebrow: "Ionomegax · Extreme Technology",
@@ -130,8 +133,11 @@ const I18N = {
     cardVulns: "Open vulns",
     cardCritical: "Critical",
     fabricDone: "Cycle completed",
+    copyrightShort: "© 2009–2026 Extreme Technology · Eng. Mahmoud Rasem Bayari · Ramallah, Palestine",
   },
 };
+
+let aboutPayload = null;
 
 let lang = "ar";
 let authState = { auth_required: false, admin_configured: false };
@@ -187,6 +193,7 @@ function applyLanguage(next) {
   document.querySelectorAll(".lang-toggle button").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.lang === next);
   });
+  renderAboutModal();
   refresh();
 }
 
@@ -533,6 +540,11 @@ document.getElementById("policyForm").addEventListener("submit", async (event) =
   refresh();
 });
 
+document.getElementById("aboutSystemBtn").addEventListener("click", openAboutDialog);
+document.getElementById("aboutCloseBtn").addEventListener("click", () => {
+  document.getElementById("aboutDialog").close();
+});
+
 document.querySelectorAll(".lang-toggle button").forEach((btn) => {
   btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
 });
@@ -555,12 +567,43 @@ function scrollToView(name) {
   });
 }
 
+function renderAboutModal() {
+  if (!aboutPayload) return;
+  const block = lang === "ar" ? aboutPayload.ar : aboutPayload.en;
+  document.getElementById("aboutTitle").textContent = block.title;
+  document.getElementById("aboutProduct").textContent = `${aboutPayload.product} v${aboutPayload.version} · ${aboutPayload.operating_system}`;
+  document.getElementById("aboutBodyAr").innerHTML = lang === "ar"
+    ? `<p>${aboutPayload.ar.authorship}</p><p>${aboutPayload.ar.company}</p><p class="about-muted">${aboutPayload.ar.notice}</p>`
+    : `<p>${aboutPayload.ar.authorship}</p><p>${aboutPayload.ar.company}</p>`;
+  document.getElementById("aboutBodyEn").innerHTML = lang === "en"
+    ? `<p>${aboutPayload.en.authorship}</p><p>${aboutPayload.en.company}</p><p class="about-muted">${aboutPayload.en.notice}</p>`
+    : `<p>${aboutPayload.en.authorship}</p><p>${aboutPayload.en.company}</p>`;
+  document.getElementById("aboutRights").textContent = block.rights;
+  document.getElementById("copyrightFooter").textContent = lang === "ar" ? aboutPayload.footer_ar : aboutPayload.footer_en;
+}
+
+async function loadAbout() {
+  try {
+    aboutPayload = await api("/api/system/about");
+    renderAboutModal();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function openAboutDialog() {
+  const dialog = document.getElementById("aboutDialog");
+  renderAboutModal();
+  if (typeof dialog.showModal === "function") dialog.showModal();
+}
+
 function initFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const view = params.get("view");
   const urlLang = params.get("lang");
   if (urlLang === "en" || urlLang === "ar") lang = urlLang;
   loadAuthStatus().then(() => {
+    loadAbout();
     applyLanguage(lang);
     startClock();
     if (view) setTimeout(() => scrollToView(view), 600);

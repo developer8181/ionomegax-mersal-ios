@@ -9,3 +9,5 @@ systemctl is-active mersal-gateway.service 2>/dev/null && echo "Gateway (nftable
 command -v nft >/dev/null && nft list ruleset 2>/dev/null | head -20 || true
 echo ""
 echo "Open: http://127.0.0.1:8090/console/"
+echo ""
+echo "Copyright (c) 2009-2026 Extreme Technology · Eng. Mahmoud Rasem Bayari · Ramallah"

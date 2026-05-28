@@ -1,3 +1,6 @@
+# Copyright (c) 2009–2026 Extreme Technology Company, Ramallah, Palestine.
+# Designed and developed by Eng. Mahmoud Rasem Bayari. All rights reserved.
+# Arabic: تم التصميم والبرمجة بواسطة المهندس محمود راسم بياري — رام الله، فلسطين.
 """Ionomegax Mersal Guard — HTTP API and Command Center."""
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from .auth import (
     verify_admin,
 )
 from .brand import BRAND
+from .credits import system_about
 from .core import EndpointEvent, PolicyRule
 from .ai import MersalAICortex
 from .fabric import MersalSecurityFabric
@@ -50,6 +54,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "admin_username": admin_username(),
                 }
             )
+        if path == "/api/system/about":
+            return self._send_json(system_about(version=self._version()))
         if not self._authorized():
             return
         if path == "/api/health":

@@ -642,7 +642,108 @@ footer {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.nav-about {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: rgba(59, 130, 246, 0.06);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: start;
+  transition: all 0.2s;
+}
+
+.nav-about:hover {
+  color: var(--primary-bright);
+  border-color: var(--primary-bright);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.about-dialog {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 520px;
+  width: calc(100% - 2rem);
+  color: var(--text);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.55), var(--glow);
+}
+
+.about-dialog::backdrop {
+  background: rgba(3, 7, 18, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.about-inner { padding: 1.5rem 1.75rem; position: relative; }
+
+.about-close {
+  position: absolute;
+  top: 0.75rem;
+  inset-inline-end: 0.75rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.about-dialog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  color: var(--primary-bright);
+}
+
+.about-product {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.about-block {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  margin-bottom: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(8, 15, 28, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.1);
+}
+
+.about-block-en {
+  border-color: rgba(139, 92, 246, 0.15);
+  direction: ltr;
+  text-align: left;
+}
+
+.about-rights {
+  margin: 0.5rem 0 0;
+  font-weight: 700;
+  color: var(--primary-bright);
   font-size: 0.85rem;
+  text-align: center;
+}
+
+.about-muted {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
 }
 
 html[dir="ltr"] .shell { direction: ltr; }

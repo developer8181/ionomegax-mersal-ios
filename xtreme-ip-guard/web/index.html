@@ -52,6 +52,9 @@
           <a href="#events" data-nav="events"><span class="nav-icon">⚡</span><span data-i18n="navEvents">الأحداث</span></a>
           <a href="#policies" data-nav="policies"><span class="nav-icon">🛡</span><span data-i18n="navPolicies">السياسات</span></a>
           <a href="#audit" data-nav="audit"><span class="nav-icon">📜</span><span data-i18n="navAudit">التدقيق</span></a>
+          <button type="button" id="aboutSystemBtn" class="nav-about">
+            <span class="nav-icon">ℹ</span><span data-i18n="navAbout">معلومات عن النظام</span>
+          </button>
         </nav>
 
         <div class="sidebar-card glass-inner">
@@ -192,11 +195,23 @@
         </section>
 
         <footer class="glass">
-          <span>Ionomegax · Mersal Global Security Fabric · <span data-i18n="poweredBy">Extreme Technology</span></span>
+          <span id="copyrightFooter" data-i18n="copyrightShort">© 2009–2026 Extreme Technology · المهندس محمود راسم بياري · رام الله</span>
           <span id="platforms"></span>
         </footer>
       </main>
     </div>
+
+    <dialog id="aboutDialog" class="about-dialog glass">
+      <div class="about-inner">
+        <button type="button" class="about-close" id="aboutCloseBtn" aria-label="Close">×</button>
+        <h2 id="aboutTitle">معلومات عن النظام</h2>
+        <p class="about-product" id="aboutProduct"></p>
+        <div class="about-block" id="aboutBodyAr"></div>
+        <div class="about-block about-block-en" id="aboutBodyEn"></div>
+        <p class="about-rights" id="aboutRights"></p>
+      </div>
+    </dialog>
+
     <script src="/console/app.js"></script>
   </body>
 </html>
