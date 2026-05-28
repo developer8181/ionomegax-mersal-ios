@@ -601,12 +601,14 @@ function initFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const view = params.get("view");
   const urlLang = params.get("lang");
+  const openAbout = params.get("openAbout");
   if (urlLang === "en" || urlLang === "ar") lang = urlLang;
   loadAuthStatus().then(() => {
     loadAbout();
     applyLanguage(lang);
     startClock();
     if (view) setTimeout(() => scrollToView(view), 600);
+    if (openAbout === "1") setTimeout(() => openAboutDialog(), 900);
   });
 }
 

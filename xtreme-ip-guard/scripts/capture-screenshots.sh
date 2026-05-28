@@ -45,5 +45,6 @@ shot "02-global-fabric-ar.png" "${URL}?lang=ar&view=fabric"
 shot "03-neural-cortex-ar.png" "${URL}?lang=ar&view=ai"
 shot "04-command-center-en.png" "${URL}?lang=en&view=overview"
 shot "05-endpoints-threats-ar.png" "${URL}?lang=ar&view=events"
+shot "06-about-system-ar.png" "${URL}?lang=ar&openAbout=1"
 
 echo "Screenshots saved to $OUT"

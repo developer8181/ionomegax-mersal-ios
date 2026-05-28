@@ -9,6 +9,7 @@
 | `03-neural-cortex-ar.png` | الذكاء الاصطناعي |
 | `04-command-center-en.png` | English UI |
 | `05-endpoints-threats-ar.png` | الأحداث والتهديدات |
+| `06-about-system-ar.png` | معلومات عن النظام — حقوق النشر |
 
 ```bash
 ./scripts/capture-screenshots.sh
