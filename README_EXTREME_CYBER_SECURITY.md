@@ -18,6 +18,7 @@ Designed and developed by **Eng. Mahmoud Rasem Bayari**. **All rights reserved Â
 | Command Center | http://127.0.0.1:8090/console/ |
 | Install | `cd xtreme-ip-guard && make enterprise-install` |
 | Docs | `xtreme-ip-guard/docs/PLATFORM_MASTER_AR.md` |
+| Professional profile (AR / EN + screenshots) | `xtreme-ip-guard/docs/PROFESSIONAL_PROFILE_AR.md` Â· `PROFESSIONAL_PROFILE_EN.md` |
 
 ## Quick start
 
