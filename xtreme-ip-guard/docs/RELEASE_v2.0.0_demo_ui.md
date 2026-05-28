@@ -1,6 +1,6 @@
 # Mersal Global Security Fabric v2.0 — إصدار تجريبي UI
 
-**Ionomegax** · **Extreme Technology** · أول منصة أمن سيبراني بواجهة مصرية مستقبلية
+**Ionomegax** · **Extreme Technology** · واجهة عصرية عالمية
 
 ## لقطات الواجهة
 
@@ -16,19 +16,16 @@
 
 ## الميزات
 
-- Mersal Neural Cortex — AI تعلم وقرار
-- فحص ثغرات يومي + CVE
-- تهديدات STIX + SOAR
-- واجهة Command Center عربية/إنجليزية بتصميم فرعوني رقمي
+- Mersal Neural Cortex · فحص ثغرات · STIX · SOAR
+- واجهة Command Center عربية/إنجليزية — **تصميم عالمي عصري**
 
-## تشغيل سريع
+## تشغيل
 
 ```bash
-git checkout cursor/mersal-ai-security-brain-eef7
 cd xtreme-ip-guard
 python3 scripts/seed_demo_ui.py
 export MERSAL_DB=data/demo-ui.sqlite3
 python3 -m xig.server
 ```
 
-افتح: http://127.0.0.1:8090/console/
+http://127.0.0.1:8090/console/

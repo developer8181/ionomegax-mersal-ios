@@ -3,19 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mersal · منصة الأمن المصرية العالمية</title>
+    <title>Mersal · Global Security Command</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/console/style.css" />
     <link rel="icon" href="/console/logo.svg" type="image/svg+xml" />
   </head>
   <body>
-    <div class="egypt-bg" aria-hidden="true"></div>
-    <div class="hieroglyph-strip" aria-hidden="true">𓁹 𓂀 𓆣 𓇳 𓊝 𓋹 𓂧 𓆙 𓃀 𓁹 𓂀 𓆣 𓇳 𓊝 𓋹</div>
+    <div class="global-bg" aria-hidden="true"></div>
+    <div class="grid-overlay" aria-hidden="true"></div>
 
     <div class="shell">
       <aside class="sidebar glass">
@@ -23,7 +23,7 @@
           <img class="brand-logo" src="/console/logo.svg" width="52" height="52" alt="Mersal" />
           <div>
             <strong data-i18n="brandName">Mersal Global Fabric</strong>
-            <small data-i18n="brandSubtitle">مركز قيادة الفرعون الرقمي</small>
+            <small data-i18n="brandSubtitle">مركز القيادة العالمي</small>
           </div>
         </div>
 
@@ -35,10 +35,10 @@
         </div>
 
         <div class="auth-card glass-inner" id="authCard">
-          <span class="label-gold" data-i18n="adminLogin">تسجيل المسؤول</span>
+          <span class="label-accent" data-i18n="adminLogin">تسجيل المسؤول</span>
           <input id="adminUser" type="text" autocomplete="username" />
           <input id="adminPass" type="password" autocomplete="current-password" />
-          <button type="button" id="loginBtn" class="btn-gold" data-i18n="signIn">دخول</button>
+          <button type="button" id="loginBtn" class="btn-primary" data-i18n="signIn">دخول</button>
           <button type="button" id="logoutBtn" class="secondary hidden" data-i18n="signOut">خروج</button>
           <small id="authStatus"></small>
         </div>
@@ -67,9 +67,9 @@
             <span class="threat-badge" id="threatBadge">DEFCON 2</span>
             <span id="liveClock">--:--:--</span>
           </div>
-          <div class="topbar-title" data-i18n="topbarTitle">غرفة العمليات — القاهرة</div>
+          <div class="topbar-title" data-i18n="topbarTitle">غرفة العمليات العالمية</div>
           <div class="topbar-actions">
-            <button type="button" id="dailyRunBtn" class="btn-gold sm" data-i18n="fabricDaily">دورة يومية</button>
+            <button type="button" id="dailyRunBtn" class="btn-primary sm" data-i18n="fabricDaily">دورة يومية</button>
             <button type="button" id="vulnScanBtn" class="secondary sm" data-i18n="fabricVuln">فحص ثغرات</button>
           </div>
         </header>
@@ -78,7 +78,7 @@
           <div class="hero-copy">
             <p class="eyebrow" data-i18n="heroEyebrow">Ionomegax · Extreme Technology</p>
             <h1><span data-i18n="heroTitle">Mersal</span> <span class="hero-glow" data-i18n="heroSuffix">العالمية</span></h1>
-            <p class="hero-lead" data-i18n="heroBody">أول منصة أمن سيبراني موحّدة بعقل مصري مستقبلي — AI · ثغرات · تهديدات · SOAR.</p>
+            <p class="hero-lead" data-i18n="heroBody">منصة أمن سيبراني عالمية موحّدة — ذكاء اصطناعي · فحص ثغرات · تهديدات · SOAR.</p>
             <div class="hero-badges">
               <span class="badge" data-i18n="badgeAI">Neural Cortex</span>
               <span class="badge" data-i18n="badgeVuln">فحص يومي</span>
@@ -86,11 +86,13 @@
             </div>
           </div>
           <div class="hero-visual">
-            <div class="pyramid-stack" aria-hidden="true">
-              <div class="pyramid p3"></div>
-              <div class="pyramid p2"></div>
-              <div class="pyramid p1"></div>
-              <div class="sun-disc"></div>
+            <div class="globe-visual" aria-hidden="true">
+              <div class="orbit-ring ring-1"></div>
+              <div class="orbit-ring ring-2"></div>
+              <div class="globe-core"></div>
+              <div class="node n1"></div>
+              <div class="node n2"></div>
+              <div class="node n3"></div>
             </div>
             <div class="hero-panel glass-inner">
               <span class="chip" data-i18n="chip">مباشر</span>
@@ -184,7 +186,7 @@
             </select>
             <input id="ruleClass" placeholder="secret" />
             <input id="ruleChannel" placeholder="removable_media" />
-            <button type="submit" class="btn-gold" data-i18n="addPolicy">إضافة سياسة</button>
+            <button type="submit" class="btn-primary" data-i18n="addPolicy">إضافة سياسة</button>
           </form>
           <div class="table-wrap" id="policiesTable"></div>
         </section>

@@ -23,9 +23,9 @@ def main() -> None:
 
     endpoints = [
         ("endpoint-demo-001", "FUTURE-LAPTOP-001", "Windows 11 Enterprise", "sara", 76),
-        ("egypt-hq-gw-01", "MERSAL-GATEWAY-CAIRO", "Mersal OS 2.0", "noc", 82),
-        ("egypt-fin-042", "FIN-SERVER-ALEX", "Linux RHEL 9", "finance", 71),
-        ("egypt-dev-118", "DEV-WKS-GIZA", "macOS 15", "devops", 68),
+        ("global-hq-gw-01", "MERSAL-GATEWAY-HQ", "Mersal OS 2.0", "noc", 82),
+        ("global-fin-042", "FIN-SERVER-EU", "Linux RHEL 9", "finance", 71),
+        ("global-dev-118", "DEV-WKS-APAC", "macOS 15", "devops", 68),
     ]
     for eid, host, os_name, owner, trust in endpoints:
         db.record_agent_heartbeat(
@@ -37,10 +37,10 @@ def main() -> None:
             metadata={
                 "endpoint_id": eid,
                 "owner": owner,
-                "site": "Cairo HQ",
+                "site": "Global HQ",
                 "vuln_probe": {
                     "open_ports": [22, 443, 445] if "gw" in eid else [22, 8080],
-                    "security_features": {"disk_encryption": eid == "egypt-hq-gw-01"},
+                    "security_features": {"disk_encryption": eid == "global-hq-gw-01"},
                 },
             },
         )
@@ -49,7 +49,7 @@ def main() -> None:
 
     samples = [
         EndpointEvent(
-            endpoint_id="egypt-fin-042",
+            endpoint_id="global-fin-042",
             actor="sara",
             event_type="file_copy",
             channel="removable_media",
@@ -59,7 +59,7 @@ def main() -> None:
             severity=30,
         ),
         EndpointEvent(
-            endpoint_id="egypt-dev-118",
+            endpoint_id="global-dev-118",
             actor="omar",
             event_type="network_upload",
             channel="unsanctioned_cloud",

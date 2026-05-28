@@ -10,7 +10,7 @@ BRAND = {
     "ai_engine": "Mersal Neural Cortex",
     "powered_by": "Extreme Technology Company",
     "tagline_en": "AI defense, vulnerability management, threat intel, and SOAR — unified",
-    "tagline_ar": "ذكاء اصطناعي، فحص ثغرات، تهديدات حية، وأتمتة SOAR — منصة موحدة",
+    "tagline_ar": "منصة أمن سيبراني عالمية عصرية — ذكاء اصطناعي · ثغرات · تهديدات · SOAR",
     "console_title": "Mersal Command Center",
     "agent_name": "Mersal Endpoint Agent",
     "site": "https://github.com/developer8181/ionomegax-mersal-ios",
