@@ -125,6 +125,25 @@ button.hidden { display: none; }
   gap: 0.5rem; margin-bottom: 1rem;
 }
 .actions button { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+.fabric-section { margin-bottom: 1.5rem; }
+.fabric-section .section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.fabric-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.fabric-posture {
+  display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1rem;
+  padding: 1rem; border-radius: 12px; background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border);
+}
+.posture-grade {
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 1.8rem; font-weight: 800;
+}
+.grade-a { background: rgba(5, 150, 105, 0.3); color: #6ee7b7; }
+.grade-b { background: rgba(6, 182, 212, 0.25); color: #67e8f9; }
+.grade-c { background: rgba(234, 179, 8, 0.25); color: #fde047; }
+.grade-d, .grade-f { background: rgba(220, 38, 38, 0.25); color: #fecaca; }
 .ai-section { margin-bottom: 1.5rem; }
 .ai-section .section-head {
   display: flex; align-items: center; justify-content: space-between;

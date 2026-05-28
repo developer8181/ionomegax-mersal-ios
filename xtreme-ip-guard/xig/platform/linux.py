@@ -10,18 +10,20 @@ from pathlib import Path
 from typing import Any
 
 from .base import PlatformProfile, SensorEvent, _safe_username, register_platform
+from .vuln_probe import collect_vuln_probe
 
 
 def build_linux_profile() -> PlatformProfile:
-    sensors = {
-        "mounts": _read_mounts(),
-        "removable": _removable_devices(),
-        "listening_ports": _listening_ports_sample(),
-    }
     security = {
         "selinux": _file_exists("/sys/fs/selinux/enforce"),
         "apparmor": _file_exists("/sys/kernel/security/apparmor"),
         "disk_encryption": _detect_luks(),
+    }
+    sensors = {
+        "mounts": _read_mounts(),
+        "removable": _removable_devices(),
+        "listening_ports": _listening_ports_sample(),
+        "vuln_probe": collect_vuln_probe(security),
     }
     return PlatformProfile(
         platform_id="linux",
@@ -40,6 +42,7 @@ def build_linux_profile() -> PlatformProfile:
             "removable_media",
             "process_sample",
             "local_enforcement",
+            "vulnerability_probe",
         ),
         security_features=security,
         sensors=sensors,

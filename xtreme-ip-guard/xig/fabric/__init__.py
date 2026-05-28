@@ -1,0 +1,53 @@
+"""Mersal Global Security Fabric — orchestration layer."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from ..ai import MersalAICortex
+from ..soar import SoarEngine
+from ..threat_feeds import ThreatFeedSync
+from ..vuln import VulnerabilityScanner
+from .posture import compute_posture
+from .scheduler import SecurityScheduler
+
+if TYPE_CHECKING:
+    from ..storage import Database
+
+
+class MersalSecurityFabric:
+    """Unified defensive stack: AI + vuln + threat intel + SOAR + posture."""
+
+    def __init__(self, database: "Database") -> None:
+        self.db = database
+        self.cortex = MersalAICortex(database)
+        self.scanner = VulnerabilityScanner(database)
+        self.feeds = ThreatFeedSync(database)
+        self.soar = SoarEngine(database)
+        self.scheduler = SecurityScheduler(database, soar=self.soar)
+
+    def dashboard(self) -> dict[str, Any]:
+        posture = self.db.latest_security_posture()
+        return {
+            "fabric": "Mersal Global Security Fabric",
+            "version": "2.0",
+            "modules": [
+                "neural_cortex",
+                "vulnerability_management",
+                "threat_intelligence",
+                "soar",
+                "daily_scheduler",
+            ],
+            "posture": posture,
+            "ai": self.cortex.dashboard(),
+            "vulnerabilities": self.db.vuln_summary(),
+            "threat_intel": {"indicators": len(self.db.list_threat_intel())},
+            "soar": self.db.soar_summary(),
+            "scheduler": self.db.scheduler_summary(),
+        }
+
+    def run_daily_now(self) -> dict[str, Any]:
+        return self.scheduler.run_daily_cycle()
+
+
+__all__ = ["MersalSecurityFabric", "SecurityScheduler", "compute_posture"]

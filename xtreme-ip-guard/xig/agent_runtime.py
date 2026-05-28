@@ -16,6 +16,7 @@ from . import __version__
 from .brand import BRAND
 from .enforcement import LocalEnforcer
 from .platform import collect_profile, collect_sensor_events
+from .platform.vuln_probe import collect_vuln_probe
 
 
 @dataclass
@@ -96,6 +97,8 @@ class MersalAgent:
                 "capabilities": list(self.profile.capabilities),
                 "security_features": self.profile.security_features,
                 "sensors": self.profile.sensors,
+                "vuln_probe": self.profile.sensors.get("vuln_probe")
+                or collect_vuln_probe(self.profile.security_features),
                 "enforcement": self.enforcer.load().to_dict(),
             },
         }

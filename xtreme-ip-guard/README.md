@@ -1,6 +1,6 @@
-# Ionomegax Mersal Guard
+# Ionomegax Mersal Global Security Fabric
 
-**Ionomegax Mersal Guard** is an integrated endpoint protection and data-loss-prevention platform. It is not a JSON-only API: it ships a full **Mersal Command Center** web console, a continuous **Mersal Endpoint Agent** for Linux, Windows, and macOS, and **local policy enforcement** on managed hosts.
+**Mersal Guard v2.0** is an integrated endpoint protection platform with **AI Cortex**, **daily vulnerability scanning**, **STIX threat feeds**, **SOAR playbooks**, and a **security posture score**. It is not a JSON-only API: it ships a full **Mersal Command Center** web console, a continuous **Mersal Endpoint Agent** for Linux, Windows, and macOS, and **local policy enforcement** on managed hosts.
 
 The product brand is **Ionomegax** · **Mersal Guard** (مرسال — حماية نقاط النهاية).
 

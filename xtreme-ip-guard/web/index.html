@@ -34,6 +34,7 @@
           <a href="#agents" data-i18n="navAgents">الوكلاء</a>
           <a href="#events" data-i18n="navEvents">الأحداث</a>
           <a href="#policies" data-i18n="navPolicies">السياسات</a>
+          <a href="#fabric" data-i18n="navFabric">المنصة العالمية</a>
           <a href="#ai" data-i18n="navAI">الذكاء الاصطناعي</a>
           <a href="#audit" data-i18n="navAudit">التدقيق</a>
         </nav>
@@ -57,6 +58,26 @@
           </div>
         </header>
         <section class="cards" id="cards"></section>
+        <section id="fabric" class="fabric-section">
+          <div class="section-head">
+            <h2 data-i18n="fabricTitle">Mersal Global Security Fabric</h2>
+            <div class="fabric-actions">
+              <button type="button" id="dailyRunBtn" data-i18n="fabricDaily">دورة يومية الآن</button>
+              <button type="button" id="vulnScanBtn" class="secondary" data-i18n="fabricVuln">فحص ثغرات</button>
+            </div>
+          </div>
+          <div class="fabric-posture" id="fabricPosture"></div>
+          <div class="grid-two">
+            <article>
+              <h3 data-i18n="fabricVulnsTitle">ثغرات مفتوحة</h3>
+              <div class="table-wrap" id="vulnTable"></div>
+            </article>
+            <article>
+              <h3 data-i18n="fabricSoarTitle">تنفيذ SOAR</h3>
+              <div class="table-wrap" id="soarTable"></div>
+            </article>
+          </div>
+        </section>
         <section class="grid-two">
           <article id="endpoints">
             <h2 data-i18n="endpointsTitle">الأجهزة المدارة</h2>

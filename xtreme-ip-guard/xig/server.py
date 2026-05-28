@@ -22,6 +22,7 @@ from .auth import (
 from .brand import BRAND
 from .core import EndpointEvent, PolicyRule
 from .ai import MersalAICortex
+from .fabric import MersalSecurityFabric
 from .storage import Database
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,8 +31,9 @@ WEB_ROOT = PROJECT_ROOT / "web"
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, database: Database, **kwargs):
+    def __init__(self, *args, database: Database, fabric: MersalSecurityFabric | None = None, **kwargs):
         self.database = database
+        self.fabric = fabric
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:  # noqa: N802
@@ -75,6 +77,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_ai_insights())
         if path == "/api/ai/predictions":
             return self._send_json(self.database.list_ai_predictions())
+        if path == "/api/fabric/dashboard" and self.fabric:
+            return self._send_json(self.fabric.dashboard())
+        if path == "/api/vuln/findings":
+            return self._send_json(self.database.list_vuln_findings())
+        if path == "/api/vuln/scans":
+            return self._send_json(self.database.list_vuln_scans())
+        if path == "/api/soar/runs":
+            return self._send_json(self.database.list_soar_runs())
+        if path == "/api/posture":
+            return self._send_json(self.database.latest_security_posture())
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -149,6 +161,30 @@ class RequestHandler(BaseHTTPRequestHandler):
                 limit = int(payload.get("limit", 100))
                 result = self.database.train_cortex_from_history(limit=limit)
                 self.database.record_audit(actor, "ai.train", details=result)
+                return self._send_json(result)
+
+            if path == "/api/vuln/scan":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                scope = str(self._read_json().get("scope", "manual"))
+                result = self.fabric.scanner.scan_all_endpoints(scope=scope)
+                self.database.record_audit(actor, "vuln.scan", details={"scope": scope, "findings": result.get("findings_count")})
+                return self._send_json(result)
+
+            if path == "/api/fabric/daily":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.run_daily_now()
+                self.database.record_audit(actor, "fabric.daily", details=result)
+                return self._send_json(result)
+
+            if path == "/api/threat/sync":
+                if not self.fabric:
+                    return self._send_json({"error": "fabric not initialized"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                result = self.fabric.feeds.sync_all(
+                    remote_url=os.environ.get("MERSAL_STIX_FEED_URL", "").strip()
+                )
+                self.database.record_audit(actor, "threat.sync", details=result)
                 return self._send_json(result)
 
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
@@ -235,9 +271,11 @@ def run(host: str | None = None, port: int | None = None) -> None:
     database = Database(os.environ.get("MERSAL_DB", os.environ.get("XIG_DB", DEFAULT_DB)))
     database.init_schema()
     database.seed_demo()
+    fabric = MersalSecurityFabric(database)
+    fabric.scheduler.start()
 
     def handler(*args, **kwargs):
-        RequestHandler(*args, database=database, **kwargs)
+        RequestHandler(*args, database=database, fabric=fabric, **kwargs)
 
     server = ThreadingHTTPServer((bind_host, bind_port), handler)
     cert = os.environ.get("MERSAL_TLS_CERT", "").strip()
@@ -251,6 +289,7 @@ def run(host: str | None = None, port: int | None = None) -> None:
 
     print(f"{BRAND['full_name']} running at {scheme}://{bind_host}:{bind_port}")
     print(f"Command Center: {scheme}://{bind_host}:{bind_port}/console/")
+    print("Mersal Global Security Fabric: daily scheduler active (vuln + threat feeds + AI + posture).")
     if auth_required():
         print("Authentication enabled (API token and/or admin password).")
     if scheme == "https":

@@ -1,9 +1,10 @@
 # خارطة طريق الأمن — Mersal Guard & Mersal OS
 
-## المرحلة الحالية (v1.2)
+## المرحلة الحالية (v2.0)
 
 - [x] Mersal Guard — وكلاء، سياسات، عزل، تدقيق
 - [x] Mersal Neural Cortex — تعلم، شذوذ، تنبؤ، IOC
+- [x] **Mersal Global Security Fabric** — فحص ثغرات، STIX، SOAR، posture، مجدول يومي
 - [x] Mersal OS ISO تجريبي (Live)
 - [x] GitHub Release للتوزيعة
 

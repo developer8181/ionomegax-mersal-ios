@@ -129,6 +129,72 @@ class Database:
                     metadata TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS vuln_scans (
+                    scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scope TEXT NOT NULL DEFAULT 'daily',
+                    status TEXT NOT NULL DEFAULT 'running',
+                    findings_count INTEGER NOT NULL DEFAULT 0,
+                    summary TEXT NOT NULL DEFAULT '{}',
+                    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    finished_at TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS vuln_findings (
+                    finding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scan_id INTEGER,
+                    endpoint_id TEXT NOT NULL,
+                    cve_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    severity REAL NOT NULL,
+                    port INTEGER NOT NULL DEFAULT 0,
+                    service TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    remediation TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS threat_feed_sync (
+                    sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feed_name TEXT NOT NULL,
+                    indicators_added INTEGER NOT NULL DEFAULT 0,
+                    details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS soar_playbooks (
+                    playbook_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    trigger_type TEXT NOT NULL,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    config TEXT NOT NULL DEFAULT '{}'
+                );
+
+                CREATE TABLE IF NOT EXISTS soar_runs (
+                    run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playbook_id TEXT NOT NULL,
+                    endpoint_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    actions TEXT NOT NULL DEFAULT '[]',
+                    trigger_ref TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS security_posture (
+                    posture_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    score INTEGER NOT NULL,
+                    grade TEXT NOT NULL,
+                    breakdown TEXT NOT NULL DEFAULT '{}',
+                    computed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS scheduler_runs (
+                    run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_name TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    details TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
                 """
             )
 
@@ -218,7 +284,17 @@ class Database:
                 "blocked_or_quarantined": db.execute(
                     "SELECT COUNT(*) FROM events WHERE action IN ('block', 'quarantine', 'isolate_endpoint')"
                 ).fetchone()[0],
+                "open_vulns": db.execute(
+                    "SELECT COUNT(*) FROM vuln_findings WHERE status = 'open'"
+                ).fetchone()[0],
+                "critical_vulns": db.execute(
+                    "SELECT COUNT(*) FROM vuln_findings WHERE status = 'open' AND severity >= 9"
+                ).fetchone()[0],
             }
+            posture_row = db.execute(
+                "SELECT score, grade FROM security_posture ORDER BY posture_id DESC LIMIT 1"
+            ).fetchone()
+            posture = dict(posture_row) if posture_row else {"score": 0, "grade": "-"}
             recent_events = [dict(row) for row in db.execute("SELECT * FROM events ORDER BY event_id DESC LIMIT 10")]
             top_actions = [
                 dict(row)
@@ -226,7 +302,12 @@ class Database:
                     "SELECT action, COUNT(*) AS count FROM events GROUP BY action ORDER BY count DESC, action"
                 )
             ]
-            return {"totals": totals, "recent_events": recent_events, "top_actions": top_actions}
+            return {
+                "totals": totals,
+                "posture": posture,
+                "recent_events": recent_events,
+                "top_actions": top_actions,
+            }
 
     def list_endpoints(self) -> list[dict[str, Any]]:
         with self.connect() as db:
@@ -369,7 +450,11 @@ class Database:
             breach_probability=fusion.breach_probability,
             payload=fusion.signals.get("prediction", {}),
         )
-        return self._decode_event(row)
+        decoded = self._decode_event(row)
+        from .soar import SoarEngine
+
+        SoarEngine(self).on_event_ingested(decoded)
+        return decoded
 
     def create_policy(self, policy: PolicyRule) -> dict[str, Any]:
         with self.connect() as db:
@@ -626,6 +711,197 @@ class Database:
 
             self.seed_threat_intel(DEFAULT_IOCS)
         return {"trained_samples": trained, "baseline_signals": self.count_baselines()}
+
+    def start_vuln_scan(self, *, scope: str = "daily") -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO vuln_scans (scope, status) VALUES (?, 'running')",
+                (scope,),
+            )
+            row = db.execute("SELECT * FROM vuln_scans ORDER BY scan_id DESC LIMIT 1").fetchone()
+            return dict(row)
+
+    def finish_vuln_scan(self, scan_id: int, *, findings_count: int) -> dict[str, Any]:
+        summary = json.dumps({"findings_count": findings_count}, sort_keys=True)
+        with self.connect() as db:
+            db.execute(
+                """
+                UPDATE vuln_scans
+                SET status = 'completed', findings_count = ?, summary = ?, finished_at = CURRENT_TIMESTAMP
+                WHERE scan_id = ?
+                """,
+                (findings_count, summary, scan_id),
+            )
+            row = db.execute("SELECT * FROM vuln_scans WHERE scan_id = ?", (scan_id,)).fetchone()
+            return dict(row)
+
+    def record_vuln_finding(
+        self,
+        *,
+        scan_id: int | None,
+        endpoint_id: str,
+        cve_id: str,
+        title: str,
+        severity: float,
+        port: int,
+        service: str,
+        remediation: str,
+        status: str = "open",
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO vuln_findings (
+                    scan_id, endpoint_id, cve_id, title, severity, port, service, status, remediation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (scan_id, endpoint_id, cve_id, title, severity, port, service, status, remediation),
+            )
+            row = db.execute("SELECT * FROM vuln_findings ORDER BY finding_id DESC LIMIT 1").fetchone()
+            return dict(row)
+
+    def list_vuln_findings(
+        self,
+        *,
+        limit: int = 50,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if status:
+                rows = db.execute(
+                    "SELECT * FROM vuln_findings WHERE status = ? ORDER BY severity DESC, finding_id DESC LIMIT ?",
+                    (status, limit),
+                )
+            else:
+                rows = db.execute(
+                    "SELECT * FROM vuln_findings ORDER BY severity DESC, finding_id DESC LIMIT ?",
+                    (limit,),
+                )
+            return [dict(row) for row in rows]
+
+    def list_vuln_scans(self, *, limit: int = 10) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute("SELECT * FROM vuln_scans ORDER BY scan_id DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+
+    def vuln_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            open_count = db.execute("SELECT COUNT(*) FROM vuln_findings WHERE status = 'open'").fetchone()[0]
+            critical = db.execute(
+                "SELECT COUNT(*) FROM vuln_findings WHERE status = 'open' AND severity >= 9"
+            ).fetchone()[0]
+            last_scan = db.execute("SELECT * FROM vuln_scans ORDER BY scan_id DESC LIMIT 1").fetchone()
+            return {
+                "open_findings": open_count,
+                "critical_open": critical,
+                "last_scan": dict(last_scan) if last_scan else None,
+            }
+
+    def record_threat_feed_sync(self, feed_name: str, indicators_added: int, **details: Any) -> None:
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO threat_feed_sync (feed_name, indicators_added, details) VALUES (?, ?, ?)",
+                (feed_name, indicators_added, json.dumps(details, sort_keys=True)),
+            )
+
+    def ensure_soar_playbooks(self) -> None:
+        from .soar.playbooks import DEFAULT_PLAYBOOKS, playbook_config
+
+        with self.connect() as db:
+            for playbook in DEFAULT_PLAYBOOKS:
+                db.execute(
+                    """
+                    INSERT OR IGNORE INTO soar_playbooks (playbook_id, name, trigger_type, enabled, config)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        playbook.playbook_id,
+                        playbook.name,
+                        playbook.trigger,
+                        int(playbook.enabled),
+                        json.dumps(playbook_config(playbook.playbook_id), sort_keys=True),
+                    ),
+                )
+
+    def record_soar_run(
+        self,
+        *,
+        playbook_id: str,
+        endpoint_id: str,
+        trigger_ref: dict[str, Any],
+        actions: list[str],
+        status: str,
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO soar_runs (playbook_id, endpoint_id, status, actions, trigger_ref)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    playbook_id,
+                    endpoint_id,
+                    status,
+                    json.dumps(actions, sort_keys=True),
+                    json.dumps(trigger_ref, sort_keys=True, default=str),
+                ),
+            )
+            row = db.execute("SELECT * FROM soar_runs ORDER BY run_id DESC LIMIT 1").fetchone()
+            data = dict(row)
+            data["actions"] = self._decode_json(data["actions"], [])
+            data["trigger_ref"] = self._decode_json(data["trigger_ref"], {})
+            return data
+
+    def list_soar_runs(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute("SELECT * FROM soar_runs ORDER BY run_id DESC LIMIT ?", (limit,))
+            results = []
+            for row in rows:
+                data = dict(row)
+                data["actions"] = self._decode_json(data["actions"], [])
+                data["trigger_ref"] = self._decode_json(data["trigger_ref"], {})
+                results.append(data)
+            return results
+
+    def soar_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            total = db.execute("SELECT COUNT(*) FROM soar_runs").fetchone()[0]
+            recent = self.list_soar_runs(limit=5)
+            return {"total_runs": total, "recent_runs": recent}
+
+    def save_security_posture(self, *, score: int, grade: str, breakdown: dict[str, Any]) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO security_posture (score, grade, breakdown) VALUES (?, ?, ?)",
+                (score, grade, json.dumps(breakdown, sort_keys=True)),
+            )
+            row = db.execute("SELECT * FROM security_posture ORDER BY posture_id DESC LIMIT 1").fetchone()
+            data = dict(row)
+            data["breakdown"] = self._decode_json(data["breakdown"], {})
+            return data
+
+    def latest_security_posture(self) -> dict[str, Any]:
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM security_posture ORDER BY posture_id DESC LIMIT 1").fetchone()
+            if row is None:
+                return {"score": 0, "grade": "-", "breakdown": {}}
+            data = dict(row)
+            data["breakdown"] = self._decode_json(data["breakdown"], {})
+            return data
+
+    def record_scheduler_run(self, job_name: str, status: str, details: dict[str, Any]) -> None:
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO scheduler_runs (job_name, status, details) VALUES (?, ?, ?)",
+                (job_name, status, json.dumps(details, sort_keys=True, default=str)),
+            )
+
+    def scheduler_summary(self) -> dict[str, Any]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT job_name, status, created_at FROM scheduler_runs ORDER BY run_id DESC LIMIT 8"
+            )
+            return {"recent_jobs": [dict(row) for row in rows]}
 
     def _policy_rows(self) -> list[sqlite3.Row]:
         with self.connect() as db:

@@ -7,6 +7,7 @@ const I18N = {
     navAgents: "الوكلاء",
     navEvents: "الأحداث",
     navPolicies: "السياسات",
+    navFabric: "المنصة العالمية",
     navAI: "الذكاء الاصطناعي",
     navAudit: "التدقيق",
     liveLabel: "منصة حية",
@@ -48,6 +49,15 @@ const I18N = {
     aiBaselines: "إشارات أساسية متعلّمة",
     aiTrained: "تم التدريب",
     poweredBy: "مدعوم من Extreme Technology",
+    fabricTitle: "Mersal Global Security Fabric",
+    fabricDaily: "دورة يومية الآن",
+    fabricVuln: "فحص ثغرات",
+    fabricVulnsTitle: "ثغرات مفتوحة",
+    fabricSoarTitle: "تنفيذ SOAR",
+    postureScore: "درجة الأمن",
+    cardVulns: "ثغرات مفتوحة",
+    cardCritical: "حرجة",
+    fabricDone: "اكتملت الدورة",
   },
   en: {
     brandName: "Ionomegax Mersal Guard",
@@ -57,6 +67,7 @@ const I18N = {
     navAgents: "Agents",
     navEvents: "Events",
     navPolicies: "Policies",
+    navFabric: "Global Fabric",
     navAI: "AI Cortex",
     navAudit: "Audit",
     liveLabel: "Live platform",
@@ -98,6 +109,15 @@ const I18N = {
     aiBaselines: "Learned baseline signals",
     aiTrained: "Training complete",
     poweredBy: "Powered by Extreme Technology",
+    fabricTitle: "Mersal Global Security Fabric",
+    fabricDaily: "Run daily cycle",
+    fabricVuln: "Vulnerability scan",
+    fabricVulnsTitle: "Open vulnerabilities",
+    fabricSoarTitle: "SOAR executions",
+    postureScore: "Security posture",
+    cardVulns: "Open vulns",
+    cardCritical: "Critical",
+    fabricDone: "Cycle completed",
   },
 };
 
@@ -205,12 +225,55 @@ window.restoreEndpoint = async (endpointId) => {
   refresh();
 };
 
+function renderFabric(fabric, vulns, soarRuns, posture) {
+  const p = posture.score ? posture : fabric.posture || {};
+  document.getElementById("fabricPosture").innerHTML = `
+    <div class="posture-grade grade-${(p.grade || "C").toLowerCase()}">${p.grade || "-"}</div>
+    <div><span>${t("postureScore")}</span><strong>${p.score ?? 0}/100</strong></div>`;
+
+  const findings = vulns.length ? vulns : [];
+  const vulnEl = document.getElementById("vulnTable");
+  if (!findings.length) vulnEl.innerHTML = `<p>${t("empty")}</p>`;
+  else {
+    vulnEl.innerHTML = `<table><thead><tr><th>CVE</th><th>Host</th><th>CVSS</th><th>Title</th></tr></thead><tbody>${findings
+      .slice(0, 12)
+      .map(
+        (row) => `<tr>
+          <td>${row.cve_id}</td>
+          <td>${row.endpoint_id}</td>
+          <td>${row.severity}</td>
+          <td>${row.title}</td>
+        </tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+
+  const runs = soarRuns.length ? soarRuns : fabric.soar?.recent_runs || [];
+  const soarEl = document.getElementById("soarTable");
+  if (!runs.length) soarEl.innerHTML = `<p>${t("empty")}</p>`;
+  else {
+    soarEl.innerHTML = `<table><thead><tr><th>Playbook</th><th>Host</th><th>Status</th><th>Actions</th></tr></thead><tbody>${runs
+      .slice(0, 10)
+      .map(
+        (row) => `<tr>
+          <td>${row.playbook_id}</td>
+          <td>${row.endpoint_id}</td>
+          <td>${row.status}</td>
+          <td>${(row.actions || []).join(", ")}</td>
+        </tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+}
+
 function renderCards(totals) {
   const cards = [
     [t("cardEndpoints"), totals.endpoints],
     [t("cardIsolated"), totals.isolated_endpoints],
     [t("cardPolicies"), totals.policies],
     [t("cardBlocked"), totals.blocked_or_quarantined],
+    [t("cardVulns"), totals.open_vulns ?? 0],
+    [t("cardCritical"), totals.critical_vulns ?? 0],
   ];
   document.getElementById("cards").innerHTML = cards
     .map(([label, value]) => `<div class="card"><span>${label}</span><strong>${value}</strong></div>`)
@@ -374,7 +437,8 @@ function renderPolicies(rows) {
 async function refresh() {
   if (authState.auth_required && !token()) return;
   try {
-    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard] = await Promise.all([
+    const [dashboard, endpoints, agents, events, policies, audit, brand, aiDashboard, fabric, vulns, soarRuns, posture] =
+      await Promise.all([
       api("/api/dashboard"),
       api("/api/endpoints"),
       api("/api/agents"),
@@ -383,8 +447,13 @@ async function refresh() {
       api("/api/audit"),
       api("/api/brand"),
       api("/api/ai/dashboard"),
+      api("/api/fabric/dashboard"),
+      api("/api/vuln/findings"),
+      api("/api/soar/runs"),
+      api("/api/posture"),
     ]);
     renderCards(dashboard.totals);
+    renderFabric(fabric, vulns, soarRuns, posture);
     renderEndpoints(endpoints);
     renderAgents(agents);
     renderEvents(events);
@@ -396,6 +465,17 @@ async function refresh() {
     console.error(error);
   }
 }
+
+document.getElementById("dailyRunBtn").addEventListener("click", async () => {
+  await apiPost("/api/fabric/daily", {});
+  document.getElementById("authStatus").textContent = t("fabricDone");
+  refresh();
+});
+
+document.getElementById("vulnScanBtn").addEventListener("click", async () => {
+  await apiPost("/api/vuln/scan", { scope: "manual" });
+  refresh();
+});
 
 document.getElementById("aiTrainBtn").addEventListener("click", async () => {
   const result = await apiPost("/api/ai/train", { limit: 200 });
