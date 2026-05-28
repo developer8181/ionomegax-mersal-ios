@@ -123,6 +123,8 @@ const I18N = {
     siemTitle: "SIEM alerts",
     incidentsTitle: "Incident response",
     matrixTitle: "Capability comparison",
+    matrixCap: "Capability",
+    matrixLegacy: "Legacy stack",
     xdrTitle: "Mersal XDR",
     xdrSub: "Cross-layer detection and response",
     xdrCorrelate: "Run XDR correlation",
