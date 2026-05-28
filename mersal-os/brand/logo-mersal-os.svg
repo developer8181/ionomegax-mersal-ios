@@ -25,6 +25,7 @@
   </g>
   <!-- Wordmark -->
   <text x="120" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="800" fill="url(#orangeGrad)" transform="skewX(-8)">Mersal</text>
-  <text x="122" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="8" fill="#616161">GUARD OS</text>
-  <text x="122" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#06B6D4">SECURE ENTERPRISE LINUX</text>
+  <text x="122" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="8" fill="#616161">OS</text>
+  <text x="122" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="800" fill="url(#orangeGrad)" transform="skewX(-6)">Extreme</text>
+  <text x="218" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="4" fill="#757575">TECHNOLOGY</text>
 </svg>

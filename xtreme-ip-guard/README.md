@@ -1,7 +1,7 @@
 # Ionomegax Mersal Global Security Platform
 
 <p align="center">
-  <img src="web/extreme-logo.svg" alt="Extreme Technology Company" height="44" />
+  <img src="web/logo-unified.svg" alt="Mersal by Extreme Technology" height="72" />
   <br />
   <strong>Powered by Extreme Technology Company</strong>
 </p>

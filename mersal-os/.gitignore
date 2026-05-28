@@ -9,3 +9,5 @@ wget-log*
 __pycache__/
 *.pyc
 .pytest_cache/
+mersal-os/build/*.log
+build/iso-*.log

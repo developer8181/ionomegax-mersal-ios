@@ -37,10 +37,22 @@ cp "$ROOT/gateway/nftables-mersal.conf" "$INCLUDES/etc/nftables.conf"
 cp "$ROOT/gateway/suricata-mersal.yaml" "$INCLUDES/etc/suricata/suricata.yaml" 2>/dev/null || \
   mkdir -p "$INCLUDES/etc/suricata" && cp "$ROOT/gateway/suricata-mersal.yaml" "$INCLUDES/etc/suricata/suricata.yaml"
 
-# Logo
-if [ -f "$ROOT/brand/assets/mersal-os-logo.png" ]; then
-  mkdir -p "$INCLUDES/usr/share/pixmaps"
-  cp "$ROOT/brand/assets/mersal-os-logo.png" "$INCLUDES/usr/share/pixmaps/mersal-os-logo.png"
+# Brand assets (Mersal + Extreme unified)
+mkdir -p "$INCLUDES/usr/share/pixmaps" "$INCLUDES/opt/mersal-guard/web"
+GUARD_WEB="$REPO/xtreme-ip-guard/web"
+for asset in logo.svg logo-unified.svg extreme-logo.svg extreme-logo-dark.svg; do
+  if [ -f "$GUARD_WEB/$asset" ]; then
+    cp "$GUARD_WEB/$asset" "$INCLUDES/opt/mersal-guard/web/$asset"
+  fi
+done
+for png in mersal-os-logo.png mersal-platform-unified.png extreme-technology-logo.png mersal-icon.svg; do
+  if [ -f "$ROOT/brand/assets/$png" ]; then
+    cp "$ROOT/brand/assets/$png" "$INCLUDES/usr/share/pixmaps/$png"
+    [ "$png" = "mersal-os-logo.png" ] && cp "$ROOT/brand/assets/$png" "$INCLUDES/usr/share/pixmaps/mersal-os-logo.png"
+  fi
+done
+if [ -f "$ROOT/brand/assets/mersal-platform-unified.png" ]; then
+  cp "$ROOT/brand/assets/mersal-platform-unified.png" "$INCLUDES/usr/share/pixmaps/mersal-os-boot-logo.png" 2>/dev/null || true
 fi
 
 # Live username for casper
