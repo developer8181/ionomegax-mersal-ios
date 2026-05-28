@@ -1,10 +1,22 @@
-# Ionomegax Mersal XDR Enterprise Platform
+# Ionomegax Mersal Global Security Platform
 
-**Mersal v6.0** is a unified **global-class** cybersecurity platform (XDR + multi-tenant SOC + RBAC + extended GRC). **Mersal v5.0** core: **EDR**, **SIEM**, **SOAR**, **Log Vault**, **Suricata IDS**, **vulnerability management**, **NIST-CSF compliance**, and **Neural Cortex AI** — with a bilingual **Mersal Command Center** (Arabic / English) and **Mersal Endpoint Agent** for Linux, Windows, macOS, and Mersal OS.
+<p align="center">
+  <img src="web/extreme-logo.svg" alt="Extreme Technology Company" height="44" />
+  <br />
+  <strong>Powered by Extreme Technology Company</strong>
+</p>
 
-The product brand is **Ionomegax** · **Mersal** (مرسال).
+**Mersal v6.0** is a unified **world-class** cybersecurity platform — **XDR**, **SIEM**, **SOAR**, **EDR**, **Log Vault**, **GRC** (NIST · ISO 27001 · SOC 2), **multi-tenant SOC**, **RBAC**, and **Neural Cortex AI** — with a modern **light Command Center** (Arabic / English) and agents for Linux, Windows, macOS, and **Mersal OS**.
 
-**Documentation:** [v6 Global AR](docs/MERSAL_GLOBAL_v6_AR.md) · [v6 EN](docs/MERSAL_GLOBAL_v6_EN.md) · [Platform AR](docs/MERSAL_PLATFORM_AR.md) · [Screenshots](docs/screenshots/README.md)
+Designed by **Eng. Mahmoud Rasem Bayari** · **Ionomegax** · **Mersal** (مرسال).
+
+| Resource | Link |
+|----------|------|
+| v6 Global (AR) | [docs/MERSAL_GLOBAL_v6_AR.md](docs/MERSAL_GLOBAL_v6_AR.md) |
+| v6 Global (EN) | [docs/MERSAL_GLOBAL_v6_EN.md](docs/MERSAL_GLOBAL_v6_EN.md) |
+| Light UI release | [docs/GITHUB_RELEASE_v6_ui_light.md](docs/GITHUB_RELEASE_v6_ui_light.md) |
+| Screenshots (22) | [docs/screenshots/README.md](docs/screenshots/README.md) |
+| Latest release | [GitHub Releases](https://github.com/developer8181/ionomegax-mersal-ios/releases) |
 
 ## Copyright
 
