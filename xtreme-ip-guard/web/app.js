@@ -2,6 +2,7 @@ const I18N = {
   ar: {
     brandName: "Mersal Global Fabric",
     brandSubtitle: "مركز القيادة العالمي",
+    navReadiness: "الجاهزية",
     navOverview: "نظرة عامة",
     navEndpoints: "نقاط النهاية",
     navAgents: "الوكلاء",
@@ -31,7 +32,7 @@ const I18N = {
     heroEyebrow: "Ionomegax · Extreme Technology",
     heroTitle: "ميرسال",
     heroSuffix: "العالمية",
-    heroBody: "منصة أمن سيبراني عالمية موحّدة — ذكاء اصطناعي · فحص ثغرات يومي · تهديدات · SOAR.",
+    heroBody: "منصة XDR مؤسسية — EDR · SIEM · Log Vault · Suricata · SOAR · امتثال · ذكاء اصطناعي.",
     topbarTitle: "غرفة العمليات العالمية",
     badgeAI: "Neural Cortex",
     badgeVuln: "فحص يومي",
@@ -92,6 +93,7 @@ const I18N = {
   en: {
     brandName: "Mersal Global Fabric",
     brandSubtitle: "Global Command Center",
+    navReadiness: "Readiness",
     navOverview: "Overview",
     navEndpoints: "Endpoints",
     navAgents: "Agents",
@@ -121,7 +123,7 @@ const I18N = {
     heroEyebrow: "Ionomegax · Extreme Technology",
     heroTitle: "Mersal",
     heroSuffix: "Global",
-    heroBody: "Unified global cyber defense platform — AI · vulns · threats · SOAR.",
+    heroBody: "Enterprise XDR platform — EDR · SIEM · Log Vault · Suricata · SOAR · compliance · AI.",
     topbarTitle: "Global Operations Center",
     badgeAI: "Neural Cortex",
     badgeVuln: "Daily scan",
@@ -799,7 +801,7 @@ function renderAboutModal() {
 
 async function loadAbout() {
   try {
-    aboutPayload = await api("/api/system/about");
+    aboutPayload = await fetch("/api/system/about").then((r) => r.json());
     renderAboutModal();
   } catch (e) {
     console.error(e);
@@ -812,19 +814,21 @@ function openAboutDialog() {
   if (typeof dialog.showModal === "function") dialog.showModal();
 }
 
-function initFromUrl() {
+async function initFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const view = params.get("view");
   const urlLang = params.get("lang");
   const openAbout = params.get("openAbout");
+  const capture = params.get("capture") === "1";
   if (urlLang === "en" || urlLang === "ar") lang = urlLang;
-  loadAuthStatus().then(() => {
-    loadAbout();
-    applyLanguage(lang);
-    startClock();
-    if (view) setTimeout(() => scrollToView(view), 600);
-    if (openAbout === "1") setTimeout(() => openAboutDialog(), 900);
-  });
+  await loadAuthStatus();
+  await loadAbout();
+  applyLanguage(lang);
+  startClock();
+  await refresh();
+  const delay = capture ? 1200 : 600;
+  if (view) setTimeout(() => scrollToView(view), delay);
+  if (openAbout === "1") setTimeout(() => openAboutDialog(), delay + 500);
 }
 
 document.querySelectorAll("#mainNav a").forEach((link) => {

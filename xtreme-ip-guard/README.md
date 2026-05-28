@@ -1,8 +1,10 @@
-# Ionomegax Mersal Global Security Fabric
+# Ionomegax Mersal XDR Enterprise Platform
 
-**Mersal Guard v3.1** is an integrated endpoint protection platform with **AI Cortex**, **CISA KEV threat feeds**, **EDR-lite process intel**, **daily vulnerability scanning**, **SOAR playbooks**, and a **security posture score**. It is not a JSON-only API: it ships a full **Mersal Command Center** web console, a continuous **Mersal Endpoint Agent** for Linux, Windows, and macOS, and **local policy enforcement** on managed hosts.
+**Mersal v5.0** is a unified **XDR-class** cybersecurity platform: **EDR**, **SIEM**, **SOAR**, **Log Vault**, **Suricata IDS**, **vulnerability management**, **NIST-CSF compliance**, and **Neural Cortex AI** — with a bilingual **Mersal Command Center** (Arabic / English) and **Mersal Endpoint Agent** for Linux, Windows, macOS, and Mersal OS.
 
-The product brand is **Ionomegax** · **Mersal Guard** (مرسال — حماية نقاط النهاية).
+The product brand is **Ionomegax** · **Mersal** (مرسال).
+
+**Documentation:** [Arabic platform guide](docs/MERSAL_PLATFORM_AR.md) · [English](docs/MERSAL_PLATFORM_EN.md) · [Screenshots (20 screens)](docs/screenshots/README.md)
 
 ## Copyright
 
@@ -13,8 +15,11 @@ Designed and developed by **Eng. Mahmoud Rasem Bayari**, Cybersecurity Systems E
 | Layer | Role |
 | --- | --- |
 | Mersal Command Center | Central API, policy engine, Arabic/English console |
-| Mersal Global Security Fabric | Vuln scan, threat intel, SOAR, daily scheduler (`xig/fabric/`) |
-| Mersal Neural Cortex | AI learning, anomaly detection, prediction (`xig/ai/`) |
+| Mersal XDR | Cross-layer correlation (`xig/xdr/`) |
+| Mersal SIEM | Alerts, MITRE ATT&CK (`xig/siem/`) |
+| Mersal Log Vault | Log ingest & search (`xig/logvault/`) |
+| Mersal Global Security Fabric | Vuln scan, threat intel, SOAR (`xig/fabric/`) |
+| Mersal Neural Cortex | AI learning, anomaly detection (`xig/ai/`) |
 | Mersal Policy Brain | Risk scoring and DLP decisions (`xig/core.py`) |
 | Mersal Data Vault | SQLite persistence (`xig/storage.py`) |
 | Mersal Endpoint Agent | OS sensors, heartbeat daemon, enforcement (`agent.py`, `xig/agent_runtime.py`) |

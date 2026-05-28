@@ -1,16 +1,11 @@
-# لقطات Mersal Command Center v2.0
+# لقطات Mersal Command Center v5.0 XDR
 
-واجهة **عصرية عالمية** — تصميم SOC حديث · زجاج · شبكة عالمية · أزرق/سيان.
+واجهة **عصرية عالمية** — دعم **العربية** و **English** · 20 شاشة كاملة.
 
-| الملف | الوصف |
-|-------|--------|
-| `01-command-center-overview-ar.png` | نظرة عامة |
-| `02-global-fabric-ar.png` | المنصة العالمية |
-| `03-neural-cortex-ar.png` | الذكاء الاصطناعي |
-| `04-command-center-en.png` | English UI |
-| `05-endpoints-threats-ar.png` | الأحداث والتهديدات |
-| `06-about-system-ar.png` | معلومات عن النظام — حقوق النشر |
+راجع أيضاً: [README.md](README.md) · [دليل المنصة](../MERSAL_PLATFORM_AR.md)
 
 ```bash
-./scripts/capture-screenshots.sh
+./scripts/capture-all-screenshots.sh
 ```
+
+© Extreme Technology · المهندس محمود راسم بياري
