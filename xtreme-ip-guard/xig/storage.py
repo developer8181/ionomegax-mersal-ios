@@ -2079,6 +2079,40 @@ class Database:
             ).fetchone()
             return row is not None
 
+    def create_scim_token(self, *, label: str, tenant_id: str = "default") -> dict[str, Any]:
+        import hashlib
+        import secrets
+
+        token = f"scim_{secrets.token_urlsafe(32)}"
+        token_id = f"scim-tok-{secrets.token_hex(6)}"
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO scim_tokens (token_id, tenant_id, token_hash, label, enabled)
+                VALUES (?, ?, ?, ?, 1)
+                """,
+                (token_id, tenant_id, digest, label),
+            )
+            row = db.execute("SELECT * FROM scim_tokens WHERE token_id = ?", (token_id,)).fetchone()
+        data = dict(row)
+        data["token"] = token
+        data.pop("token_hash", None)
+        return data
+
+    def list_scim_tokens(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            if tenant_id:
+                rows = db.execute(
+                    "SELECT token_id, tenant_id, label, enabled, created_at FROM scim_tokens WHERE tenant_id = ?",
+                    (tenant_id,),
+                ).fetchall()
+            else:
+                rows = db.execute(
+                    "SELECT token_id, tenant_id, label, enabled, created_at FROM scim_tokens"
+                ).fetchall()
+            return [dict(row) for row in rows]
+
     def save_update_manifest(
         self,
         *,

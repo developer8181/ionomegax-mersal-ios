@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import socket
+import ssl
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -117,6 +118,15 @@ class SiemForwarder:
             if proto == "syslog_tcp":
                 with socket.create_connection((host, port), timeout=5) as sock:
                     sock.sendall((message + "\n").encode("utf-8"))
+                return True
+            if proto == "syslog_tls":
+                ctx = ssl.create_default_context()
+                ca = str(forwarder.get("tls_ca", "") or "")
+                if ca:
+                    ctx.load_verify_locations(cafile=ca)
+                with socket.create_connection((host, port), timeout=8) as raw:
+                    with ctx.wrap_socket(raw, server_hostname=host) as sock:
+                        sock.sendall((message + "\n").encode("utf-8"))
                 return True
         except OSError:
             return False

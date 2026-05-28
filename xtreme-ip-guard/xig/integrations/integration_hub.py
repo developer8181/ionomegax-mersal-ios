@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from ..config import enterprise_strict, postgres_dsn, tls_enabled
 from ..db.adapter import uses_postgres
 from ..platform_ops.backup import BackupManager
+from ..platform_ops.postgres_health import postgres_cluster_health
 from ..platform_ops.updates import UpdateChannel
 from .oidc import OidcProvider
 from .saml import SamlProvider
@@ -61,6 +62,7 @@ class IntegrationHub:
             "data_plane": {
                 "postgres_active": uses_postgres(),
                 "postgres_configured": bool(postgres_dsn()),
+                "postgres_cluster": postgres_cluster_health(),
                 "tls": tls_enabled(),
                 "siem_forwarders": len(forwarders),
                 "siem_forward_cursor": cursor,
@@ -98,7 +100,11 @@ class IntegrationHub:
                 "strict": os.environ.get("MERSAL_SAML_STRICT", "1") not in {"0", "false"},
             }
         if integration_id == "postgres":
-            return {"active": uses_postgres(), "dsn_set": bool(postgres_dsn())}
+            return postgres_cluster_health()
+        if integration_id == "enterprise":
+            from ..platform_ops.enterprise_readiness import enterprise_adoption_report
+
+            return enterprise_adoption_report(self.db)
         return {"error": f"unknown integration: {integration_id}"}
 
 

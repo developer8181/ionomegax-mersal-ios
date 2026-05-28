@@ -165,6 +165,9 @@ _ROUTE_RULES: list[tuple[str, str, str]] = [
     ("GET", "/api/updates/latest", "platform.read"),
     ("GET", "/api/integrations/", "integrations.admin"),
     ("POST", "/api/integrations/", "integrations.admin"),
+    ("GET", "/api/admin/scim-tokens", "users.write"),
+    ("POST", "/api/admin/scim-tokens", "users.write"),
+    ("GET", "/api/system/enterprise-readiness", "dashboard.read"),
 ]
 
 

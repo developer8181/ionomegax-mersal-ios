@@ -70,6 +70,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(system_about(version=self._version()))
         if path == "/api/system/readiness":
             return self._send_json(production_readiness(self.database))
+        if path == "/api/system/enterprise-readiness":
+            from .platform_ops.enterprise_readiness import enterprise_adoption_report
+
+            return self._send_json(enterprise_adoption_report(self.database))
         if path == "/api/system/build":
             return self._send_json(build_info())
         if path == "/api/system/tools":
@@ -227,6 +231,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return self._send_json(self.database.list_tenants())
         if path == "/api/users":
             return self._send_json(self.database.list_rbac_users())
+        if path == "/api/admin/scim-tokens" and self._authorized():
+            return self._send_json(self.database.list_scim_tokens())
         if path == "/api/webhooks":
             tenant = self.headers.get("X-Mersal-Tenant", "default")
             return self._send_json(self.database.list_webhooks(tenant_id=tenant))
@@ -533,6 +539,15 @@ class RequestHandler(BaseHTTPRequestHandler):
                 )
                 self.database.record_audit(actor, "siem.forwarder.create", target=fw["forwarder_id"])
                 return self._send_json(fw, status=HTTPStatus.CREATED)
+
+            if path == "/api/admin/scim-tokens":
+                payload = self._read_json()
+                created = self.database.create_scim_token(
+                    label=str(payload.get("label", "provisioning")),
+                    tenant_id=str(payload.get("tenant_id", self._audit_tenant())),
+                )
+                self.database.record_audit(actor, "scim.token.create", target=created.get("token_id", ""))
+                return self._send_json(created, status=HTTPStatus.CREATED)
 
             if path == "/api/agents/register-key":
                 payload = self._read_json()

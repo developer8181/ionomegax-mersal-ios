@@ -79,6 +79,7 @@ class MersalAgent:
         self._flush_queue()
         self.send_heartbeat()
         self.check_signed_updates()
+        self.apply_pending_update()
         directives = self.fetch_directives()
         if directives.get("isolated"):
             self.enforcer.apply("isolate_endpoint", reason="Server marked endpoint isolated")
@@ -179,6 +180,31 @@ class MersalAgent:
             encoding="utf-8",
         )
         return {"staged": True, "version": remote_version, "path": str(artifact_path)}
+
+    def apply_pending_update(self) -> dict[str, Any]:
+        if os.environ.get("MERSAL_AGENT_AUTO_APPLY", "").strip().lower() not in {"1", "true", "yes"}:
+            return {"skipped": True, "reason": "MERSAL_AGENT_AUTO_APPLY not set"}
+        pending_path = self.state_dir / "updates" / "pending.json"
+        if not pending_path.is_file():
+            return {}
+        try:
+            pending = json.loads(pending_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {"error": "invalid pending.json"}
+        artifact = Path(str(pending.get("path", "")))
+        if not artifact.is_file():
+            return {"error": "staged artifact missing"}
+        install_script = artifact.with_suffix(".sh")
+        if install_script.is_file():
+            import subprocess
+
+            subprocess.run([str(install_script)], check=False, timeout=300)  # noqa: S603
+            pending_path.unlink(missing_ok=True)
+            return {"applied": True, "via": "install_script", "version": pending.get("version")}
+        applied_marker = self.state_dir / "updates" / f"applied-{pending.get('version', 'unknown')}.marker"
+        applied_marker.write_text(artifact.read_bytes()[:64].hex(), encoding="utf-8")
+        pending_path.unlink(missing_ok=True)
+        return {"applied": True, "via": "marker", "version": pending.get("version"), "note": "Add .sh installer for full apply"}
 
     def _flush_queue(self) -> None:
         for item_id, payload in self.queue.pending():
