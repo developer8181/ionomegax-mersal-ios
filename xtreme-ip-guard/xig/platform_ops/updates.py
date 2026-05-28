@@ -20,11 +20,13 @@ class UpdateChannel:
         self.db = database
 
     def _signing_key(self) -> bytes:
+        from ..config import enterprise_strict
+
         key = os.environ.get("MERSAL_UPDATE_SIGNING_KEY", "").strip()
-        if not key:
+        if not key and not enterprise_strict():
             key = os.environ.get("MERSAL_SIGNING_SECRET", "") or os.environ.get("MERSAL_API_TOKEN", "")
         if not key:
-            raise ValueError("MERSAL_UPDATE_SIGNING_KEY or MERSAL_SIGNING_SECRET required")
+            raise ValueError("MERSAL_UPDATE_SIGNING_KEY required for enterprise supply chain")
         return key.encode()
 
     def publish_manifest(

@@ -41,6 +41,10 @@ PERMISSIONS: dict[str, frozenset[str]] = {
             "users.write",
             "webhooks.write",
             "reports.export",
+            "platform.read",
+            "platform.write",
+            "updates.publish",
+            "integrations.admin",
             "admin.all",
         }
     ),
@@ -64,6 +68,8 @@ PERMISSIONS: dict[str, frozenset[str]] = {
             "vuln.write",
             "threat.write",
             "reports.export",
+            "platform.read",
+            "integrations.admin",
         }
     ),
     "analyst": frozenset(

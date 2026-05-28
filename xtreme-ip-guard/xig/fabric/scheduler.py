@@ -69,11 +69,15 @@ class SecurityScheduler:
             from ..platform_ops.standalone import StandaloneController
 
             return StandaloneController(self.db, self.fabric).run_autonomous_cycle()
+        if job_name == "backup":
+            from ..platform_ops.backup import BackupManager
+
+            return BackupManager(self.db).create_backup()
         raise ValueError(f"unknown job: {job_name}")
 
     def run_daily_cycle(self) -> dict[str, Any]:
         results: dict[str, Any] = {}
-        jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture"]
+        jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture", "backup"]
         if self.fabric and os.environ.get("MERSAL_AUTONOMOUS", "1").strip().lower() not in {"0", "false"}:
             jobs.extend(["siem_forward", "autonomous_cycle"])
         for job in jobs:

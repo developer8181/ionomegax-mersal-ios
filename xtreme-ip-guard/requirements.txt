@@ -12,3 +12,7 @@ psycopg[binary]>=3.2.0
 
 # Field-level encryption helpers (optional)
 cryptography>=42.0.0
+
+# SAML assertion signature verification (enterprise SSO)
+signxml>=4.0.0
+lxml>=5.0.0

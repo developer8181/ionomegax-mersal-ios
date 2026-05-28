@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -17,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .agent.event_queue import AgentEventQueue
 from .brand import BRAND
+from .config import agent_mtls_required
 from .enforcement import LocalEnforcer
 from .platform import collect_profile, collect_sensor_events
 from .platform.vuln_probe import collect_vuln_probe
@@ -57,7 +60,10 @@ class AgentConfig:
 class MersalAgent:
     def __init__(self, config: AgentConfig):
         self.config = config
-        self.enforcer = LocalEnforcer(Path(config.state_dir))
+        self.state_dir = Path(config.state_dir)
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.enforcer = LocalEnforcer(self.state_dir)
+        self.queue = AgentEventQueue(self.state_dir)
         self.profile = collect_profile()
 
     def run_forever(self) -> None:
@@ -70,7 +76,9 @@ class MersalAgent:
             time.sleep(max(5, self.config.interval_seconds))
 
     def tick(self) -> None:
+        self._flush_queue()
         self.send_heartbeat()
+        self.check_signed_updates()
         directives = self.fetch_directives()
         if directives.get("isolated"):
             self.enforcer.apply("isolate_endpoint", reason="Server marked endpoint isolated")
@@ -103,6 +111,7 @@ class MersalAgent:
             or collect_vuln_probe(self.profile.security_features),
             "network_flows": sensors.get("network_flows") or [],
             "enforcement": self.enforcer.load().to_dict(),
+            "queue_depth": self.queue.depth(),
         }
         ebpf_edr = collect_agent_ebpf_edr()
         metadata["ebpf_edr"] = ebpf_edr
@@ -135,7 +144,49 @@ class MersalAgent:
             "behavior_flags": list(sensor.behavior_flags),
             "metadata": {"source": "mersal-agent", **sensor.metadata},
         }
-        return self._post("/api/events", payload)
+        try:
+            return self._post("/api/events", payload)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError):
+            self.queue.enqueue(payload)
+            return {"action": "monitor", "queued": True}
+
+    def check_signed_updates(self) -> dict[str, Any]:
+        manifest = self._get("/api/updates/latest?component=agent")
+        if not manifest.get("manifest_id"):
+            return {}
+        remote_version = str(manifest.get("version", ""))
+        if remote_version == __version__:
+            return {"skipped": True, "version": remote_version}
+        artifact_url = str(manifest.get("artifact_url", ""))
+        checksum = str(manifest.get("checksum_sha256", ""))
+        if not artifact_url or not checksum:
+            return {"error": "incomplete manifest"}
+        try:
+            request = urllib.request.Request(artifact_url, headers=self._headers())
+            with urllib.request.urlopen(request, timeout=60, context=self._ssl_context()) as resp:  # noqa: S310
+                data = resp.read()
+        except (urllib.error.URLError, OSError) as exc:
+            return {"error": str(exc)}
+        digest = hashlib.sha256(data).hexdigest()
+        if digest != checksum:
+            return {"error": "checksum mismatch"}
+        updates_dir = self.state_dir / "updates"
+        updates_dir.mkdir(parents=True, exist_ok=True)
+        artifact_path = updates_dir / f"agent-{remote_version}.bin"
+        artifact_path.write_bytes(data)
+        (updates_dir / "pending.json").write_text(
+            json.dumps({"version": remote_version, "path": str(artifact_path), "manifest": manifest}, indent=2),
+            encoding="utf-8",
+        )
+        return {"staged": True, "version": remote_version, "path": str(artifact_path)}
+
+    def _flush_queue(self) -> None:
+        for item_id, payload in self.queue.pending():
+            try:
+                self._post("/api/events", payload)
+                self.queue.ack(item_id)
+            except (urllib.error.URLError, urllib.error.HTTPError, OSError):
+                break
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json", "User-Agent": f"MersalAgent/{__version__}"}
@@ -150,10 +201,15 @@ class MersalAgent:
         cert = os.environ.get("MERSAL_AGENT_CERT", "").strip()
         key = os.environ.get("MERSAL_AGENT_KEY", "").strip()
         ca = os.environ.get("MERSAL_AGENT_CA", "").strip()
+        if agent_mtls_required() and (not cert or not key):
+            raise RuntimeError("MERSAL_AGENT_MTLS=1 requires MERSAL_AGENT_CERT and MERSAL_AGENT_KEY")
         if not cert or not key:
             return None
         ctx = ssl.create_default_context(cafile=ca or None)
         ctx.load_cert_chain(cert, key)
+        if ca:
+            ctx.check_hostname = True
+            ctx.verify_mode = ssl.CERT_REQUIRED
         return ctx
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:

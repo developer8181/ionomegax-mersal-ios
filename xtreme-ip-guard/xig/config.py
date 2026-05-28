@@ -57,6 +57,11 @@ def is_enterprise() -> bool:
     return os.environ.get("MERSAL_ENTERPRISE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def enterprise_strict() -> bool:
+    """Mandatory TLS, Postgres, dedicated update signing — set MERSAL_ENTERPRISE_STRICT=1."""
+    return os.environ.get("MERSAL_ENTERPRISE_STRICT", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def ldap_enabled() -> bool:
     return bool(os.environ.get("MERSAL_LDAP_URL", "").strip())
 

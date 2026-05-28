@@ -7,4 +7,4 @@ from .credits import COPYRIGHT_YEARS, system_about
 
 __all__ = ["__version__", "COPYRIGHT_YEARS", "system_about"]
 
-__version__ = "8.4.0"
+__version__ = "8.5.0"

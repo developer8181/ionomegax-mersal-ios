@@ -36,7 +36,9 @@ class V84IntegrationTests(unittest.TestCase):
     def test_integration_hub_matrix(self) -> None:
         hub = IntegrationHub(self.db).full_matrix()
         self.assertIn("identity", hub)
-        self.assertIn("autonomous_cycle", hub["operations"]["scheduler_jobs"])
+        jobs = hub["operations"]["scheduler_jobs"]
+        self.assertIn("autonomous_cycle", jobs)
+        self.assertIn("backup", jobs)
 
     def test_siem_forward_cursor(self) -> None:
         result = SiemForwarder(self.db).forward_batch()

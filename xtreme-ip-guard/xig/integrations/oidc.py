@@ -82,7 +82,9 @@ class OidcProvider:
             or self._username_from_id_token(id_token)
             or f"oidc-{secrets.token_hex(4)}"
         )
-        role = str(client.get("default_role", "analyst"))
+        from .federation_roles import resolve_role_from_claims
+
+        role = resolve_role_from_claims(claims, default_role=str(client.get("default_role", "analyst")))
         tenant_id = str(client.get("tenant_id", "default"))
         from ..auth import create_session_token
 

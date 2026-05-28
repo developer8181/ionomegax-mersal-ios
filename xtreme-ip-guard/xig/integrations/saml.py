@@ -8,7 +8,6 @@ import base64
 import os
 import secrets
 import urllib.parse
-import xml.etree.ElementTree as ET
 import zlib
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -61,18 +60,24 @@ class SamlProvider:
     def consume_response(self, saml_response_b64: str) -> dict[str, Any]:
         try:
             xml_bytes = base64.b64decode(saml_response_b64)
-            root = ET.fromstring(xml_bytes)
-        except (ET.ParseError, ValueError, OSError) as exc:
+        except (ValueError, OSError) as exc:
             return {"error": f"invalid SAML response: {exc}"}
-        name_id = ""
-        for elem in root.iter():
-            if elem.tag.endswith("NameID") and elem.text:
-                name_id = elem.text.strip()
-                break
+        cfg = self._env_config() or {}
+        from .saml_verify import verify_saml_response
+
+        ok, err, claims = verify_saml_response(
+            xml_bytes,
+            sp_entity_id=str(cfg.get("entity_id", os.environ.get("MERSAL_SAML_ENTITY_ID", "mersal-sp"))),
+            idp_cert_pem=os.environ.get("MERSAL_SAML_IDP_CERT", ""),
+        )
+        if not ok:
+            return {"error": err}
+        name_id = str(claims.get("name_id", ""))
         if not name_id:
             return {"error": "NameID not found in assertion"}
-        cfg = self._env_config() or {}
-        role = str(cfg.get("default_role", "analyst"))
+        from .federation_roles import resolve_role_from_claims
+
+        role = resolve_role_from_claims(claims, default_role=str(cfg.get("default_role", "analyst")))
         tenant_id = str(cfg.get("tenant_id", "default"))
         from ..auth import create_session_token
 

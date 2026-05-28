@@ -1,13 +1,12 @@
--- Mersal PostgreSQL schema (reference for HA deployments)
--- Application default remains SQLite; set MERSAL_POSTGRES_DSN when using this stack.
+-- Mersal Guard — PostgreSQL reference schema
+-- Apply via: python3 scripts/init-postgres-schema.py
+-- Requires MERSAL_POSTGRES_DSN
 
-CREATE TABLE IF NOT EXISTS platform_meta (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
+-- Core tables are created by xig.storage init_schema() with dialect adaptation.
+-- This file documents required extensions and tuning for large institutions.
 
-INSERT INTO platform_meta (key, value) VALUES ('schema', 'mersal-v8-reference')
-ON CONFLICT (key) DO NOTHING;
+-- CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Full table DDL is applied by mersal migrations when PG adapter is enabled.
--- Use: python3 scripts/init-postgres.py (future) or replicate from SQLite migrations.
+-- Recommended connection pool sizing for 10k+ endpoints:
+-- max_connections = 200
+-- shared_buffers = 256MB

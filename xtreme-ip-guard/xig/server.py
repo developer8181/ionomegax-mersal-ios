@@ -116,6 +116,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/scim/v2/Users/"):
             return self._handle_scim_get_user()
         if path.startswith("/api/updates/latest"):
+            if not self._authorize_agent(path) and not self._authorized():
+                return self._send_json({"error": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
             from urllib.parse import parse_qs
 
             component = parse_qs(urlparse(self.path).query).get("component", ["agent"])[0]
@@ -125,6 +127,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             if manifest and UpdateChannel(self.database).verify_manifest(manifest):
                 return self._send_json(manifest)
             return self._send_json(manifest or {}, status=HTTPStatus.NOT_FOUND)
+        if path.startswith("/api/platform/integrations/probe/") and self._authorized():
+            probe_id = urlparse(self.path).path.rsplit("/", 1)[-1]
+            from .integrations.integration_hub import IntegrationHub
+
+            return self._send_json(IntegrationHub(self.database).probe(probe_id))
         if path == "/api/threat/intel" and self._authorized():
             return self._send_json(self.database.threat_intel_summary())
         if not self._authorized():
@@ -303,6 +310,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             meta = BackupManager(self.database).create_backup()
             self.database.record_audit(self._actor(), "platform.backup", target=meta.get("backup_id", ""))
             return self._send_json(meta, status=HTTPStatus.CREATED)
+        if path == "/api/platform/restore":
+            if not self._authorized():
+                return
+            from .platform_ops.backup import BackupManager
+
+            try:
+                payload = self._read_json()
+                result = BackupManager(self.database).restore_backup(str(payload.get("backup_id", "")))
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                return self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            self.database.record_audit(
+                self._actor(), "platform.restore", target=str(payload.get("backup_id", ""))
+            )
+            return self._send_json(result)
         if path == "/api/integrations/siem/forward":
             if not self._authorized():
                 return

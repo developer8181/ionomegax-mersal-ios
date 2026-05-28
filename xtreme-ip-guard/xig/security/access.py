@@ -15,7 +15,7 @@ from ..auth import (
     decode_session,
     verify_admin,
 )
-from ..config import is_enterprise, is_production
+from ..config import enterprise_strict, is_enterprise, is_production, postgres_dsn, tls_enabled
 from ..rbac.engine import PERMISSIONS, RbacEngine
 
 if TYPE_CHECKING:
@@ -156,6 +156,15 @@ _ROUTE_RULES: list[tuple[str, str, str]] = [
     ("GET", "/api/brand", "dashboard.read"),
     ("GET", "/api/threat/", "threat.write"),
     ("GET", "/api/alerts/stream", "siem.read"),
+    ("GET", "/api/platform/", "platform.read"),
+    ("POST", "/api/platform/backup", "platform.write"),
+    ("POST", "/api/platform/restore", "platform.write"),
+    ("POST", "/api/platform/autonomous-cycle", "platform.write"),
+    ("GET", "/api/platform/integrations", "platform.read"),
+    ("POST", "/api/updates/publish", "updates.publish"),
+    ("GET", "/api/updates/latest", "platform.read"),
+    ("GET", "/api/integrations/", "integrations.admin"),
+    ("POST", "/api/integrations/", "integrations.admin"),
 ]
 
 
@@ -172,11 +181,22 @@ def permission_for_route(method: str, path: str) -> str:
 
 
 def enterprise_startup_errors() -> list[str]:
+    import os
+
     errors: list[str] = []
     if not is_enterprise():
         return errors
     if not is_production():
         errors.append("MERSAL_ENTERPRISE=1 requires MERSAL_PRODUCTION=1")
+    if enterprise_strict():
+        if not tls_enabled():
+            errors.append("Enterprise strict: set MERSAL_TLS_CERT and MERSAL_TLS_KEY")
+        if not os.environ.get("MERSAL_UPDATE_SIGNING_KEY", "").strip():
+            errors.append("Enterprise strict: set MERSAL_UPDATE_SIGNING_KEY (dedicated from API token)")
+        if not postgres_dsn():
+            errors.append(
+                "Enterprise strict: set MERSAL_POSTGRES_DSN (or MERSAL_ENTERPRISE_STRICT=0 for pilot SQLite)"
+            )
     return errors
 
 
