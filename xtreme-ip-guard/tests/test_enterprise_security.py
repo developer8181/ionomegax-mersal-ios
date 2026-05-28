@@ -26,7 +26,7 @@ class EnterpriseSecurityTests(unittest.TestCase):
             "MERSAL_SIGNING_SECRET": "x" * 48,
             "MERSAL_API_TOKEN": "enterprise-test-token-32chars-minimum-len",
             "MERSAL_ADMIN_PASSWORD": "AdminPass123!",
-            "MERSAL_PORT": "18091",
+            "MERSAL_PORT": "28191",
         }
 
     def tearDown(self) -> None:
@@ -59,7 +59,7 @@ class EnterpriseSecurityTests(unittest.TestCase):
 
             for _ in range(30):
                 try:
-                    c = HTTPConnection("127.0.0.1", 18091, timeout=2)
+                    c = HTTPConnection("127.0.0.1", 28191, timeout=2)
                     c.request("GET", "/api/system/about")
                     if c.getresponse().status == 200:
                         break
@@ -70,7 +70,7 @@ class EnterpriseSecurityTests(unittest.TestCase):
             from xig.auth import create_session_token
 
             token = create_session_token("viewer1", role="viewer", tenant_id="default")
-            c = HTTPConnection("127.0.0.1", 18091, timeout=5)
+            c = HTTPConnection("127.0.0.1", 28191, timeout=5)
             body = json.dumps(
                 {
                     "rule_id": "TEST-RULE",

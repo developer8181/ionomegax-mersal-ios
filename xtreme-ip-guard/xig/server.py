@@ -83,6 +83,26 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "version": self._version(),
                 }
             )
+        if path == "/api/platform/status" and self._authorized():
+            from .platform_ops.health import PlatformHealth
+
+            return self._send_json(PlatformHealth(self.database).full_status())
+        if path == "/api/platform/backups" and self._authorized():
+            from .platform_ops.backup import BackupManager
+
+            return self._send_json(BackupManager(self.database).list_backups())
+        if path == "/api/integrations/suricata/status" and self._authorized() and self.fabric:
+            from .integrations.suricata_manager import SuricataManager
+
+            return self._send_json(SuricataManager(self.database, self.fabric).status())
+        if path == "/api/integrations/siem/forwarders" and self._authorized():
+            return self._send_json(self.database.list_siem_forwarders())
+        if path == "/api/auth/oidc/login":
+            from .integrations.oidc import OidcProvider
+
+            return self._send_json(OidcProvider(self.database).authorization_url())
+        if path.startswith("/api/auth/oidc/callback"):
+            return self._handle_oidc_callback()
         if path == "/api/threat/intel" and self._authorized():
             return self._send_json(self.database.threat_intel_summary())
         if not self._authorized():
@@ -206,6 +226,32 @@ class RequestHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/auth/login":
             return self._handle_login()
+        if path == "/api/platform/autonomous-cycle":
+            if not self.fabric:
+                return self._send_json({"error": "fabric unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+            if not self._authorized():
+                return
+            from .platform_ops.standalone import StandaloneController
+
+            result = StandaloneController(self.database, self.fabric).run_autonomous_cycle()
+            self.database.record_audit(
+                self._actor(), "platform.autonomous_cycle", details={"keys": list(result.keys())}
+            )
+            return self._send_json(result)
+        if path == "/api/platform/backup":
+            if not self._authorized():
+                return
+            from .platform_ops.backup import BackupManager
+
+            meta = BackupManager(self.database).create_backup()
+            self.database.record_audit(self._actor(), "platform.backup", target=meta.get("backup_id", ""))
+            return self._send_json(meta, status=HTTPStatus.CREATED)
+        if path == "/api/integrations/siem/forward":
+            if not self._authorized():
+                return
+            from .integrations.siem_forwarder import SiemForwarder
+
+            return self._send_json(SiemForwarder(self.database).forward_batch())
         if path in {"/api/agents/heartbeat", "/api/events"}:
             if not self._authorize_agent(path):
                 return
@@ -395,6 +441,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.database.record_audit(actor, "taxii.sync", details=result)
                 return self._send_json(result)
 
+            if path == "/api/integrations/siem/forwarders":
+                payload = self._read_json()
+                import secrets
+
+                fw = self.database.create_siem_forwarder(
+                    forwarder_id=f"fw-{secrets.token_hex(6)}",
+                    name=str(payload["name"]),
+                    host=str(payload["host"]),
+                    port=int(payload.get("port", 514)),
+                    protocol=str(payload.get("protocol", "syslog_udp")),
+                    tenant_id=str(payload.get("tenant_id", self._audit_tenant())),
+                )
+                self.database.record_audit(actor, "siem.forwarder.create", target=fw["forwarder_id"])
+                return self._send_json(fw, status=HTTPStatus.CREATED)
+
             if path == "/api/agents/register-key":
                 payload = self._read_json()
                 agent_id = str(payload["agent_id"])
@@ -483,6 +544,22 @@ class RequestHandler(BaseHTTPRequestHandler):
             return True
         self._send_json({"error": "agent unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
         return False
+
+    def _handle_oidc_callback(self) -> None:
+        from urllib.parse import parse_qs
+
+        from .integrations.oidc import OidcProvider
+
+        query = parse_qs(urlparse(self.path).query)
+        code = query.get("code", [""])[0]
+        state = query.get("state", [""])[0]
+        if not code:
+            return self._send_json({"error": "missing code"}, status=HTTPStatus.BAD_REQUEST)
+        result = OidcProvider(self.database).exchange_code(code, state=state)
+        if "error" in result:
+            return self._send_json(result, status=HTTPStatus.BAD_REQUEST)
+        self.database.record_audit(result.get("username", "oidc"), "oidc.login", target="sso")
+        return self._send_json(result)
 
     def _handle_login(self) -> None:
         try:

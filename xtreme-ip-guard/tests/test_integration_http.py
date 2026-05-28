@@ -21,7 +21,7 @@ class IntegrationHttpTests(unittest.TestCase):
         os.environ["MERSAL_API_TOKEN"] = "integration-test-token-32chars-minimum"
         os.environ["MERSAL_SIGNING_SECRET"] = "x" * 48
         os.environ["MERSAL_BOOTSTRAP"] = "0"
-        os.environ["MERSAL_PORT"] = "18090"
+        os.environ["MERSAL_PORT"] = "28190"
         os.environ["MERSAL_HOST"] = "127.0.0.1"
         os.environ["MERSAL_NO_SCHEDULER"] = "1"
         os.environ["MERSAL_KEV_FEED_URL"] = ""
@@ -29,12 +29,12 @@ class IntegrationHttpTests(unittest.TestCase):
         from xig.server import run
 
         cls.server_thread = threading.Thread(
-            target=lambda: run(host="127.0.0.1", port=18090),
+            target=lambda: run(host="127.0.0.1", port=28190),
             name="integration-server",
             daemon=True,
         )
         cls.server_thread.start()
-        cls.base = "http://127.0.0.1:18090"
+        cls.base = "http://127.0.0.1:28190"
         for _ in range(40):
             try:
                 with urllib.request.urlopen(f"{cls.base}/api/system/about", timeout=1) as resp:
@@ -66,9 +66,9 @@ class IntegrationHttpTests(unittest.TestCase):
 
     def test_public_about_and_build(self):
         about = self._get("/api/system/about")
-        self.assertEqual(about["version"], "7.1.0")
+        self.assertEqual(about["version"], "8.0.0")
         build = self._get("/api/system/build")
-        self.assertEqual(build["version"], "7.1.0")
+        self.assertEqual(build["version"], "8.0.0")
         self.assertIn("components", build)
 
     def test_readiness_without_auth(self):

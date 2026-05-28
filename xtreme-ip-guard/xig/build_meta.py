@@ -10,11 +10,12 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__
 from .config import is_production, tls_enabled
 
 
 def build_info() -> dict[str, object]:
+    from . import __version__
+
     root = Path(__file__).resolve().parents[1]
     commit = _git_revision(root)
     return {

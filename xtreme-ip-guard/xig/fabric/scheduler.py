@@ -61,11 +61,22 @@ class SecurityScheduler:
             from ..enterprise import MersalEnterpriseSuite
 
             return MersalEnterpriseSuite(self.db, fabric=self.fabric).run_enterprise_cycle()
+        if job_name == "siem_forward" and self.fabric:
+            from ..integrations.siem_forwarder import SiemForwarder
+
+            return SiemForwarder(self.db).forward_batch()
+        if job_name == "autonomous_cycle" and self.fabric:
+            from ..platform_ops.standalone import StandaloneController
+
+            return StandaloneController(self.db, self.fabric).run_autonomous_cycle()
         raise ValueError(f"unknown job: {job_name}")
 
     def run_daily_cycle(self) -> dict[str, Any]:
         results: dict[str, Any] = {}
-        for job in ("threat_feeds", "vuln_scan", "ai_train", "posture"):
+        jobs = ["threat_feeds", "vuln_scan", "ai_train", "posture"]
+        if self.fabric and os.environ.get("MERSAL_AUTONOMOUS", "1").strip().lower() not in {"0", "false"}:
+            jobs.append("siem_forward")
+        for job in jobs:
             try:
                 results[job] = self.run_job(job)
                 self.db.record_scheduler_run(job, "ok", results[job])

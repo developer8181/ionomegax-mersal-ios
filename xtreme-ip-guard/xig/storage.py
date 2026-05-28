@@ -337,11 +337,13 @@ class Database:
         from .migrations_v6 import apply_v6_migrations
         from .migrations_v7 import apply_v7_migrations
         from .migrations_v7_1 import apply_v7_1_migrations
+        from .migrations_v8 import apply_v8_migrations
 
         with self.connect() as db:
             apply_v6_migrations(db)
             apply_v7_migrations(db)
             apply_v7_1_migrations(db)
+            apply_v8_migrations(db)
 
     def seed_demo(self) -> None:
         demo_policies = [
@@ -1999,3 +2001,79 @@ class Database:
                     (limit,),
                 )
             return [dict(row) for row in rows]
+
+    def create_siem_forwarder(
+        self,
+        *,
+        forwarder_id: str,
+        name: str,
+        host: str,
+        port: int = 514,
+        protocol: str = "syslog_udp",
+        tenant_id: str = "default",
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO siem_forwarders (forwarder_id, tenant_id, name, protocol, host, port)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (forwarder_id, tenant_id, name, protocol, host, port),
+            )
+            row = db.execute(
+                "SELECT * FROM siem_forwarders WHERE forwarder_id = ?", (forwarder_id,)
+            ).fetchone()
+            return dict(row)
+
+    def list_siem_forwarders(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            query = "SELECT * FROM siem_forwarders"
+            if enabled_only:
+                query += " WHERE enabled = 1"
+            return [dict(row) for row in db.execute(query).fetchall()]
+
+    def list_oidc_clients(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            query = "SELECT * FROM oidc_clients"
+            if enabled_only:
+                query += " WHERE enabled = 1"
+            rows = db.execute(query).fetchall()
+            return [dict(row) for row in rows]
+
+    def register_backup(
+        self, backup_id: str, path: str, *, size_bytes: int, checksum: str
+    ) -> dict[str, Any]:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO platform_backups (backup_id, path, size_bytes, checksum)
+                VALUES (?, ?, ?, ?)
+                """,
+                (backup_id, path, size_bytes, checksum),
+            )
+            row = db.execute("SELECT * FROM platform_backups WHERE backup_id = ?", (backup_id,)).fetchone()
+            return dict(row)
+
+    def list_platform_backups(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM platform_backups ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            )
+            return [dict(row) for row in rows]
+
+    def touch_platform_heartbeat(
+        self, component: str, *, status: str = "ok", detail: dict[str, Any] | None = None
+    ) -> None:
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO platform_heartbeats (component, status, detail, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(component) DO UPDATE SET
+                    status = excluded.status,
+                    detail = excluded.detail,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (component, status, json.dumps(detail or {}, sort_keys=True)),
+            )
