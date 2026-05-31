@@ -13,7 +13,9 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-    container: debian:bookworm
+    container:
+      image: debian:bookworm
+      options: --privileged
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4

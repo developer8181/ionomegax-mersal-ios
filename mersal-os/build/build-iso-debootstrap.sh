@@ -24,9 +24,11 @@ mkdir -p "$CHROOT" "$ISO_DIR"
 
 PKGS="linux-image-amd64,live-boot,live-config,live-config-systemd,live-tools,systemd-sysv,initramfs-tools,sudo,python3,curl,openssl,ca-certificates,nftables,ifupdown,dhcpcd5,iproute2,rsync"
 
-if [ ! -f "$CHROOT/debootstrap/debootstrap.log" ]; then
+if [ ! -f "$CHROOT/debootstrap/debootstrap.log" ] && [ ! -f "$CHROOT/etc/debian_version" ]; then
   echo "Bootstrapping Debian bookworm with packages..."
   sudo debootstrap --arch="$ARCH" --include="$PKGS" bookworm "$CHROOT" http://deb.debian.org/debian
+elif [ -f "$CHROOT/etc/debian_version" ]; then
+  echo "Reusing existing chroot ($(cat "$CHROOT/etc/debian_version" 2>/dev/null || echo bookworm))"
 fi
 
 sudo tee "$CHROOT/etc/apt/sources.list" >/dev/null <<'EOF'
@@ -61,17 +63,27 @@ if ! sudo chroot "$CHROOT" id mersal >/dev/null 2>&1; then
 fi
 echo "mersal:mersal" | sudo chroot "$CHROOT" chpasswd
 
-sudo chroot "$CHROOT" systemctl enable mersal-command-center.service mersal-guard-agent.service mersal-gateway.service mersal-update-orbit.service
+sudo chroot "$CHROOT" systemctl enable mersal-command-center.service mersal-guard-agent.service mersal-gateway.service mersal-update-orbit.service 2>/dev/null || {
+  for svc in mersal-command-center mersal-guard-agent mersal-gateway mersal-update-orbit; do
+    ln -sf "/etc/systemd/system/${svc}.service" "$CHROOT/etc/systemd/system/multi-user.target.wants/${svc}.service" 2>/dev/null || true
+  done
+}
 
 sudo chroot "$CHROOT" apt-get clean
+
+# Unmount virtual filesystems before squashfs (avoids bloating ISO with /proc)
+cleanup
+trap - EXIT
 
 KERNEL="$(ls -1 "$CHROOT"/boot/vmlinuz-* | sort -V | tail -1)"
 INITRD="$(ls -1 "$CHROOT"/boot/initrd.img-* | sort -V | tail -1)"
 sudo cp "$KERNEL" "$ISO_DIR/vmlinuz"
 sudo cp "$INITRD" "$ISO_DIR/initrd"
-echo "Building squashfs (may take several minutes)..."
+SQUASH_COMP="${MERSAL_SQUASHFS_COMP:-gzip}"
+SQUASH_LEVEL="${MERSAL_SQUASHFS_LEVEL:-6}"
+echo "Building squashfs ($SQUASH_COMP level $SQUASH_LEVEL)..."
 sudo mkdir -p "$ISO_DIR/live"
-sudo mksquashfs "$CHROOT" "$ISO_DIR/live/filesystem.squashfs" -comp xz -e boot -noappend -processors "$(nproc)"
+sudo mksquashfs "$CHROOT" "$ISO_DIR/live/filesystem.squashfs" -comp "$SQUASH_COMP" -Xcompression-level "$SQUASH_LEVEL" -e boot -e proc -e sys -e dev -e run -e tmp -noappend -processors "$(nproc)"
 sudo tee "$ISO_DIR/live/filesystem.size" >/dev/null <<< "$(sudo du -sx --block-size=1 "$CHROOT" | cut -f1)"
 
 sudo apt-get install -y -qq isolinux syslinux-utils xorriso 2>/dev/null || true
