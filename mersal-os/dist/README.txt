@@ -1,12 +1,12 @@
-Mersal OS ISO artifacts are written here by build/build-iso.sh
+Mersal OS 6.0.0 — Extreme Cyber Security Edition
+=================================================
 
-Download pre-built ISO from GitHub Actions:
-  Repository -> Actions -> "Mersal OS ISO Build" -> Artifacts -> mersal-os-iso
+ISO files appear here after: sudo ./build/build-iso-debootstrap.sh
 
-File: mersal-os-YYYYMMDD-amd64.iso
-Checksum: mersal-os-YYYYMMDD-amd64.iso.sha256
+Expected name: mersal-os-6.0.0-YYYYMMDD-amd64.iso
+Checksum:      mersal-os-6.0.0-YYYYMMDD-amd64.iso.sha256
 
-Trial login: mersal / mersal
-Command Center: http://127.0.0.1:8090/console/
+GitHub Actions artifact: mersal-os-iso
+Screenshots artifact:      mersal-os-screenshots-6.0
 
-Powered by Extreme Technology Company
+© Extreme Technology Company · Eng. Mahmoud Rasem Bayari

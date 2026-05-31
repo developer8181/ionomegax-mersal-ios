@@ -6,6 +6,8 @@ on:
       - "mersal-os/**"
       - "xtreme-ip-guard/**"
       - ".github/workflows/mersal-os-iso.yml"
+    tags:
+      - "mersal-os-*"
   workflow_dispatch:
 
 jobs:
@@ -15,6 +17,11 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+
+      - name: Sync ISO screenshots
+        run: |
+          chmod +x mersal-os/scripts/sync-iso-screenshots.sh
+          ./mersal-os/scripts/sync-iso-screenshots.sh || true
 
       - name: Build Mersal OS ISO
         run: |
@@ -34,6 +41,33 @@ jobs:
             mersal-os/dist/*.iso
             mersal-os/dist/*.sha256
           retention-days: 30
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mersal-os-screenshots-6.0
+          path: |
+            mersal-os/docs/screenshots/*.png
+            xtreme-ip-guard/docs/screenshots/*.png
+          retention-days: 90
+
+  release-assets:
+    needs: build-iso
+    if: startsWith(github.ref, 'refs/tags/mersal-os-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mersal-os-iso
+          path: dist-iso
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist-iso/*
+          generate_release_notes: true
 
   unit-tests:
     runs-on: ubuntu-latest

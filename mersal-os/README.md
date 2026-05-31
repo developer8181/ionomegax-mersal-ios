@@ -6,9 +6,13 @@
 
 ## Download ISO (GitHub Release)
 
-**[Releases — mersal-os-20260528-amd64.iso (~339 MB)](https://github.com/developer8181/ionomegax-mersal-ios/releases)**
+**Mersal OS 6.0.0** — Extreme Cyber Security Edition · platform bundle **1.1.0**
+
+**[Releases](https://github.com/developer8181/ionomegax-mersal-ios/releases)** — artifact `mersal-os-iso` from workflow **Mersal OS ISO Build**, or tag `mersal-os-6.0.0`
 
 Login: `mersal` / `mersal` · Console: http://127.0.0.1:8090/console/
+
+Screenshots: [docs/screenshots/](docs/screenshots/) · [RELEASE v6.0.0](docs/RELEASE_v6.0.0_mersal_os.md)
 
 It unifies:
 

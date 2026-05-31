@@ -1,8 +1,9 @@
 PRODUCT=Mersal OS
-VERSION=8.7.0
-CODENAME=unified-enterprise
-PLATFORM_BUNDLE=xtreme-ip-guard-v8.7
-VENDOR=Ionomegax
+PRODUCT_LINE=Extreme Cyber Security Edition
+VERSION=6.0.0
+CODENAME=global-alternative
+PLATFORM_BUNDLE=extreme-cyber-security-1.1.0
+VENDOR=Extreme Technology Company
 POWERED_BY=Extreme Technology Company
 COPYRIGHT=2009-2026 Eng. Mahmoud Rasem Bayari, Ramallah, Palestine
 LEAD_ENGINEER=Mahmoud Rasem Bayari

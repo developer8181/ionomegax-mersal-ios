@@ -40,7 +40,7 @@ cp "$ROOT/gateway/suricata-mersal.yaml" "$INCLUDES/etc/suricata/suricata.yaml" 2
 # Brand assets (Mersal + Extreme unified)
 mkdir -p "$INCLUDES/usr/share/pixmaps" "$INCLUDES/opt/mersal-guard/web"
 GUARD_WEB="$REPO/xtreme-ip-guard/web"
-for asset in logo.svg logo-unified.svg extreme-logo.svg extreme-logo-dark.svg; do
+for asset in logo.svg logo-unified.svg logo-ecs.svg extreme-logo.svg extreme-logo-dark.svg ecs-theme.css; do
   if [ -f "$GUARD_WEB/$asset" ]; then
     cp "$GUARD_WEB/$asset" "$INCLUDES/opt/mersal-guard/web/$asset"
   fi

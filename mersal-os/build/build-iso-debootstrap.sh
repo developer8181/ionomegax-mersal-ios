@@ -90,8 +90,9 @@ LABEL mersal
   APPEND initrd=/initrd boot=live components username=mersal hostname=mersal-os quiet splash
 CFG
 
+VER="$(grep '^VERSION=' "$ROOT/rootfs-overlay/etc/mersal-os/release" 2>/dev/null | cut -d= -f2 || echo "6.0.0")"
 STAMP="$(date +%Y%m%d)"
-FINAL="$DIST/mersal-os-${STAMP}-${ARCH}.iso"
+FINAL="$DIST/mersal-os-${VER}-${STAMP}-${ARCH}.iso"
 sudo xorriso -as mkisofs -iso-level 3 -full-iso9660-filenames -volid MERSAL_OS \
   -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
   -no-emul-boot -boot-load-size 4 -boot-info-table \

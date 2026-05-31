@@ -2,18 +2,18 @@
 cat <<'BANNER'
 
   ╭──────────────────────────────────────────────╮
-  │  Mersal OS — Holonic Security Fabric        │
-  │  Powered by Extreme Technology Company      │
+  │  Mersal OS 6.0 — Extreme Cyber Security      │
+  │  Global integrated alternative · Live ISO    │
+  │  Powered by Extreme Technology Company       │
   ╰──────────────────────────────────────────────╯
 
   Designed & developed by Eng. Mahmoud Rasem Bayari
   Cybersecurity Systems Engineer — Ramallah, Palestine
-  Founder, Extreme Technology Company
   All rights reserved (c) 2009-2026
 
   Command Center : http://127.0.0.1:8090/console/
-  About system   : http://127.0.0.1:8090/api/system/about
-  Update Orbit   : http://127.0.0.1:8091/manifest.json
+  Platform API   : http://127.0.0.1:8090/api/platform/global-alternative
+  About          : http://127.0.0.1:8090/api/system/about
   Status         : mersal-status
 
 BANNER

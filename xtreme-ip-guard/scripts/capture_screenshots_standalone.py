@@ -20,6 +20,8 @@ os.environ["MERSAL_NO_SCHEDULER"] = "1"
 os.environ["MERSAL_KEV_FEED_URL"] = ""
 os.environ["MERSAL_BOOTSTRAP"] = "0"
 os.environ["MERSAL_DEMO_UI"] = "1"
+os.environ.setdefault("MERSAL_SIGNING_SECRET", "x" * 48)
+os.environ.setdefault("MERSAL_API_TOKEN", "demo-capture-token-minimum-32-chars")
 
 OUT = ROOT / "docs" / "screenshots"
 PORT = 8090

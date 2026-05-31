@@ -6,7 +6,8 @@
 2. تبويب **Actions** → workflow **Mersal OS ISO Build**.
 3. **Run workflow** (أو انتظر اكتمال آخر تشغيل).
 4. من صفحة التشغيل الناجح: **Artifacts** → `mersal-os-iso`.
-5. حمّل `mersal-os-YYYYMMDD-amd64.iso` وملف `.sha256`.
+5. حمّل `mersal-os-6.0.0-YYYYMMDD-amd64.iso` وملف `.sha256`.
+6. لقطات الإصدار: مجلد `mersal-os/docs/screenshots/` في المستودع.
 
 ## الطريقة 2 — البناء المحلي (موصى به)
 

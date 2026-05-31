@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>Ionomegax · Mersal Guard OS</strong><br/>
-  <em>Powered by Extreme Technology Company</em>
+  <strong>Mersal OS 6.0 — Extreme Cyber Security Edition</strong><br/>
+  <em>Extreme Technology Company · منصة 1.1.0</em>
 </p>
 
 ---
@@ -51,7 +51,7 @@
 
 | البند | القيمة |
 |-------|--------|
-| الإصدار | **1.0.0** (تجريبي — Live) |
+| الإصدار | **6.0.0** (Live — Extreme Cyber Security 1.1.0) |
 | الملف | `mersal-os-20260528-amd64.iso` |
 | الحجم | ~339 MB |
 | المعمارية | amd64 (64-bit) |
